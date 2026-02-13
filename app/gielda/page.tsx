@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
 // Dodaj: Mountain (jako sterta/hałda), ShoppingBag (worek), Layers (paleta), Archive (bela/kostka)
-import { Archive, Mountain, ShoppingBag, Layers, Box } from 'lucide-react';
-
+import { Archive, Mountain, ShoppingBag, Layers, Box, ArrowRight } from 'lucide-react';
 
 
 // Zaktualizowany interfejs zgodny z Twoją bazą
@@ -161,88 +160,94 @@ export default function Gielda() {
                 ) : (
                     <div className="grid gap-6">
                         {filtrowaneOferty.map((o) => (
-                            <div key={o.id} className="bg-white rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl border border-slate-100 hover:border-blue-100 transition-all duration-300 group">
-                                <div className="flex flex-col md:flex-row h-full">
+                            <Link href={`/gielda/${o.id}`} key={o.id} className="block bg-white rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl border border-slate-100 hover:border-blue-100 transition-all duration-300 group no-underline text-inherit">                                <div className="flex flex-col md:flex-row h-full">
 
-                                    {/* SEKCJA ZDJĘCIA */}
-                                    <div className="w-full md:w-72 h-64 md:h-auto bg-slate-50 flex-shrink-0 relative overflow-hidden">
-                                        {o.zdjecie_url ? (
-                                            <img src={o.zdjecie_url} alt={o.material} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-8xl opacity-20 grayscale">
-                                                {getIcon(o.material)}
-                                            </div>
-                                        )}
-
-                                        {/* Badge Czasu */}
-                                        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur text-slate-700 text-[10px] px-3 py-1.5 rounded-full font-black uppercase tracking-wide shadow-sm">
-                                            🕒 {formatDistanceToNow(new Date(o.created_at), { addSuffix: true, locale: pl })}
+                                {/* SEKCJA ZDJĘCIA */}
+                                <div className="w-full md:w-72 h-64 md:h-auto bg-slate-50 flex-shrink-0 relative overflow-hidden">
+                                    {o.zdjecie_url ? (
+                                        <img src={o.zdjecie_url} alt={o.material} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-8xl opacity-20 grayscale">
+                                            {getIcon(o.material)}
                                         </div>
+                                    )}
 
-                                        {/* Badge Dokumentacji (jeśli jest) */}
-                                        {o.extra_photo_docs && (
-                                            <div className="absolute bottom-4 left-4 bg-green-500 text-white text-[10px] px-3 py-1.5 rounded-full font-black uppercase tracking-wide shadow-lg flex items-center gap-1">
-                                                📸 Dokumentacja
-                                            </div>
-                                        )}
+                                    {/* Badge Czasu */}
+                                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur text-slate-700 text-[10px] px-3 py-1.5 rounded-full font-black uppercase tracking-wide shadow-sm">
+                                        🕒 {formatDistanceToNow(new Date(o.created_at), { addSuffix: true, locale: pl })}
                                     </div>
 
-                                    {/* SEKCJA TREŚCI */}
-                                    <div className="p-6 md:p-8 flex-grow flex flex-col justify-between relative">
+                                    {/* Badge Dokumentacji (jeśli jest) */}
+                                    {o.extra_photo_docs && (
+                                        <div className="absolute bottom-4 left-4 bg-green-500 text-white text-[10px] px-3 py-1.5 rounded-full font-black uppercase tracking-wide shadow-lg flex items-center gap-1">
+                                            📸 Dokumentacja
+                                        </div>
+                                    )}
+                                </div>
 
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div>
-                                                <div className="flex flex-wrap gap-2 mb-3">
-                                                    <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider">
-                                                        📍 {o.lokalizacja}
+                                {/* SEKCJA TREŚCI */}
+                                <div className="p-6 md:p-8 flex-grow flex flex-col justify-between relative">
+
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div>
+                                            <div className="flex flex-wrap gap-2 mb-3">
+                                                <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider">
+                                                    📍 {o.lokalizacja}
+                                                </span>
+                                                {o.form && (
+                                                    <span className="bg-blue-50 text-blue-700 text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider border border-blue-100 flex items-center gap-1.5">
+                                                        {/* Wywołujemy naszą inteligentną funkcję */}
+                                                        {getFormIcon(o.form)}
+                                                        {o.form}
                                                     </span>
-                                                    {o.form && (
-                                                        <span className="bg-blue-50 text-blue-700 text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider border border-blue-100 flex items-center gap-1.5">
-                                                            {/* Wywołujemy naszą inteligentną funkcję */}
-                                                            {getFormIcon(o.form)}
-                                                            {o.form}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-2 group-hover:text-blue-600 transition-colors">
-                                                    {o.material}
-                                                </h2>
-                                                {o.pickup_hours && (
-                                                    <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                                                        🕒 Odbiór: {o.pickup_hours === '24h' ? 'Całodobowo' : o.pickup_hours}
-                                                    </p>
                                                 )}
                                             </div>
-
-                                            {/* CENA I WAGA */}
-                                            <div className="text-right bg-slate-50 p-4 rounded-2xl border border-slate-100 min-w-[120px]">
-                                                {o.cena > 0 ? (
-                                                    <>
-                                                        <p className="text-2xl font-black text-slate-900 leading-none mb-1">{o.cena} <span className="text-sm text-slate-400 font-bold">zł</span></p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cena za tonę</p>
-                                                    </>
-                                                ) : (
-                                                    <p className="text-sm font-black text-slate-400 uppercase">Do negocjacji</p>
-                                                )}
-
-                                                <div className="w-full h-px bg-slate-200 my-3"></div>
-
-                                                <p className="text-xl font-black text-blue-600 leading-none mb-1">{o.waga} <span className="text-sm text-blue-400">t</span></p>
-                                                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Ilość</p>
-                                            </div>
+                                            <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-2 group-hover:text-blue-600 transition-colors">
+                                                {o.material}
+                                            </h2>
+                                            {o.pickup_hours && (
+                                                <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                                                    🕒 Odbiór: {o.pickup_hours === '24h' ? 'Całodobowo' : o.pickup_hours}
+                                                </p>
+                                            )}
                                         </div>
 
-                                        {/* STOPKA Z PRZYCISKIEM */}
-                                        <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
-                                            <span className="text-slate-300 text-[10px] font-black uppercase tracking-widest">ID: #{o.id}</span>
+                                        {/* CENA I WAGA */}
+                                        <div className="text-right bg-slate-50 p-4 rounded-2xl border border-slate-100 min-w-[120px]">
+                                            {o.cena > 0 ? (
+                                                <>
+                                                    <p className="text-2xl font-black text-slate-900 leading-none mb-1">{o.cena} <span className="text-sm text-slate-400 font-bold">zł</span></p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cena za tonę</p>
+                                                </>
+                                            ) : (
+                                                <p className="text-sm font-black text-slate-400 uppercase">Do negocjacji</p>
+                                            )}
 
-                                            <a href={`tel:${o.telefon}`} className="bg-slate-900 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-200 hover:-translate-y-0.5 active:scale-95 uppercase tracking-tight text-sm">
-                                                <span>📞</span> Zadzwoń: {o.telefon}
-                                            </a>
+                                            <div className="w-full h-px bg-slate-200 my-3"></div>
+
+                                            <p className="text-xl font-black text-blue-600 leading-none mb-1">{o.waga} <span className="text-sm text-blue-400">t</span></p>
+                                            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Ilość</p>
                                         </div>
+                                    </div>
+
+                                    {/* Przycisk zachęcający do kliknięcia */}
+                                    <div className="mt-4 mb-2 flex justify-center">
+                                        <span className="bg-blue-50 text-blue-600 text-xs font-bold px-4 py-2 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center gap-2 shadow-sm">
+                                            Zobacz szczegóły <ArrowRight size={14} />
+                                        </span>
+                                    </div>
+
+                                    {/* STOPKA Z PRZYCISKIEM */}
+                                    <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
+                                        <span className="text-slate-300 text-[10px] font-black uppercase tracking-widest">ID: #{o.id}</span>
+
+                                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `tel:${o.telefon}`; }} className="bg-slate-900 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-200 hover:-translate-y-0.5 active:scale-95 uppercase tracking-tight text-sm">
+                                            <span>📞</span> Zadzwoń: {o.telefon}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
+                            </Link>
                         ))}
 
                         {filtrowaneOferty.length === 0 && (

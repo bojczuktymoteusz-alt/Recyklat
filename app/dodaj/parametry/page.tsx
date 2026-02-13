@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -9,25 +9,31 @@ export default function ParametryDetailsPage() {
     const [loading, setLoading] = useState(false);
     const [step1Data, setStep1Data] = useState<any>(null);
 
-    // --- TWOJE STANY (TUTAJ JE WKLEJASZ) ---
+    // --- TWOJE STANY ---
     const [bdo, setBdo] = useState("");
-    const [cena, setCena] = useState(""); // Pobierana w tym kroku od użytkownika
+    const [cena, setCena] = useState("");
     const [impurity, setImpurity] = useState("");
     const [form, setForm] = useState("");
     const [certs, setCerts] = useState<string[]>([]);
     const [logistics, setLogistics] = useState<string[]>([]);
     const [pickupHours, setPickupHours] = useState("8-16");
     const [description, setDescription] = useState("");
-    const [hasExtraDocs, setHasExtraDocs] = useState(false); // Stan dla przycisku dokumentacji foto
+    const [hasExtraDocs, setHasExtraDocs] = useState(false);
 
 
-    // Pobieramy dane z Kroku 1 (LocalStorage)
+    // Pobieramy dane z Kroku 1 i automatycznie ustawiamy BDO
     useEffect(() => {
         const savedData = localStorage.getItem("temp_offer");
         if (!savedData) {
             router.push("/dodaj");
         } else {
-            setStep1Data(JSON.parse(savedData));
+            const parsedData = JSON.parse(savedData);
+            setStep1Data(parsedData);
+
+            // --- AUTOMATYCZNE BDO Z KROKU 1 ---
+            if (parsedData.bdo_code) {
+                setBdo(parsedData.bdo_code);
+            }
         }
     }, [router]);
 
@@ -48,17 +54,15 @@ export default function ParametryDetailsPage() {
 
         // Łączymy dane z Kroku 1 i Kroku 2
         const finalOffer = {
-            // --- DANE Z KROKU 1 (z LocalStorage) ---
+            // --- DANE Z KROKU 1 ---
             material: step1Data.material,
             waga: step1Data.waga,
-            // cena: step1Data.cena,  <-- USUŃ TO STĄD! (To był błąd)
             lokalizacja: step1Data.lokalizacja,
             telefon: step1Data.telefon,
             zdjecie_url: step1Data.zdjecie_url,
 
-            // --- DANE Z KROKU 2 (z formularza, który widzisz) ---
-            cena: parseFloat(cena) || 0,        // <--- WSTAW TO TUTAJ! (Pobieramy z wpisanego pola)
-
+            // --- DANE Z KROKU 2 ---
+            cena: parseFloat(cena) || 0,
             bdo_code: bdo,
             impurity: parseFloat(impurity) || 0,
             form: form,
@@ -71,7 +75,6 @@ export default function ParametryDetailsPage() {
             status: 'aktywna',
             created_at: new Date(),
         };
-
 
         const { error } = await supabase.from('oferty').insert([finalOffer]);
 
@@ -106,7 +109,6 @@ export default function ParametryDetailsPage() {
                 <p className="text-xs font-bold text-slate-400 mb-8">Uzupełnij szczegóły techniczne Twojego towaru</p>
 
                 <form onSubmit={handleFinalSubmit} className="space-y-6">
-                    {/* BDO i Zanieczyszczenie */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Kod BDO</label>

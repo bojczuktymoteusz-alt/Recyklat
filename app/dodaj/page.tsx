@@ -1,13 +1,20 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase'; // Upewnij się, że ścieżka jest ok
+import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // Potrzebne do przejścia dalej
+import { useRouter } from 'next/navigation';
 
-const KATEGORIE = [
-    "Folia LDPE (stretch)", "Folia kolorowa", "Tworzywa sztuczne (mix)",
-    "Makulatura (karton)", "Makulatura (gazeta)", "Złom stalowy",
-    "Złom kolorowy", "Drewno / Palety", "Inne"
+// 1. ROZSZERZONA LISTA Z KODAMI BDO
+const KATEGORIE_Z_BDO = [
+    { nazwa: "Folia LDPE (stretch)", bdo: "15 01 02" },
+    { nazwa: "Folia kolorowa", bdo: "15 01 02" },
+    { nazwa: "Tworzywa sztuczne (mix)", bdo: "16 01 19" },
+    { nazwa: "Makulatura (karton)", bdo: "15 01 01" },
+    { nazwa: "Makulatura (gazeta)", bdo: "15 01 01" },
+    { nazwa: "Złom stalowy", bdo: "17 04 05" },
+    { nazwa: "Złom kolorowy", bdo: "17 04 01" },
+    { nazwa: "Drewno / Palety", bdo: "15 01 03" },
+    { nazwa: "Inne", bdo: "" }
 ];
 
 const getIcon = (material: string) => {
@@ -21,20 +28,20 @@ const getIcon = (material: string) => {
 };
 
 export default function DodajOferteKrok1() {
-    const router = useRouter(); // Kierownica do zmiany strony
+    const router = useRouter();
 
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
     const [lokalizacja, setLokalizacja] = useState('');
     const [telefon, setTelefon] = useState('');
 
-    // Zdjęcia
+    // Dodatkowy stan na kod BDO, który "przesuniemy" do kroku 2
+    const [autoBdo, setAutoBdo] = useState('');
+
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
-
     const [loading, setLoading] = useState(false);
 
-    // Obsługa wklejania (Paste)
     useEffect(() => {
         const handlePaste = (e: ClipboardEvent) => {
             const item = e.clipboardData?.items[0];
@@ -50,15 +57,12 @@ export default function DodajOferteKrok1() {
         return () => window.removeEventListener('paste', handlePaste);
     }, []);
 
-    // Funkcja uploadu zdjęcia (robimy to już w kroku 1, żeby nie zgubić pliku)
     const uploadImage = async (fileToUpload: File) => {
         const fileExt = fileToUpload.name.split('.').pop() || 'png';
         const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
         const filePath = `${fileName}`;
-
         const { error: uploadError } = await supabase.storage.from('oferty-zdjecia').upload(filePath, fileToUpload);
         if (uploadError) throw uploadError;
-
         const { data } = supabase.storage.from('oferty-zdjecia').getPublicUrl(filePath);
         return data.publicUrl;
     };
@@ -69,28 +73,23 @@ export default function DodajOferteKrok1() {
 
         try {
             let uploadedImageUrl = '';
-
-            // Jeśli jest zdjęcie, wysyłamy je teraz
             if (file) {
                 uploadedImageUrl = await uploadImage(file);
             }
 
-            // Pakujemy dane do "walizki" (LocalStorage)
             const step1Data = {
                 material,
                 waga: parseFloat(waga),
                 lokalizacja,
                 telefon,
-                zdjecie_url: uploadedImageUrl
+                zdjecie_url: uploadedImageUrl,
+                bdo_code: autoBdo // ZAPISUJEMY KOD BDO DO WALIZKI
             };
 
             localStorage.setItem('temp_offer', JSON.stringify(step1Data));
-
-            // Przechodzimy do Kroku 2
             router.push('/dodaj/parametry');
-
         } catch (err: any) {
-            alert('Błąd podczas przetwarzania zdjęcia: ' + err.message);
+            alert('Błąd: ' + err.message);
             setLoading(false);
         }
     };
@@ -107,22 +106,30 @@ export default function DodajOferteKrok1() {
                 </div>
 
                 <form onSubmit={handleDalej} className="space-y-4">
-                    {/* Wybór materiału */}
+                    {/* Wybór materiału - POPRAWIONY */}
                     <div>
                         <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-1 ml-1">
                             Rodzaj materiału {material && <span>{getIcon(material)}</span>}
                         </label>
                         <select
                             required
-                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-semibold text-slate-900 appearance-none"
-                            value={material} onChange={(e) => setMaterial(e.target.value)}
+                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-semibold text-slate-900 appearance-none transition-all cursor-pointer"
+                            value={material}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setMaterial(val);
+                                // Znajdź BDO dla tego surowca
+                                const found = KATEGORIE_Z_BDO.find(item => item.nazwa === val);
+                                if (found) setAutoBdo(found.bdo);
+                            }}
                         >
                             <option value="" disabled>-- Wybierz z listy --</option>
-                            {KATEGORIE.map(kat => <option key={kat} value={kat}>{kat}</option>)}
+                            {KATEGORIE_Z_BDO.map(kat => (
+                                <option key={kat.nazwa} value={kat.nazwa}>{kat.nazwa}</option>
+                            ))}
                         </select>
                     </div>
 
-                    {/* Waga i Telefon */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Waga towaru</label>
@@ -145,7 +152,6 @@ export default function DodajOferteKrok1() {
                         </div>
                     </div>
 
-                    {/* Lokalizacja */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Lokalizacja</label>
                         <input
@@ -155,7 +161,6 @@ export default function DodajOferteKrok1() {
                         />
                     </div>
 
-                    {/* Zdjęcie (Drag & Drop) */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Zdjęcie (Opcjonalne)</label>
                         <div
