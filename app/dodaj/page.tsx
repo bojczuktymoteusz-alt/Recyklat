@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import imageCompression from 'browser-image-compression';
 
 // 1. ROZSZERZONA LISTA Z KODAMI BDO
 const KATEGORIE_Z_BDO = [
@@ -58,13 +59,31 @@ export default function DodajOferteKrok1() {
     }, []);
 
     const uploadImage = async (fileToUpload: File) => {
-        const fileExt = fileToUpload.name.split('.').pop() || 'png';
-        const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
-        const { error: uploadError } = await supabase.storage.from('oferty-zdjecia').upload(filePath, fileToUpload);
-        if (uploadError) throw uploadError;
-        const { data } = supabase.storage.from('oferty-zdjecia').getPublicUrl(filePath);
-        return data.publicUrl;
+        // Opcje kompresji
+        const options = {
+            maxSizeMB: 1, // Max 1MB
+            maxWidthOrHeight: 1920, // Zmniejsz rozdzielczość jeśli za duża
+            useWebWorker: true
+        };
+
+        try {
+            console.log("Rozpoczynam kompresję...", fileToUpload.size / 1024 / 1024, "MB");
+            const compressedFile = await imageCompression(fileToUpload, options);
+            console.log("Po kompresji:", compressedFile.size / 1024 / 1024, "MB");
+
+            const fileExt = compressedFile.name.split('.').pop() || 'png';
+            const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { error: uploadError } = await supabase.storage.from('oferty-zdjecia').upload(filePath, compressedFile);
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage.from('oferty-zdjecia').getPublicUrl(filePath);
+            return data.publicUrl;
+        } catch (error) {
+            console.error("Błąd kompresji lub uploadu:", error);
+            throw error; // Rzuć dalej, żeby obsłużyć w catch handleDalej
+        }
     };
 
     const handleDalej = async (e: React.FormEvent) => {
