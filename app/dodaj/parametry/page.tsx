@@ -83,7 +83,8 @@ export default function ParametryDetailsPage() {
             setLoading(false);
         } else {
             localStorage.removeItem("temp_offer");
-            router.push("/gielda");
+            setLoading(false);
+            router.push("/dodano");
         }
     };
 
@@ -215,10 +216,12 @@ export default function ParametryDetailsPage() {
                     </div>
 
                     <button
-                        disabled={loading} type="submit"
-                        className="w-full bg-green-500 text-white p-5 rounded-2xl font-black text-xl hover:bg-green-600 transition-all shadow-lg active:scale-95 disabled:bg-slate-300 uppercase tracking-tight"
+                        disabled={loading}
+                        type="submit"
+                        className={`w-full p-5 rounded-2xl font-black text-xl transition-all shadow-lg active:scale-95 uppercase tracking-tight flex items-center justify-center gap-3 ${loading ? 'bg-slate-300 text-slate-500' : 'bg-green-500 text-white hover:bg-green-600'
+                            }`}
                     >
-                        {loading ? 'Zapisywanie...' : 'Opublikuj ofertę 🎉'}
+                        {loading ? 'Przesyłanie danych...' : 'Opublikuj ofertę 🎉'}
                     </button>
                 </form>
             </div>

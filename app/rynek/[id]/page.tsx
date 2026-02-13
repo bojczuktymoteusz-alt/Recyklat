@@ -21,7 +21,7 @@ export default function SzczegolyOferty() {
 
             if (error) {
                 console.error('Błąd:', error);
-                router.push('/gielda');
+                router.push('/rynek');
             } else {
                 setOferta(data);
             }
@@ -43,7 +43,7 @@ export default function SzczegolyOferty() {
             alert("Błąd: " + error.message);
         } else {
             alert("Oferta usunięta pomyślnie.");
-            router.push('/gielda');
+            router.push('/rynek');
         }
     };
 
@@ -55,7 +55,7 @@ export default function SzczegolyOferty() {
             {/* Header */}
             <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <Link href="/gielda" className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors font-semibold">
+                    <Link href="/rynek" className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors font-semibold">
                         <ArrowLeft size={20} />
                         <span>Powrót do giełdy</span>
                     </Link>
