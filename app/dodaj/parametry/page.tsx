@@ -12,6 +12,7 @@ export default function ParametryDetailsPage() {
     // --- TWOJE STANY ---
     const [bdo, setBdo] = useState("");
     const [cena, setCena] = useState("");
+    const [email, setEmail] = useState(""); // <-- NOWY STAN DLA MAILA
     const [impurity, setImpurity] = useState("");
     const [form, setForm] = useState("");
     const [certs, setCerts] = useState<string[]>([]);
@@ -19,7 +20,6 @@ export default function ParametryDetailsPage() {
     const [pickupHours, setPickupHours] = useState("8-16");
     const [description, setDescription] = useState("");
     const [hasExtraDocs, setHasExtraDocs] = useState(false);
-
 
     // Pobieramy dane z Kroku 1 i automatycznie ustawiamy BDO
     useEffect(() => {
@@ -63,6 +63,7 @@ export default function ParametryDetailsPage() {
 
             // --- DANE Z KROKU 2 ---
             cena: parseFloat(cena) || 0,
+            email: email || null, // <-- DODANY EMAIL DO BAZY
             bdo_code: bdo,
             impurity: parseFloat(impurity) || 0,
             form: form,
@@ -110,6 +111,8 @@ export default function ParametryDetailsPage() {
                 <p className="text-xs font-bold text-slate-400 mb-8">Uzupełnij szczegóły techniczne Twojego towaru</p>
 
                 <form onSubmit={handleFinalSubmit} className="space-y-6">
+
+                    {/* CZYSTA SIATKA 2x2: BDO, Cena, Zanieczyszczenie, E-mail */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Kod BDO</label>
@@ -144,18 +147,45 @@ export default function ParametryDetailsPage() {
                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">%</span>
                             </div>
                         </div>
+                        {/* 4. MIEJSCE W SIATCE: E-mail */}
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                                E-mail <span className="text-slate-400 font-normal text-[10px]">(Opcjonalne)</span>
+                            </label>
+                            <input
+                                type="email"
+                                placeholder="biuro@firma.pl"
+                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
+                        </div>
                     </div>
 
-                    {/* Forma towaru */}
+                    {/* Forma towaru - Lista rozwijana */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Forma towaru</label>
-                        <input
-                            required type="text" placeholder="np. bela, luzem, mielony"
-                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                            value={form} onChange={(e) => setForm(e.target.value)}
-                        />
+                        <div className="relative">
+                            <select
+                                required
+                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none"
+                                value={form}
+                                onChange={(e) => setForm(e.target.value)}
+                            >
+                                <option value="" disabled className="text-slate-400">wybierz:</option>
+                                <option value="Bela">Bela</option>
+                                <option value="Luzem">Luzem</option>
+                                <option value="Przemiał/Mielony">Przemiał / Mielony</option>
+                                <option value="Regranulat">Regranulat</option>
+                                <option value="Odpad poprodukcyjny">Odpad poprodukcyjny</option>
+                                <option value="Inne">Inne</option>
+                            </select>
+                            {/* Mała strzałeczka z boku dla lepszego wyglądu (opcjonalnie, wymaga ChevronDown z lucide-react, ale zadziała i bez) */}
+                            <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-500">
+                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                            </div>
+                        </div>
                     </div>
-
                     {/* Certyfikaty (Multi-select style) */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Dokumenty / Certyfikaty</label>
@@ -164,9 +194,9 @@ export default function ParametryDetailsPage() {
                                 <button
                                     key={cert} type="button"
                                     onClick={() => toggleSelection(cert, certs, setCerts)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${certs.includes(cert)
-                                        ? "bg-blue-500 border-blue-500 text-white"
-                                        : "bg-white border-slate-100 text-slate-500 hover:border-blue-200"
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all ${certs.includes(cert)
+                                        ? "bg-blue-600 text-white border-blue-600"
+                                        : "bg-white text-slate-500 border-slate-200 hover:border-blue-400"
                                         }`}
                                 >
                                     {cert}
@@ -177,15 +207,15 @@ export default function ParametryDetailsPage() {
 
                     {/* Logistyka */}
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Logistyka i Transport</label>
-                        <div className="flex gap-2">
-                            {["Odbiór własny", "Zapewniam transport"].map(opt => (
+                        <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Logistyka</label>
+                        <div className="flex flex-wrap gap-2">
+                            {["Transport sprzedającego", "Transport kupującego", "Odbiór własny"].map(opt => (
                                 <button
                                     key={opt} type="button"
                                     onClick={() => toggleSelection(opt, logistics, setLogistics)}
-                                    className={`flex-1 p-4 rounded-2xl text-sm font-bold transition-all border-2 ${logistics.includes(opt)
-                                        ? "bg-slate-900 border-slate-900 text-white"
-                                        : "bg-white border-slate-100 text-slate-500 hover:border-slate-200"
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all ${logistics.includes(opt)
+                                        ? "bg-slate-900 text-white border-slate-900"
+                                        : "bg-white text-slate-500 border-slate-200 hover:border-slate-400"
                                         }`}
                                 >
                                     {opt}
@@ -194,35 +224,45 @@ export default function ParametryDetailsPage() {
                         </div>
                     </div>
 
-                    {/* Godziny odbioru */}
+                    {/* Godziny i Opis */}
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Preferowane godziny odbioru</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Godziny odbioru</label>
                         <input
-                            type="text" placeholder="np. 8:00 - 16:00"
+                            type="text"
                             className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
                             value={pickupHours} onChange={(e) => setPickupHours(e.target.value)}
                         />
                     </div>
 
-                    {/* Opis */}
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Opis dodatkowy (dla kupującego)</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Opis dodatkowy</label>
                         <textarea
                             rows={3}
-                            placeholder="Wpisz dodatkowe informacje o towarze..."
-                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 resize-none"
+                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
                             value={description} onChange={(e) => setDescription(e.target.value)}
                         />
                     </div>
 
+                    <div className="flex items-center gap-3 p-2 bg-blue-50 rounded-xl border border-blue-100">
+                        <input
+                            type="checkbox"
+                            id="extraDocs"
+                            checked={hasExtraDocs}
+                            onChange={(e) => setHasExtraDocs(e.target.checked)}
+                            className="w-5 h-5 accent-blue-600"
+                        />
+                        <label htmlFor="extraDocs" className="text-sm font-bold text-blue-800 cursor-pointer">
+                            Posiadam dodatkową dokumentację zdjęciową
+                        </label>
+                    </div>
+
                     <button
-                        disabled={loading}
-                        type="submit"
-                        className={`w-full p-5 rounded-2xl font-black text-xl transition-all shadow-lg active:scale-95 uppercase tracking-tight flex items-center justify-center gap-3 ${loading ? 'bg-slate-300 text-slate-500' : 'bg-green-500 text-white hover:bg-green-600'
-                            }`}
+                        disabled={loading} type="submit"
+                        className="w-full bg-green-600 text-white p-5 rounded-2xl font-black text-xl hover:bg-green-500 transition-all shadow-lg active:scale-95 disabled:bg-slate-400 uppercase tracking-tight mt-4"
                     >
-                        {loading ? 'Przesyłanie danych...' : 'Opublikuj ofertę 🎉'}
+                        {loading ? 'Zapisywanie...' : 'Opublikuj Ofertę ✔'}
                     </button>
+
                 </form>
             </div>
         </main>
