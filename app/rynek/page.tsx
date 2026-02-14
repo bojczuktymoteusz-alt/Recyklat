@@ -37,7 +37,8 @@ const KATEGORIE = [
     { nazwa: "Tworzywa", ikona: "♻️" },
     { nazwa: "Makulatura", ikona: "📄" },
     { nazwa: "Złom", ikona: "🔩" },
-    { nazwa: "Drewno", ikona: "🪵" }
+    { nazwa: "Drewno", ikona: "🟫" },
+    { nazwa: "Inne", ikona: "❓" }
 ];
 
 const getIcon = (material: string) => {
