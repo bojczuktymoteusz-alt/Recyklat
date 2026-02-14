@@ -236,7 +236,7 @@ export default function ParametryDetailsPage() {
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Logistyka</label>
                         <div className="flex flex-wrap gap-2">
-                            {["Transport sprzedającego", "Transport kupującego", "Odbiór własny"].map(opt => (
+                            {["Transport sprzedającego", "Odbiór własny"].map(opt => (
                                 <button
                                     key={opt} type="button"
                                     onClick={() => toggleSelection(opt, logistics, setLogistics)}

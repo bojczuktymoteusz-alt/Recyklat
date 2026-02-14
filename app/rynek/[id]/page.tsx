@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
     ArrowLeft, MapPin, Phone, Info, Truck,
-    Clock, Trash2, Mail, CheckCircle, Scale
+    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -162,6 +162,41 @@ export default function SzczegolyOferty() {
                                 <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Postać</p>
                                 <p className="font-black text-slate-700 text-lg uppercase">{oferta.form || 'Luzem'}</p>
                             </div>
+                        </div>
+
+                        {/* SEKCJA: CERTYFIKATY I DOKUMENTY */}
+                        <div className="bg-white p-8 rounded-[40px] border shadow-sm mt-6">
+                            <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
+                                <Award size={16} className="text-purple-500" /> Dokumentacja i Jakość
+                            </h3>
+
+                            {oferta.certificates && (Array.isArray(oferta.certificates) ? oferta.certificates.length > 0 : oferta.certificates.length > 0) ? (
+                                <div className="p-5 bg-purple-50 rounded-[24px] border border-purple-100">
+                                    <p className="text-[10px] uppercase font-black text-purple-400 mb-3 tracking-widest">
+                                        Gwarantowane dokumenty:
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(Array.isArray(oferta.certificates)
+                                            ? oferta.certificates
+                                            : oferta.certificates.split(',')
+                                        ).map((cert: string, index: number) => (
+                                            <div
+                                                key={index}
+                                                className="bg-white text-purple-700 px-4 py-2 rounded-xl text-[11px] font-black border border-purple-200 shadow-sm flex items-center gap-2"
+                                            >
+                                                <ShieldCheck size={14} className="text-purple-400" />
+                                                {cert.trim()}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-6 bg-slate-50 rounded-[24px] border border-slate-100 border-dashed text-center">
+                                    <p className="text-slate-400 font-bold text-sm italic">
+                                        Sprzedający nie wskazał dodatkowych certyfikatów.
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm">
