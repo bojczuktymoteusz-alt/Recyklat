@@ -4,9 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
-// Dodaj: Mountain (jako sterta/hałda), ShoppingBag (worek), Layers (paleta), Archive (bela/kostka)
 import { Archive, Mountain, ShoppingBag, Layers, Box, ArrowRight } from 'lucide-react';
-
 
 // Zaktualizowany interfejs zgodny z Twoją bazą
 interface Oferta {
@@ -15,6 +13,7 @@ interface Oferta {
     waga: number;
     cena: number; // Nowe pole
     lokalizacja: string;
+    wojewodztwo?: string; // NOWE POLE (opcjonalne dla starych ofert)
     telefon: string;
     zdjecie_url?: string;
     created_at: string;
@@ -22,24 +21,16 @@ interface Oferta {
     pickup_hours?: string; // Godziny
     extra_photo_docs?: boolean; // Dokumentacja zdjęciowa
 }
+
 const getFormIcon = (formName: string) => {
     const name = formName.toLowerCase();
-
-    // 1. LUZEM -> Ikona góry/hałdy (symbolizuje stertę towaru)
     if (name.includes('luz')) return <Mountain size={14} />;
-
-    // 2. BELA -> Ikona archiwum (symbolizuje spiętą pasami kostkę)
     if (name.includes('bela') || name.includes('bel')) return <Archive size={14} />;
-
-    // 3. BIG BAG -> Ikona torby/worka
     if (name.includes('bag') || name.includes('worek')) return <ShoppingBag size={14} />;
-
-    // 4. PALETA -> Ikona warstw (symbolizuje towar na palecie)
     if (name.includes('palet')) return <Layers size={14} />;
-
-    // 5. DOMYŚLNA -> Zwykłe pudełko, jeśli nie rozpozna formy
     return <Box size={14} />;
 };
+
 const KATEGORIE = [
     { nazwa: "Wszystko", ikona: "🌐" },
     { nazwa: "Folia", ikona: "🧻" },
@@ -78,12 +69,13 @@ export default function Rynek() {
             wyniki = wyniki.filter(o => o.material.toLowerCase().includes(aktywnyFiltr.toLowerCase()));
         }
 
-        // 2. Filtruj po tekście
+        // 2. Filtruj po tekście (Zaktualizowane o wyszukiwanie po województwie!)
         if (szukanaFraza) {
             const fraza = szukanaFraza.toLowerCase();
             wyniki = wyniki.filter(o =>
                 o.material.toLowerCase().includes(fraza) ||
-                o.lokalizacja.toLowerCase().includes(fraza)
+                o.lokalizacja.toLowerCase().includes(fraza) ||
+                (o.wojewodztwo && o.wojewodztwo.toLowerCase().includes(fraza))
             );
         }
 
@@ -110,9 +102,12 @@ export default function Rynek() {
                 {/* NAGŁÓWEK */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 gap-6">
                     <div>
-                        <h1 className="text-4xl font-black tracking-tighter uppercase leading-none text-slate-900">
-                            Giełda <span className="text-blue-600">Surowców</span>
-                        </h1>
+                        {/* INTERAKTYWNY NAGŁÓWEK */}
+                        <Link href="/" className="inline-block hover:scale-[1.02] active:scale-95 transition-transform">
+                            <h1 className="text-4xl font-black tracking-tighter uppercase leading-none text-slate-900 cursor-pointer">
+                                Giełda <span className="text-blue-600">Surowców</span>
+                            </h1>
+                        </Link>
                         <p className="text-slate-400 font-bold mt-2 uppercase text-xs tracking-widest">
                             Rynek hurtowy B2B • {wszystkieOferty.length} aktywnych ofert
                         </p>
@@ -160,93 +155,93 @@ export default function Rynek() {
                 ) : (
                     <div className="grid gap-6">
                         {filtrowaneOferty.map((o) => (
-                            <Link href={`/rynek/${o.id}`} key={o.id} className="block bg-white rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl border border-slate-100 hover:border-blue-100 transition-all duration-300 group no-underline text-inherit">                                <div className="flex flex-col md:flex-row h-full">
+                            <Link href={`/rynek/${o.id}`} key={o.id} className="block bg-white rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl border border-slate-100 hover:border-blue-100 transition-all duration-300 group no-underline text-inherit">
+                                <div className="flex flex-col md:flex-row h-full">
 
-                                {/* SEKCJA ZDJĘCIA */}
-                                <div className="w-full md:w-72 h-64 md:h-auto bg-slate-50 flex-shrink-0 relative overflow-hidden">
-                                    {o.zdjecie_url ? (
-                                        <img src={o.zdjecie_url} alt={o.material} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-8xl opacity-20 grayscale">
-                                            {getIcon(o.material)}
+                                    {/* SEKCJA ZDJĘCIA */}
+                                    <div className="w-full md:w-72 h-64 md:h-auto bg-slate-50 flex-shrink-0 relative overflow-hidden">
+                                        {o.zdjecie_url ? (
+                                            <img src={o.zdjecie_url} alt={o.material} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-8xl opacity-20 grayscale">
+                                                {getIcon(o.material)}
+                                            </div>
+                                        )}
+
+                                        {/* Badge Czasu */}
+                                        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur text-slate-700 text-[10px] px-3 py-1.5 rounded-full font-black uppercase tracking-wide shadow-sm">
+                                            🕒 {formatDistanceToNow(new Date(o.created_at), { addSuffix: true, locale: pl })}
                                         </div>
-                                    )}
 
-                                    {/* Badge Czasu */}
-                                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur text-slate-700 text-[10px] px-3 py-1.5 rounded-full font-black uppercase tracking-wide shadow-sm">
-                                        🕒 {formatDistanceToNow(new Date(o.created_at), { addSuffix: true, locale: pl })}
+                                        {/* Badge Dokumentacji (jeśli jest) */}
+                                        {o.extra_photo_docs && (
+                                            <div className="absolute bottom-4 left-4 bg-green-500 text-white text-[10px] px-3 py-1.5 rounded-full font-black uppercase tracking-wide shadow-lg flex items-center gap-1">
+                                                📸 Dokumentacja
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Badge Dokumentacji (jeśli jest) */}
-                                    {o.extra_photo_docs && (
-                                        <div className="absolute bottom-4 left-4 bg-green-500 text-white text-[10px] px-3 py-1.5 rounded-full font-black uppercase tracking-wide shadow-lg flex items-center gap-1">
-                                            📸 Dokumentacja
-                                        </div>
-                                    )}
-                                </div>
+                                    {/* SEKCJA TREŚCI */}
+                                    <div className="p-6 md:p-8 flex-grow flex flex-col justify-between relative">
 
-                                {/* SEKCJA TREŚCI */}
-                                <div className="p-6 md:p-8 flex-grow flex flex-col justify-between relative">
-
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div>
-                                            <div className="flex flex-wrap gap-2 mb-3">
-                                                <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider">
-                                                    📍 {o.lokalizacja}
-                                                </span>
-                                                {o.form && (
-                                                    <span className="bg-blue-50 text-blue-700 text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider border border-blue-100 flex items-center gap-1.5">
-                                                        {/* Wywołujemy naszą inteligentną funkcję */}
-                                                        {getFormIcon(o.form)}
-                                                        {o.form}
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div>
+                                                <div className="flex flex-wrap gap-2 mb-3">
+                                                    <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider">
+                                                        📍 {o.lokalizacja}{o.wojewodztwo && `, ${o.wojewodztwo}`}
                                                     </span>
+                                                    {o.form && (
+                                                        <span className="bg-blue-50 text-blue-700 text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider border border-blue-100 flex items-center gap-1.5">
+                                                            {getFormIcon(o.form)}
+                                                            {o.form}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-2 group-hover:text-blue-600 transition-colors">
+                                                    {o.material}
+                                                </h2>
+                                                {o.pickup_hours && (
+                                                    <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                                                        🕒 Odbiór: {o.pickup_hours === '24h' ? 'Całodobowo' : o.pickup_hours}
+                                                    </p>
                                                 )}
                                             </div>
-                                            <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-2 group-hover:text-blue-600 transition-colors">
-                                                {o.material}
-                                            </h2>
-                                            {o.pickup_hours && (
-                                                <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                                                    🕒 Odbiór: {o.pickup_hours === '24h' ? 'Całodobowo' : o.pickup_hours}
-                                                </p>
-                                            )}
+
+                                            {/* CENA I WAGA */}
+                                            <div className="text-right bg-slate-50 p-4 rounded-2xl border border-slate-100 min-w-[120px]">
+                                                {o.cena > 0 ? (
+                                                    <>
+                                                        <p className="text-2xl font-black text-slate-900 leading-none mb-1">{o.cena} <span className="text-sm text-slate-400 font-bold">zł</span></p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cena za tonę</p>
+                                                    </>
+                                                ) : (
+                                                    <p className="text-sm font-black text-slate-400 uppercase">Do negocjacji</p>
+                                                )}
+
+                                                <div className="w-full h-px bg-slate-200 my-3"></div>
+
+                                                <p className="text-xl font-black text-blue-600 leading-none mb-1">{o.waga} <span className="text-sm text-blue-400">t</span></p>
+                                                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Ilość</p>
+                                            </div>
                                         </div>
 
-                                        {/* CENA I WAGA */}
-                                        <div className="text-right bg-slate-50 p-4 rounded-2xl border border-slate-100 min-w-[120px]">
-                                            {o.cena > 0 ? (
-                                                <>
-                                                    <p className="text-2xl font-black text-slate-900 leading-none mb-1">{o.cena} <span className="text-sm text-slate-400 font-bold">zł</span></p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cena za tonę</p>
-                                                </>
-                                            ) : (
-                                                <p className="text-sm font-black text-slate-400 uppercase">Do negocjacji</p>
-                                            )}
-
-                                            <div className="w-full h-px bg-slate-200 my-3"></div>
-
-                                            <p className="text-xl font-black text-blue-600 leading-none mb-1">{o.waga} <span className="text-sm text-blue-400">t</span></p>
-                                            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Ilość</p>
+                                        {/* Przycisk zachęcający do kliknięcia */}
+                                        <div className="mt-4 mb-2 flex justify-center">
+                                            <span className="bg-blue-50 text-blue-600 text-xs font-bold px-4 py-2 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center gap-2 shadow-sm">
+                                                Zobacz szczegóły <ArrowRight size={14} />
+                                            </span>
                                         </div>
-                                    </div>
 
-                                    {/* Przycisk zachęcający do kliknięcia */}
-                                    <div className="mt-4 mb-2 flex justify-center">
-                                        <span className="bg-blue-50 text-blue-600 text-xs font-bold px-4 py-2 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center gap-2 shadow-sm">
-                                            Zobacz szczegóły <ArrowRight size={14} />
-                                        </span>
-                                    </div>
+                                        {/* STOPKA Z PRZYCISKIEM */}
+                                        <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
+                                            <span className="text-slate-300 text-[10px] font-black uppercase tracking-widest">ID: #{o.id}</span>
 
-                                    {/* STOPKA Z PRZYCISKIEM */}
-                                    <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
-                                        <span className="text-slate-300 text-[10px] font-black uppercase tracking-widest">ID: #{o.id}</span>
-
-                                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `tel:${o.telefon}`; }} className="bg-slate-900 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-200 hover:-translate-y-0.5 active:scale-95 uppercase tracking-tight text-sm">
-                                            <span>📞</span> Zadzwoń: {o.telefon}
-                                        </button>
+                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `tel:${o.telefon}`; }} className="bg-slate-900 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-200 hover:-translate-y-0.5 active:scale-95 uppercase tracking-tight text-sm">
+                                                <span>📞</span> Zadzwoń: {o.telefon}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
                             </Link>
                         ))}
 

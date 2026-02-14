@@ -12,7 +12,7 @@ export default function ParametryDetailsPage() {
     // --- TWOJE STANY ---
     const [bdo, setBdo] = useState("");
     const [cena, setCena] = useState("");
-    const [email, setEmail] = useState(""); // <-- NOWY STAN DLA MAILA
+    const [email, setEmail] = useState("");
     const [impurity, setImpurity] = useState("");
     const [form, setForm] = useState("");
     const [certs, setCerts] = useState<string[]>([]);
@@ -58,12 +58,13 @@ export default function ParametryDetailsPage() {
             material: step1Data.material,
             waga: step1Data.waga,
             lokalizacja: step1Data.lokalizacja,
+            wojewodztwo: step1Data.wojewodztwo, // <--- TUTAJ JEST NASZ ZGUBIONY ELEMENT!
             telefon: step1Data.telefon,
             zdjecie_url: step1Data.zdjecie_url,
 
             // --- DANE Z KROKU 2 ---
             cena: parseFloat(cena) || 0,
-            email: email || null, // <-- DODANY EMAIL DO BAZY
+            email: email || null,
             bdo_code: bdo,
             impurity: parseFloat(impurity) || 0,
             form: form,
@@ -147,7 +148,6 @@ export default function ParametryDetailsPage() {
                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">%</span>
                             </div>
                         </div>
-                        {/* 4. MIEJSCE W SIATCE: E-mail */}
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
                                 E-mail <span className="text-slate-400 font-normal text-[10px]">(Opcjonalne)</span>
@@ -172,7 +172,7 @@ export default function ParametryDetailsPage() {
                                 value={form}
                                 onChange={(e) => setForm(e.target.value)}
                             >
-                                <option value="" disabled className="text-slate-400">wybierz:</option>
+                                <option value="" disabled className="text-slate-400">Wybierz formę...</option>
                                 <option value="Bela">Bela</option>
                                 <option value="Luzem">Luzem</option>
                                 <option value="Przemiał/Mielony">Przemiał / Mielony</option>
@@ -180,13 +180,13 @@ export default function ParametryDetailsPage() {
                                 <option value="Odpad poprodukcyjny">Odpad poprodukcyjny</option>
                                 <option value="Inne">Inne</option>
                             </select>
-                            {/* Mała strzałeczka z boku dla lepszego wyglądu (opcjonalnie, wymaga ChevronDown z lucide-react, ale zadziała i bez) */}
                             <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-500">
                                 <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
                             </div>
                         </div>
                     </div>
-                    {/* Certyfikaty (Multi-select style) */}
+
+                    {/* Certyfikaty */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Dokumenty / Certyfikaty</label>
                         <div className="flex flex-wrap gap-2">
@@ -194,9 +194,9 @@ export default function ParametryDetailsPage() {
                                 <button
                                     key={cert} type="button"
                                     onClick={() => toggleSelection(cert, certs, setCerts)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all ${certs.includes(cert)
-                                        ? "bg-blue-600 text-white border-blue-600"
-                                        : "bg-white text-slate-500 border-slate-200 hover:border-blue-400"
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${certs.includes(cert)
+                                        ? "bg-blue-600 border-blue-600 text-white"
+                                        : "bg-white border-slate-200 text-slate-500 hover:border-blue-400"
                                         }`}
                                 >
                                     {cert}
@@ -213,9 +213,9 @@ export default function ParametryDetailsPage() {
                                 <button
                                     key={opt} type="button"
                                     onClick={() => toggleSelection(opt, logistics, setLogistics)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all ${logistics.includes(opt)
-                                        ? "bg-slate-900 text-white border-slate-900"
-                                        : "bg-white text-slate-500 border-slate-200 hover:border-slate-400"
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${logistics.includes(opt)
+                                        ? "bg-slate-900 border-slate-900 text-white"
+                                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-400"
                                         }`}
                                 >
                                     {opt}
@@ -224,21 +224,23 @@ export default function ParametryDetailsPage() {
                         </div>
                     </div>
 
-                    {/* Godziny i Opis */}
+                    {/* Godziny odbioru */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Godziny odbioru</label>
                         <input
-                            type="text"
+                            type="text" placeholder="np. 8:00 - 16:00"
                             className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
                             value={pickupHours} onChange={(e) => setPickupHours(e.target.value)}
                         />
                     </div>
 
+                    {/* Opis */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Opis dodatkowy</label>
                         <textarea
                             rows={3}
-                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
+                            placeholder="Wpisz dodatkowe informacje o towarze..."
+                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 resize-none"
                             value={description} onChange={(e) => setDescription(e.target.value)}
                         />
                     </div>
@@ -257,12 +259,13 @@ export default function ParametryDetailsPage() {
                     </div>
 
                     <button
-                        disabled={loading} type="submit"
-                        className="w-full bg-green-600 text-white p-5 rounded-2xl font-black text-xl hover:bg-green-500 transition-all shadow-lg active:scale-95 disabled:bg-slate-400 uppercase tracking-tight mt-4"
+                        disabled={loading}
+                        type="submit"
+                        className={`w-full p-5 rounded-2xl font-black text-xl transition-all shadow-lg active:scale-95 uppercase tracking-tight flex items-center justify-center gap-3 mt-4 ${loading ? 'bg-slate-300 text-slate-500' : 'bg-green-600 text-white hover:bg-green-500'
+                            }`}
                     >
                         {loading ? 'Zapisywanie...' : 'Opublikuj Ofertę ✔'}
                     </button>
-
                 </form>
             </div>
         </main>

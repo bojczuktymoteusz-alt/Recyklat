@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, MapPin, Phone, Info, Truck, Clock, Trash2 } from 'lucide-react';
+// Dodany import ikony Mail
+import { ArrowLeft, MapPin, Phone, Info, Truck, Clock, Trash2, Mail } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SzczegolyOferty() {
@@ -51,7 +52,7 @@ export default function SzczegolyOferty() {
     if (!oferta) return <div className="p-10 text-center">Nie znaleziono oferty.</div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-gray-50 flex flex-col relative">
             {/* Header */}
             <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -73,8 +74,8 @@ export default function SzczegolyOferty() {
                 </div>
             </div>
 
-            {/* Main Content - pb-60 zapewnia, że dół nie będzie ucięty */}
-            <div className="max-w-4xl mx-auto px-4 py-8 w-full pb-60">
+            {/* Main Content - pb-32 zapewnia miejsce na nowy dolny pasek */}
+            <div className="max-w-4xl mx-auto px-4 py-8 w-full pb-32">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                     {/* LEWA KOLUMNA */}
@@ -104,30 +105,9 @@ export default function SzczegolyOferty() {
                             </div>
                             <div className="flex items-center gap-2 text-gray-600 pt-4 border-t border-dashed">
                                 <MapPin size={20} className="text-green-500" />
-                                <span className="font-bold text-lg">{oferta.lokalizacja}</span>
+                                <span className="font-bold text-lg">{oferta.lokalizacja}{oferta.wojewodztwo && `, ${oferta.wojewodztwo}`}</span>
                             </div>
                         </div>
-
-                        {/* KONTAKT - z dodatkowym marginesem dolnym mb-10 */}
-                        <a
-                            href={`tel:${oferta.telefon}`}
-                            className="block bg-green-600 p-6 rounded-[32px] shadow-xl text-white hover:bg-green-700 transition-all transform hover:-translate-y-1 active:scale-95 group mb-10"
-                        >
-                            <h3 className="text-sm font-bold uppercase tracking-widest opacity-80 mb-3 flex items-center gap-2">
-                                <Phone size={16} /> Kontakt do sprzedawcy
-                            </h3>
-                            <div className="flex items-center justify-between">
-                                <span className="text-3xl font-black tracking-tighter">
-                                    {oferta.telefon}
-                                </span>
-                                <div className="bg-white/20 p-3 rounded-2xl">
-                                    <Phone size={24} fill="currentColor" />
-                                </div>
-                            </div>
-                            <p className="text-xs mt-4 font-medium py-2 border-t border-white/10 text-center uppercase tracking-widest">
-                                Kliknij, aby zadzwonić
-                            </p>
-                        </a>
                     </div>
 
                     {/* PRAWA KOLUMNA */}
@@ -138,13 +118,17 @@ export default function SzczegolyOferty() {
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Kod odpadu</p>
+                                    <p className="text-[15px] uppercase font-bold text-slate-400 mb-1">Kod odpadu</p>
                                     <p className="font-black text-slate-700">{oferta.bdo_code || 'N/A'}</p>
                                 </div>
                                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Zanieczyszczenie</p>
+                                    <p className="text-[15px] uppercase font-bold text-slate-400 mb-1">Zanieczyszczenie</p>
                                     <p className="font-black text-slate-700">{oferta.impurity}%</p>
                                 </div>
+                            </div>
+                            <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[15px] uppercase font-bold text-slate-400 mb-1">Postać</p>
+                                <p className="font-black text-slate-700">{oferta.form || 'Do ustalenia'}</p>
                             </div>
                         </div>
 
@@ -158,7 +142,7 @@ export default function SzczegolyOferty() {
                                         <Truck size={20} className="text-orange-600" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] uppercase font-bold text-slate-400">Transport</p>
+                                        <p className="text-[15px] uppercase font-bold text-slate-400">Transport</p>
                                         <p className="text-sm font-bold text-slate-700 leading-tight">{oferta.logistics || 'Do ustalenia'}</p>
                                     </div>
                                 </div>
@@ -167,7 +151,7 @@ export default function SzczegolyOferty() {
                                         <Clock size={20} className="text-blue-600" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] uppercase font-bold text-slate-400">Załadunek</p>
+                                        <p className="text-[15px] uppercase font-bold text-slate-400">Załadunek</p>
                                         <p className="text-sm font-bold text-slate-700 leading-tight">{oferta.pickup_hours || 'Brak danych'}</p>
                                     </div>
                                 </div>
@@ -184,6 +168,30 @@ export default function SzczegolyOferty() {
                         </div>
                     </div>
 
+                </div>
+            </div>
+
+            {/* NOWY DOLNY PASEK KONTAKTOWY */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-slate-200 p-4 z-50">
+                <div className="max-w-4xl mx-auto flex gap-3">
+                    <a
+                        href={`tel:${oferta.telefon}`}
+                        className="flex-1 bg-green-600 text-white rounded-2xl h-14 flex items-center justify-center gap-2 font-black text-lg shadow-lg shadow-green-200 active:scale-95 transition-all"
+                    >
+                        <Phone size={20} fill="currentColor" />
+                        ZADZWOŃ: {oferta.telefon}
+                    </a>
+                    {/* Przycisk Dodatkowy: E-mail (Szerszy, z tekstem) */}
+                    {oferta.email && (
+                        <a
+                            href={`mailto:${oferta.email}?subject=Giełda Recyklat: Zapytanie o ${oferta.material}`}
+                            className="px-6 bg-blue-50 text-blue-600 font-bold uppercase tracking-tight rounded-[20px] flex items-center justify-center gap-2 border border-blue-100 active:scale-95 transition-all shadow-sm"
+                            title="Wyślij wiadomość e-mail"
+                        >
+                            <Mail size={20} />
+                            <span>Napisz</span>
+                        </a>
+                    )}
                 </div>
             </div>
         </div>

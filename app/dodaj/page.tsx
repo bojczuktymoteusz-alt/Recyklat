@@ -18,6 +18,14 @@ const KATEGORIE_Z_BDO = [
     { nazwa: "Inne", bdo: "" }
 ];
 
+// LISTA WOJEWÓDZTW (alfabetycznie)
+const WOJEWODZTWA = [
+    "dolnośląskie", "kujawsko-pomorskie", "lubelskie", "lubuskie",
+    "łódzkie", "małopolskie", "mazowieckie", "opolskie",
+    "podkarpackie", "podlaskie", "pomorskie", "śląskie",
+    "świętokrzyskie", "warmińsko-mazurskie", "wielkopolskie", "zachodniopomorskie"
+];
+
 const getIcon = (material: string) => {
     const m = material.toLowerCase();
     if (m.includes('folia')) return '🧻';
@@ -33,12 +41,11 @@ export default function DodajOferteKrok1() {
 
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
-    const [lokalizacja, setLokalizacja] = useState('');
+    const [lokalizacja, setLokalizacja] = useState(''); // Miejscowość
+    const [wojewodztwo, setWojewodztwo] = useState(''); // NOWY STAN: Województwo
     const [telefon, setTelefon] = useState('');
 
-    // Dodatkowy stan na kod BDO, który "przesuniemy" do kroku 2
     const [autoBdo, setAutoBdo] = useState('');
-
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -59,18 +66,14 @@ export default function DodajOferteKrok1() {
     }, []);
 
     const uploadImage = async (fileToUpload: File) => {
-        // Opcje kompresji
         const options = {
-            maxSizeMB: 1, // Max 1MB
-            maxWidthOrHeight: 1920, // Zmniejsz rozdzielczość jeśli za duża
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
             useWebWorker: true
         };
 
         try {
-            console.log("Rozpoczynam kompresję...", fileToUpload.size / 1024 / 1024, "MB");
             const compressedFile = await imageCompression(fileToUpload, options);
-            console.log("Po kompresji:", compressedFile.size / 1024 / 1024, "MB");
-
             const fileExt = compressedFile.name.split('.').pop() || 'png';
             const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
             const filePath = `${fileName}`;
@@ -81,8 +84,8 @@ export default function DodajOferteKrok1() {
             const { data } = supabase.storage.from('oferty-zdjecia').getPublicUrl(filePath);
             return data.publicUrl;
         } catch (error) {
-            console.error("Błąd kompresji lub uploadu:", error);
-            throw error; // Rzuć dalej, żeby obsłużyć w catch handleDalej
+            console.error("Błąd kompresji/uploadu:", error);
+            throw error;
         }
     };
 
@@ -99,10 +102,11 @@ export default function DodajOferteKrok1() {
             const step1Data = {
                 material,
                 waga: parseFloat(waga),
-                lokalizacja,
+                lokalizacja, // Zostawiamy jako Miejscowość
+                wojewodztwo, // DODANE WOJEWÓDZTWO
                 telefon,
                 zdjecie_url: uploadedImageUrl,
-                bdo_code: autoBdo // ZAPISUJEMY KOD BDO DO WALIZKI
+                bdo_code: autoBdo
             };
 
             localStorage.setItem('temp_offer', JSON.stringify(step1Data));
@@ -125,7 +129,7 @@ export default function DodajOferteKrok1() {
                 </div>
 
                 <form onSubmit={handleDalej} className="space-y-4">
-                    {/* Wybór materiału - POPRAWIONY */}
+                    {/* Wybór materiału */}
                     <div>
                         <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-1 ml-1">
                             Rodzaj materiału {material && <span>{getIcon(material)}</span>}
@@ -137,7 +141,6 @@ export default function DodajOferteKrok1() {
                             onChange={(e) => {
                                 const val = e.target.value;
                                 setMaterial(val);
-                                // Znajdź BDO dla tego surowca
                                 const found = KATEGORIE_Z_BDO.find(item => item.nazwa === val);
                                 if (found) setAutoBdo(found.bdo);
                             }}
@@ -171,13 +174,29 @@ export default function DodajOferteKrok1() {
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Lokalizacja</label>
-                        <input
-                            required type="text" placeholder="np. Katowice, śląskie"
-                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                            value={lokalizacja} onChange={(e) => setLokalizacja(e.target.value)}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Województwo</label>
+                            <select
+                                required
+                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none transition-all cursor-pointer"
+                                value={wojewodztwo}
+                                onChange={(e) => setWojewodztwo(e.target.value)}
+                            >
+                                <option value="" disabled>-- wybierz --</option>
+                                {WOJEWODZTWA.map(w => (
+                                    <option key={w} value={w}>{w}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Miejscowość</label>
+                            <input
+                                required type="text" placeholder="np. Katowice"
+                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
+                                value={lokalizacja} onChange={(e) => setLokalizacja(e.target.value)}
+                            />
+                        </div>
                     </div>
 
                     <div>
