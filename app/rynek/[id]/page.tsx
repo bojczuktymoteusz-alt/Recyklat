@@ -2,8 +2,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-// Dodany import ikony Mail
-import { ArrowLeft, MapPin, Phone, Info, Truck, Clock, Trash2, Mail } from 'lucide-react';
+import {
+    ArrowLeft, MapPin, Phone, Info, Truck,
+    Clock, Trash2, Mail, CheckCircle, Scale
+} from 'lucide-react';
 import Link from 'next/link';
 
 export default function SzczegolyOferty() {
@@ -11,6 +13,7 @@ export default function SzczegolyOferty() {
     const router = useRouter();
     const [oferta, setOferta] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [czyToMoje, setCzyToMoje] = useState(false); // Stan sprawdzający właściciela
 
     useEffect(() => {
         async function fetchOferta() {
@@ -25,6 +28,11 @@ export default function SzczegolyOferty() {
                 router.push('/rynek');
             } else {
                 setOferta(data);
+                // SPRAWDZANIE WŁAŚCICIELA: Czy ID tej oferty jest w Twojej "kieszeni" (localStorage)
+                const mojeIds = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
+                if (mojeIds.includes(Number(id))) {
+                    setCzyToMoje(true);
+                }
             }
             setLoading(false);
         }
@@ -32,7 +40,7 @@ export default function SzczegolyOferty() {
     }, [id, router]);
 
     const usunOferte = async () => {
-        const potwierdzenie = confirm("Czy na pewno chcesz trwale usunąć tę ofertę?");
+        const potwierdzenie = confirm("Czy na pewno chcesz TRWALE usunąć tę ofertę z bazy danych?");
         if (!potwierdzenie) return;
 
         const { error } = await supabase
@@ -41,156 +49,173 @@ export default function SzczegolyOferty() {
             .eq('id', id);
 
         if (error) {
-            alert("Błąd: " + error.message);
+            alert("Błąd bazy: " + error.message);
         } else {
-            alert("Oferta usunięta pomyślnie.");
+            // Usuwamy też z localStorage, żeby nie śmieciło
+            const mojeIds = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
+            const noweIds = mojeIds.filter((oldId: number) => oldId !== Number(id));
+            localStorage.setItem('moje_oferty', JSON.stringify(noweIds));
+
+            alert("Oferta została usunięta.");
             router.push('/rynek');
         }
     };
 
-    if (loading) return <div className="p-10 text-center">Ładowanie szczegółów...</div>;
-    if (!oferta) return <div className="p-10 text-center">Nie znaleziono oferty.</div>;
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+            <div className="animate-spin text-4xl">♻️</div>
+        </div>
+    );
+
+    if (!oferta) return <div className="p-10 text-center font-black uppercase">Nie znaleziono oferty.</div>;
+
+    const jestSprzedane = oferta.status === 'sprzedane';
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col relative">
             {/* Header */}
-            <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
+            <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <Link href="/rynek" className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors font-semibold">
-                        <ArrowLeft size={20} />
-                        <span>Powrót do giełdy</span>
+                    <Link href="/rynek" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-bold uppercase text-xs tracking-widest">
+                        <ArrowLeft size={18} />
+                        <span>Powrót</span>
                     </Link>
 
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={usunOferte}
-                            className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-xl transition-all border border-red-100 text-sm font-bold"
-                        >
-                            <Trash2 size={16} />
-                            Usuń
-                        </button>
-                        <span className="text-xs text-gray-400 font-mono bg-gray-100 px-2 py-1 rounded">ID: {oferta.id}</span>
+                        {/* PRZYCISK USUŃ - Wyświetlany tylko jeśli oferta należy do Ciebie */}
+                        {czyToMoje && (
+                            <button
+                                onClick={usunOferte}
+                                className="flex items-center gap-2 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-xl transition-all border border-red-100 text-[10px] font-black uppercase"
+                            >
+                                <Trash2 size={14} />
+                                Usuń ogłoszenie
+                            </button>
+                        )}
+                        <span className="text-[10px] text-gray-400 font-black bg-gray-100 px-2 py-1 rounded uppercase">ID: #{oferta.id}</span>
                     </div>
                 </div>
             </div>
 
-            {/* Main Content - pb-32 zapewnia miejsce na nowy dolny pasek */}
+            {/* Main Content */}
             <div className="max-w-4xl mx-auto px-4 py-8 w-full pb-32">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-                    {/* LEWA KOLUMNA */}
+                    {/* LEWA KOLUMNA - ZDJĘCIE I TYTUŁ */}
                     <div className="space-y-6">
-                        <div className="aspect-square bg-white rounded-[32px] overflow-hidden border shadow-sm ring-1 ring-black/5">
+                        <div className="aspect-square bg-white rounded-[40px] overflow-hidden border shadow-sm relative">
                             {oferta.zdjecie_url ? (
-                                <img src={oferta.zdjecie_url} alt={oferta.material} className="w-full h-full object-cover" />
+                                <img
+                                    src={oferta.zdjecie_url}
+                                    alt={oferta.material}
+                                    className={`w-full h-full object-cover ${jestSprzedane ? 'grayscale opacity-50' : ''}`}
+                                />
                             ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-slate-50">
-                                    <div className="text-6xl mb-2 italic font-serif">?</div>
-                                    <span className="text-xs font-medium uppercase tracking-widest">Brak zdjęcia</span>
+                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-200 bg-slate-50 text-8xl font-black opacity-20">?</div>
+                            )}
+
+                            {jestSprzedane && (
+                                <div className="absolute inset-0 bg-red-600/30 backdrop-blur-[2px] flex items-center justify-center">
+                                    <div className="bg-white text-red-600 px-8 py-3 rounded-2xl font-black text-3xl uppercase tracking-tighter shadow-2xl -rotate-6 border-4 border-red-600">
+                                        Sprzedane
+                                    </div>
                                 </div>
                             )}
                         </div>
 
-                        <div className="bg-white p-6 rounded-[32px] border shadow-sm space-y-4">
-                            <h1 className="text-3xl font-black text-gray-900 leading-tight uppercase tracking-tight">
+                        <div className="bg-white p-8 rounded-[40px] border shadow-sm space-y-6">
+                            <h1 className={`text-4xl font-black tracking-tighter uppercase leading-none ${jestSprzedane ? 'text-gray-400' : 'text-slate-900'}`}>
                                 {oferta.material}
                             </h1>
-                            <div className="flex flex-wrap gap-3 items-center">
-                                <span className="bg-green-600 text-white px-4 py-2 rounded-2xl text-2xl font-black shadow-lg shadow-green-200">
+                            <div className="flex flex-wrap gap-3 items-center pt-2">
+                                <span className={`px-5 py-3 rounded-2xl text-2xl font-black shadow-lg ${jestSprzedane ? 'bg-gray-100 text-gray-400 shadow-none' : 'bg-green-600 text-white shadow-green-100'}`}>
                                     {oferta.cena} zł / t
                                 </span>
-                                <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-2xl text-lg font-bold border border-blue-100">
-                                    Dostępne: {oferta.waga} t
+                                <span className="bg-slate-50 text-slate-600 px-5 py-3 rounded-2xl text-lg font-bold border border-slate-100 flex items-center gap-2">
+                                    <Scale size={18} /> {oferta.waga} t
                                 </span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600 pt-4 border-t border-dashed">
-                                <MapPin size={20} className="text-green-500" />
-                                <span className="font-bold text-lg">{oferta.lokalizacja}{oferta.wojewodztwo && `, ${oferta.wojewodztwo}`}</span>
+                            <div className="flex items-center gap-2 text-gray-600 pt-6 border-t border-slate-50">
+                                <MapPin size={22} className="text-blue-500" />
+                                <span className="font-black text-xl uppercase tracking-tight">{oferta.lokalizacja}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* PRAWA KOLUMNA */}
+                    {/* PRAWA KOLUMNA - PARAMETRY */}
                     <div className="space-y-6">
-                        <div className="bg-white p-6 rounded-[32px] border shadow-sm">
-                            <h3 className="font-black text-gray-900 mb-4 flex items-center gap-2 text-sm uppercase tracking-widest">
-                                <Info size={18} className="text-blue-500" /> Parametry
+                        <div className="bg-white p-8 rounded-[40px] border shadow-sm">
+                            <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
+                                <Info size={16} /> Szczegóły
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <p className="text-[15px] uppercase font-bold text-slate-400 mb-1">Kod odpadu</p>
-                                    <p className="font-black text-slate-700">{oferta.bdo_code || 'N/A'}</p>
+                                <div className="p-5 bg-slate-50 rounded-[24px] border border-slate-100">
+                                    <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">BDO</p>
+                                    <p className="font-black text-slate-700 text-lg">{oferta.bdo_code || '---'}</p>
                                 </div>
-                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <p className="text-[15px] uppercase font-bold text-slate-400 mb-1">Zanieczyszczenie</p>
-                                    <p className="font-black text-slate-700">{oferta.impurity}%</p>
+                                <div className="p-5 bg-slate-50 rounded-[24px] border border-slate-100">
+                                    <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Zanieczyszczenie</p>
+                                    <p className="font-black text-slate-700 text-lg">{oferta.impurity}%</p>
                                 </div>
                             </div>
-                            <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <p className="text-[15px] uppercase font-bold text-slate-400 mb-1">Postać</p>
-                                <p className="font-black text-slate-700">{oferta.form || 'Do ustalenia'}</p>
+                            <div className="mt-4 p-5 bg-slate-50 rounded-[24px] border border-slate-100">
+                                <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Postać</p>
+                                <p className="font-black text-slate-700 text-lg uppercase">{oferta.form || 'Luzem'}</p>
                             </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-[32px] border shadow-sm">
-                            <h3 className="font-black text-gray-900 mb-4 flex items-center gap-2 text-sm uppercase tracking-widest">
-                                <Truck size={18} className="text-orange-500" /> Logistyka
+                        <div className="bg-white p-8 rounded-[40px] border shadow-sm">
+                            <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
+                                <Truck size={16} /> Logistyka
                             </h3>
                             <div className="space-y-4">
-                                <div className="flex items-start gap-4 p-3 hover:bg-slate-50 rounded-2xl transition-colors">
-                                    <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                                        <Truck size={20} className="text-orange-600" />
-                                    </div>
+                                <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-[24px] border border-slate-100">
+                                    <Truck size={20} className="text-blue-600 shrink-0" />
                                     <div>
-                                        <p className="text-[15px] uppercase font-bold text-slate-400">Transport</p>
-                                        <p className="text-sm font-bold text-slate-700 leading-tight">{oferta.logistics || 'Do ustalenia'}</p>
+                                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest leading-none mb-1">Transport</p>
+                                        <p className="text-sm font-black text-slate-700">{oferta.logistics || 'Do ustalenia'}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-start gap-4 p-3 hover:bg-slate-50 rounded-2xl transition-colors">
-                                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                                        <Clock size={20} className="text-blue-600" />
-                                    </div>
+                                <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-[24px] border border-slate-100">
+                                    <Clock size={20} className="text-blue-600 shrink-0" />
                                     <div>
-                                        <p className="text-[15px] uppercase font-bold text-slate-400">Załadunek</p>
-                                        <p className="text-sm font-bold text-slate-700 leading-tight">{oferta.pickup_hours || 'Brak danych'}</p>
+                                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest leading-none mb-1">Odbiór</p>
+                                        <p className="text-sm font-black text-slate-700">{oferta.pickup_hours || 'Brak danych'}</p>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-[32px] border shadow-sm">
-                            <h3 className="font-black text-gray-900 mb-2 text-sm uppercase tracking-widest">Opis</h3>
-                            <div className="p-4 bg-slate-50 rounded-2xl min-h-[100px]">
-                                <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">
-                                    {oferta.opis || 'Brak dodatkowego opisu dla tej oferty.'}
-                                </p>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
 
-            {/* NOWY DOLNY PASEK KONTAKTOWY */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-slate-200 p-4 z-50">
-                <div className="max-w-4xl mx-auto flex gap-3">
-                    <a
-                        href={`tel:${oferta.telefon}`}
-                        className="flex-1 bg-green-600 text-white rounded-2xl h-14 flex items-center justify-center gap-2 font-black text-lg shadow-lg shadow-green-200 active:scale-95 transition-all"
-                    >
-                        <Phone size={20} fill="currentColor" />
-                        ZADZWOŃ: {oferta.telefon}
-                    </a>
-                    {/* Przycisk Dodatkowy: E-mail (Szerszy, z tekstem) */}
-                    {oferta.email && (
-                        <a
-                            href={`mailto:${oferta.email}?subject=Giełda Recyklat: Zapytanie o ${oferta.material}`}
-                            className="px-6 bg-blue-50 text-blue-600 font-bold uppercase tracking-tight rounded-[20px] flex items-center justify-center gap-2 border border-blue-100 active:scale-95 transition-all shadow-sm"
-                            title="Wyślij wiadomość e-mail"
-                        >
-                            <Mail size={20} />
-                            <span>Napisz</span>
-                        </a>
+            {/* DOLNY PASEK KONTAKTOWY */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 p-4 z-50">
+                <div className="max-w-4xl mx-auto">
+                    {jestSprzedane ? (
+                        <div className="h-16 w-full bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-center gap-3">
+                            <CheckCircle size={24} className="text-red-600" />
+                            <span className="text-red-600 font-black uppercase tracking-tighter text-xl">Oferta zakończona</span>
+                        </div>
+                    ) : (
+                        <div className="flex gap-3">
+                            <a
+                                href={`tel:${oferta.telefon}`}
+                                className="flex-1 bg-slate-900 text-white rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight"
+                            >
+                                <Phone size={24} fill="currentColor" />
+                                Zadzwoń: {oferta.telefon}
+                            </a>
+                            {oferta.email && (
+                                <a
+                                    href={`mailto:${oferta.email}?subject=Zapytanie o: ${oferta.material}`}
+                                    className="px-8 bg-blue-50 text-blue-600 font-black uppercase tracking-widest rounded-[24px] flex items-center justify-center gap-2 border-2 border-blue-100 active:scale-95 transition-all"
+                                >
+                                    <Mail size={24} />
+                                    <span>Napisz</span>
+                                </a>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

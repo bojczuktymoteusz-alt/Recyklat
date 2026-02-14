@@ -50,19 +50,18 @@ export default function ParametryDetailsPage() {
         e.preventDefault();
         setLoading(true);
 
-        if (!step1Data) return;
+        if (!step1Data) {
+            alert("Błąd: Brak danych z pierwszego kroku!");
+            return;
+        }
 
-        // Łączymy dane z Kroku 1 i Kroku 2
         const finalOffer = {
-            // --- DANE Z KROKU 1 ---
             material: step1Data.material,
             waga: step1Data.waga,
             lokalizacja: step1Data.lokalizacja,
-            wojewodztwo: step1Data.wojewodztwo, // <--- TUTAJ JEST NASZ ZGUBIONY ELEMENT!
+            wojewodztwo: step1Data.wojewodztwo,
             telefon: step1Data.telefon,
             zdjecie_url: step1Data.zdjecie_url,
-
-            // --- DANE Z KROKU 2 ---
             cena: parseFloat(cena) || 0,
             email: email || null,
             bdo_code: bdo,
@@ -73,17 +72,45 @@ export default function ParametryDetailsPage() {
             pickup_hours: pickupHours,
             opis: description,
             extra_photo_docs: hasExtraDocs,
-
             status: 'aktywna',
             created_at: new Date(),
         };
 
-        const { error } = await supabase.from('oferty').insert([finalOffer]);
+        console.log("Próba zapisu oferty...", finalOffer);
+
+        // KLUCZOWE: .select() musi tu być, żeby Supabase oddał nam ID!
+        const { data, error } = await supabase
+            .from('oferty')
+            .insert([finalOffer])
+            .select();
 
         if (error) {
-            alert("Błąd zapisu: " + error.message);
+            console.error("Błąd Supabase:", error);
+            alert("Błąd zapisu w bazie: " + error.message);
             setLoading(false);
         } else {
+            console.log("Sukces! Otrzymano dane z bazy:", data);
+
+            if (data && data.length > 0) {
+                const noweId = data[0].id;
+
+                // POBIERANIE I ZAPISYWANIE
+                try {
+                    const suroweDane = localStorage.getItem('moje_oferty');
+                    const zapisaneOferty = suroweDane ? JSON.parse(suroweDane) : [];
+
+                    if (!zapisaneOferty.includes(noweId)) {
+                        zapisaneOferty.push(noweId);
+                        localStorage.setItem('moje_oferty', JSON.stringify(zapisaneOferty));
+                        console.log("ID zapisane w localStorage:", noweId);
+                    }
+                } catch (lsError) {
+                    console.error("Błąd localStorage:", lsError);
+                }
+            } else {
+                console.warn("Baza nie zwróciła ID! Sprawdź uprawnienia RLS w Supabase.");
+            }
+
             localStorage.removeItem("temp_offer");
             setLoading(false);
             router.push("/dodano");
