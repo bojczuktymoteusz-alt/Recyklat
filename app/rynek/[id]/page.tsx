@@ -15,6 +15,17 @@ export default function SzczegolyOferty() {
     const [loading, setLoading] = useState(true);
     const [czyToMoje, setCzyToMoje] = useState(false);
 
+    // --- FUNKCJA TŁUMACZĄCA WARTOŚĆ ZANIECZYSZCZENIA ---
+    const getImpurityLabel = (val: number | string) => {
+        const v = Number(val);
+        if (v === 2) return "Do 2% (Bardzo czysty)";
+        if (v === 5) return "Do 5% (Czysty)";
+        if (v === 10) return "Do 10% (Lekko zabrudzony)";
+        if (v === 20) return "Powyżej 10% (Zabrudzony)";
+        if (v === 99) return "Nie potrafię ocenić";
+        return v + "%"; // Fallback dla starych wpisów ręcznych
+    };
+
     useEffect(() => {
         async function fetchOferta() {
             const { data, error } = await supabase
@@ -178,7 +189,7 @@ export default function SzczegolyOferty() {
                                 </div>
                                 <div className="p-5 bg-slate-50 rounded-[24px] border border-slate-100">
                                     <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Zanieczyszczenie</p>
-                                    <p className="font-black text-slate-700 text-lg">{oferta.impurity}%</p>
+                                    <p className="font-black text-slate-700 text-lg">{getImpurityLabel(oferta.impurity)}</p>
                                 </div>
                             </div>
                             <div className="mt-4 p-5 bg-slate-50 rounded-[24px] border border-slate-100">

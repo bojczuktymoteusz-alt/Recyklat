@@ -173,7 +173,7 @@ export default function DodajOferteKrok1() {
                                     className="w-full p-4 pr-12 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
                                     value={waga} onChange={(e) => setWaga(e.target.value)}
                                 />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">t</span>
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-s font-black text-slate-400">/t</span>
                             </div>
                         </div>
                         <div>
@@ -202,9 +202,9 @@ export default function DodajOferteKrok1() {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Miejscowość</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Miejscowość lub Rejon</label>
                             <input
-                                required type="text" placeholder="np. Katowice"
+                                required type="text" placeholder="np. pod Łaskiem"
                                 className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
                                 value={lokalizacja} onChange={(e) => setLokalizacja(e.target.value)}
                             />
@@ -212,7 +212,7 @@ export default function DodajOferteKrok1() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Zdjęcie (Opcjonalne)</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Zdjęcie (opcjonalnie)</label>
                         <div
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={(e) => {
@@ -232,7 +232,7 @@ export default function DodajOferteKrok1() {
                             {preview ? (
                                 <img src={preview} alt="Podgląd" className="h-32 mx-auto rounded-lg object-cover shadow-md" />
                             ) : (
-                                <div className="text-slate-500 text-sm italic">Kliknij, przeciągnij lub wklej (Ctrl+V)</div>
+                                <div className="text-slate-500 text-sm italic">Kliknij lub wklej (Ctrl+V)</div>
                             )}
                         </div>
                     </div>
