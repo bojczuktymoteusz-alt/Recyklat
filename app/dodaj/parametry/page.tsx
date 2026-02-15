@@ -49,9 +49,9 @@ export default function ParametryDetailsPage() {
     const handleFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // 🛑 TWARDA WALIDACJA DLA KROKU 2
-        if (!cena || !impurity || !form) {
-            alert("Uzupełnij obowiązkowe pola: Cena, Zanieczyszczenie oraz Forma towaru!");
+        // 🛑 TWARDA WALIDACJA DLA KROKU 2 (Dodano wymóg kodu BDO!)
+        if (!cena || !impurity || !form || !bdo) {
+            alert("Uzupełnij obowiązkowe pola: Kod odpadu (BDO), Cena, Zanieczyszczenie oraz Forma towaru!");
             return;
         }
 
@@ -153,9 +153,24 @@ export default function ParametryDetailsPage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Kod BDO</label>
                             <input
-                                type="text" placeholder="np. 000123456"
-                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                                value={bdo} onChange={(e) => setBdo(e.target.value)}
+                                required
+                                type="text"
+                                placeholder="np. 15 01 01"
+                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 tracking-widest"
+                                value={bdo}
+                                onChange={(e) => {
+                                    // 1. Usuwamy wszystkie znaki, które nie są cyframi (np. litery, myślniki)
+                                    let val = e.target.value.replace(/\D/g, '');
+
+                                    // 2. Ograniczamy długość do maksymalnie 6 cyfr (bo kody BDO mają tylko 6)
+                                    val = val.substring(0, 6);
+
+                                    // 3. Dzielimy cyfry w pary (po 2) i łączymy je spacją
+                                    const formatted = val.match(/.{1,2}/g)?.join(' ') || '';
+
+                                    // 4. Zapisujemy pięknie sformatowany kod
+                                    setBdo(formatted);
+                                }}
                             />
                         </div>
                         <div>

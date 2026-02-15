@@ -8,14 +8,14 @@ import { CheckCircle } from 'lucide-react';
 
 // 1. ROZSZERZONA LISTA Z KODAMI BDO
 const KATEGORIE_Z_BDO = [
-    { nazwa: "Folia LDPE (stretch)", bdo: "15 01 02" },
-    { nazwa: "Folia kolorowa", bdo: "15 01 02" },
-    { nazwa: "Tworzywa sztuczne (mix)", bdo: "16 01 19" },
-    { nazwa: "Makulatura (karton)", bdo: "15 01 01" },
-    { nazwa: "Makulatura (gazeta)", bdo: "15 01 01" },
-    { nazwa: "Złom stalowy", bdo: "17 04 05" },
-    { nazwa: "Złom kolorowy", bdo: "17 04 01" },
-    { nazwa: "Drewno / Palety", bdo: "15 01 03" },
+    { nazwa: "Folia LDPE (stretch)", bdo: "" },
+    { nazwa: "Folia kolorowa", bdo: "" },
+    { nazwa: "Tworzywa sztuczne (mix)", bdo: "" },
+    { nazwa: "Makulatura (karton)", bdo: "" },
+    { nazwa: "Makulatura (papier)", bdo: "" },
+    { nazwa: "Złom stalowy", bdo: "" },
+    { nazwa: "Złom kolorowy", bdo: "" },
+    { nazwa: "Drewno / Palety", bdo: "" },
     { nazwa: "Inne", bdo: "" }
 ];
 
