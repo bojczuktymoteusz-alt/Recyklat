@@ -13,7 +13,7 @@ export default function ParametryDetailsPage() {
     const [bdo, setBdo] = useState("");
     const [cena, setCena] = useState("");
     const [email, setEmail] = useState("");
-    const [impurity, setImpurity] = useState("");
+    const [impurity, setImpurity] = useState(""); // Puste, by wymusić wybór
     const [form, setForm] = useState("");
     const [certs, setCerts] = useState<string[]>([]);
     const [logistics, setLogistics] = useState<string[]>([]);
@@ -48,10 +48,18 @@ export default function ParametryDetailsPage() {
 
     const handleFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // 🛑 TWARDA WALIDACJA DLA KROKU 2
+        if (!cena || !impurity || !form) {
+            alert("Uzupełnij obowiązkowe pola: Cena, Zanieczyszczenie oraz Forma towaru!");
+            return;
+        }
+
         setLoading(true);
 
         if (!step1Data) {
             alert("Błąd: Brak danych z pierwszego kroku!");
+            setLoading(false);
             return;
         }
 
@@ -159,22 +167,35 @@ export default function ParametryDetailsPage() {
                                     placeholder="0"
                                     value={cena}
                                     onChange={(e) => setCena(e.target.value)}
-                                    className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                                />
-                                <span className="absolute right-4 top-4 text-slate-400 font-bold text-sm">zł/t</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Zanieczyszczenie (%)</label>
-                            <div className="relative">
-                                <input
-                                    type="number" step="0.1" placeholder="0.0"
                                     className="w-full p-4 pr-12 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                                    value={impurity} onChange={(e) => setImpurity(e.target.value)}
                                 />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">%</span>
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">zł/t</span>
                             </div>
                         </div>
+
+                        {/* ZMIENIONE POLE ZANIECZYSZCZENIA NA DROPDOWN */}
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Zanieczyszczenie</label>
+                            <div className="relative">
+                                <select
+                                    required
+                                    className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none transition-all cursor-pointer"
+                                    value={impurity}
+                                    onChange={(e) => setImpurity(e.target.value)}
+                                >
+                                    <option value="" disabled className="text-slate-400">Wybierz...</option>
+                                    <option value="2">Do 2% (Bardzo czysty)</option>
+                                    <option value="5">Do 5% (Czysty)</option>
+                                    <option value="10">Do 10% (Lekko zabrudzony)</option>
+                                    <option value="20">Powyżej 10% (Zabrudzony)</option>
+                                    <option value="99">Nie potrafię ocenić</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-500">
+                                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                                </div>
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
                                 E-mail <span className="text-slate-400 font-normal text-[10px]">(Opcjonalne)</span>
@@ -195,7 +216,7 @@ export default function ParametryDetailsPage() {
                         <div className="relative">
                             <select
                                 required
-                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none"
+                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none cursor-pointer"
                                 value={form}
                                 onChange={(e) => setForm(e.target.value)}
                             >
@@ -263,10 +284,10 @@ export default function ParametryDetailsPage() {
 
                     {/* Opis */}
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Opis dodatkowy</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Informacje dodatkowe</label>
                         <textarea
                             rows={3}
-                            placeholder="Wpisz dodatkowe informacje o towarze..."
+                            placeholder="Kolor/Pochodzenie towaru, Nazwa firmy, Adres, imię/nazwisko"
                             className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 resize-none"
                             value={description} onChange={(e) => setDescription(e.target.value)}
                         />

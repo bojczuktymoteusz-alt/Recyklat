@@ -67,7 +67,7 @@ export default function Home() {
           </div>
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter uppercase leading-[0.9] mb-8">
             Zmień odpady <br />
-            <span className="text-blue-600">w kapitał.</span>
+            <span className="text-blue-600">w kapitał</span>
           </h1>
           <p className="text-xl text-slate-500 font-medium max-w-xl mb-12 leading-relaxed">
             Najszybsza w Polsce giełda surowców wtórnych. Wystaw towar w 30 sekund i zoptymalizuj koszty logistyki oraz BDO.
@@ -78,7 +78,7 @@ export default function Home() {
               Wystaw towar teraz
             </Link>
             <Link href="/rynek" className="bg-white border-2 border-slate-200 px-10 py-6 rounded-[24px] font-black text-xl uppercase tracking-tighter hover:border-slate-900 transition-all text-center">
-              Przeglądaj giełdę
+              Kup Surowiec
             </Link>
           </div>
 

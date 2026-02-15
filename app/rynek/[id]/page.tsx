@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
     ArrowLeft, MapPin, Phone, Info, Truck,
-    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck
+    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck, Map, FileText
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -13,7 +13,7 @@ export default function SzczegolyOferty() {
     const router = useRouter();
     const [oferta, setOferta] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [czyToMoje, setCzyToMoje] = useState(false); // Stan sprawdzający właściciela
+    const [czyToMoje, setCzyToMoje] = useState(false);
 
     useEffect(() => {
         async function fetchOferta() {
@@ -28,7 +28,6 @@ export default function SzczegolyOferty() {
                 router.push('/rynek');
             } else {
                 setOferta(data);
-                // SPRAWDZANIE WŁAŚCICIELA: Czy ID tej oferty jest w Twojej "kieszeni" (localStorage)
                 const mojeIds = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
                 if (mojeIds.includes(Number(id))) {
                     setCzyToMoje(true);
@@ -51,7 +50,6 @@ export default function SzczegolyOferty() {
         if (error) {
             alert("Błąd bazy: " + error.message);
         } else {
-            // Usuwamy też z localStorage, żeby nie śmieciło
             const mojeIds = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
             const noweIds = mojeIds.filter((oldId: number) => oldId !== Number(id));
             localStorage.setItem('moje_oferty', JSON.stringify(noweIds));
@@ -82,7 +80,6 @@ export default function SzczegolyOferty() {
                     </Link>
 
                     <div className="flex items-center gap-4">
-                        {/* PRZYCISK USUŃ - Wyświetlany tylko jeśli oferta należy do Ciebie */}
                         {czyToMoje && (
                             <button
                                 onClick={usunOferte}
@@ -135,15 +132,41 @@ export default function SzczegolyOferty() {
                                     <Scale size={18} /> {oferta.waga} t
                                 </span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600 pt-6 border-t border-slate-50">
-                                <MapPin size={22} className="text-blue-500" />
-                                <span className="font-black text-xl uppercase tracking-tight">{oferta.lokalizacja}</span>
+
+                            {/* POPRAWIONA SEKCJA LOKALIZACJI I WOJEWÓDZTWA */}
+                            <div className="flex flex-col pt-6 border-t border-slate-50 gap-2">
+                                <div className="flex items-center gap-3 text-gray-600">
+                                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 shrink-0">
+                                        <MapPin size={24} className="text-blue-500" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-black text-xl uppercase tracking-tight text-slate-900">{oferta.lokalizacja}</span>
+                                        {oferta.wojewodztwo && (
+                                            <span className="text-xs font-bold text-blue-600 flex items-center gap-1 mt-1 uppercase tracking-widest">
+                                                <Map size={12} /> Woj. {oferta.wojewodztwo.toLowerCase()}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     {/* PRAWA KOLUMNA - PARAMETRY */}
                     <div className="space-y-6">
+
+                        {/* NOWA SEKCJA: OPIS (Wyświetla dane firmy, kolor, pochodzenie itp.) */}
+                        {oferta.opis && (
+                            <div className="bg-white p-8 rounded-[40px] border shadow-sm">
+                                <h3 className="font-black text-gray-900 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
+                                    <FileText size={16} className="text-blue-600" /> Opis i kontakt dodatkowy
+                                </h3>
+                                <p className="text-sm font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                    {oferta.opis}
+                                </p>
+                            </div>
+                        )}
+
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                             <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
                                 <Info size={16} /> Szczegóły

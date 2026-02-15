@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
+import { CheckCircle } from 'lucide-react';
 
 // 1. ROZSZERZONA LISTA Z KODAMI BDO
 const KATEGORIE_Z_BDO = [
@@ -42,7 +43,7 @@ export default function DodajOferteKrok1() {
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
     const [lokalizacja, setLokalizacja] = useState(''); // Miejscowość
-    const [wojewodztwo, setWojewodztwo] = useState(''); // NOWY STAN: Województwo
+    const [wojewodztwo, setWojewodztwo] = useState(''); // Województwo
     const [telefon, setTelefon] = useState('');
 
     const [autoBdo, setAutoBdo] = useState('');
@@ -89,8 +90,19 @@ export default function DodajOferteKrok1() {
         }
     };
 
+    const handleNextStep = (e: React.MouseEvent) => {
+        handleDalej(e as unknown as React.FormEvent);
+    };
+
     const handleDalej = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // 🛑 TWARDA WALIDACJA - BLOKADA PUSTYCH PÓŁ
+        if (!material || !telefon || !wojewodztwo || !lokalizacja) {
+            alert("Uzupełnij obowiązkowe pola: Rodzaj materiału, Telefon, Województwo i Miejscowość!");
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -101,9 +113,9 @@ export default function DodajOferteKrok1() {
 
             const step1Data = {
                 material,
-                waga: parseFloat(waga),
-                lokalizacja, // Zostawiamy jako Miejscowość
-                wojewodztwo, // DODANE WOJEWÓDZTWO
+                waga: parseFloat(waga) || 0,
+                lokalizacja,
+                wojewodztwo,
                 telefon,
                 zdjecie_url: uploadedImageUrl,
                 bdo_code: autoBdo
@@ -226,10 +238,11 @@ export default function DodajOferteKrok1() {
                     </div>
 
                     <button
-                        disabled={loading} type="submit"
-                        className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black text-xl hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:bg-slate-400 uppercase tracking-tight"
+                        onClick={handleNextStep}
+                        className="w-full bg-slate-900 text-white py-5 rounded-[24px] font-black text-xl uppercase tracking-tighter shadow-2xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 group"
                     >
                         {loading ? 'Przetwarzanie...' : 'Dalej - Parametry ⯈'}
+                        <CheckCircle size={24} className="text-blue-400 shrink-0 group-hover:text-white transition-colors" />
                     </button>
                 </form>
             </div>
