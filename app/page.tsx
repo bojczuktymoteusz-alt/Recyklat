@@ -58,6 +58,30 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-white font-sans text-slate-900">
+      {/* --- NAWIGACJA (HEADER) --- */}
+      <header className="absolute top-0 left-0 w-full z-50">
+        <div className="max-w-5xl mx-auto px-6 py-6 flex justify-between items-center">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="bg-blue-600 p-2 rounded-xl group-hover:bg-slate-900 transition-colors shadow-md">
+              <Recycle className="w-6 h-6 text-white" />
+            </div>
+            <span className="font-black tracking-tighter uppercase text-2xl text-slate-900 group-hover:text-blue-600 transition-colors">
+              Recyklat
+            </span>
+          </Link>
+
+          {/* Menu */}
+          <nav className="hidden md:flex items-center gap-8 font-black text-xs uppercase tracking-widest text-slate-500">
+            <Link href="/rynek" className="hover:text-slate-900 transition-colors">
+              Giełda
+            </Link>
+            <Link href="/dodaj" className="text-blue-600 hover:text-slate-900 transition-colors">
+              + Wystaw towar
+            </Link>
+          </nav>
+        </div>
+      </header>
 
       {/* --- SEKCJA HERO --- */}
       <section className="relative pt-20 pb-24 overflow-hidden border-b border-slate-50">
