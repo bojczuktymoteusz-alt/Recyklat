@@ -177,7 +177,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- STOPKA --- */}
+      {/* --- STOPKA Z LINKAMI PRAWNYMI --- */}
       <footer className="py-12 border-t border-slate-50">
         <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">
@@ -186,9 +186,20 @@ export default function Home() {
             </div>
             <span className="font-black tracking-tighter uppercase text-xl">Recyklat</span>
           </div>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
-            © 2026 Recyklat B2B System • Wszystkie prawa zastrzeżone
-          </p>
+
+          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+            <nav className="flex gap-6 text-[10px] font-black uppercase tracking-widest">
+              <Link href="/regulamin" className="text-slate-400 hover:text-blue-600 transition-colors">
+                Regulamin
+              </Link>
+              <Link href="/polityka-prywatnosci" className="text-slate-400 hover:text-blue-600 transition-colors">
+                Polityka prywatności
+              </Link>
+            </nav>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest md:border-l md:border-slate-200 md:pl-8">
+              © 2026 Recyklat B2B System
+            </p>
+          </div>
         </div>
       </footer>
     </main>
