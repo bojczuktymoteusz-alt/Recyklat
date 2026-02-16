@@ -18,6 +18,7 @@ export default function SzczegolyOferty() {
     // --- FUNKCJA TŁUMACZĄCA WARTOŚĆ ZANIECZYSZCZENIA ---
     const getImpurityLabel = (val: number | string) => {
         const v = Number(val);
+        if (v === 0) return "0% (Idealny)";
         if (v === 2) return "Do 2% (Bardzo czysty)";
         if (v === 5) return "Do 5% (Czysty)";
         if (v === 10) return "Do 10% (Lekko zabrudzony)";

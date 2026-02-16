@@ -152,7 +152,7 @@ export default function ParametryDetailsPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
-                                Kod BDO <span className="text-slate-400 font-normal text-[10px]">(Zostaw puste dla regranulatu/produktu)</span>
+                                Kod BDO <span className="text-slate-500 font-normal text-[10px]">(puste dla regranulatu / produktu)</span>
                             </label>
                             <input
 
@@ -201,6 +201,7 @@ export default function ParametryDetailsPage() {
                                     onChange={(e) => setImpurity(e.target.value)}
                                 >
                                     <option value="" disabled className="text-slate-400">Wybierz...</option>
+                                    <option value="0">0% (Idealny / Produkt)</option>
                                     <option value="2">Do 2% (Bardzo czysty)</option>
                                     <option value="5">Do 5% (Czysty)</option>
                                     <option value="10">Do 10% (Lekko zabrudzony)</option>
@@ -215,7 +216,7 @@ export default function ParametryDetailsPage() {
 
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
-                                E-mail <span className="text-slate-400 font-normal text-[10px]">(Opcjonalne)</span>
+                                E-mail <span className="text-slate-500 font-normal text-[10px]">(opcjonalnie)</span>
                             </label>
                             <input
                                 type="email"
