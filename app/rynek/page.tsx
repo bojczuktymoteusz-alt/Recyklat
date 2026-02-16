@@ -23,6 +23,9 @@ interface Oferta {
     pickup_hours?: string;
     extra_photo_docs?: boolean;
     status?: string;
+    opis?: string;
+    bdo_code?: string;
+    impurity?: number;
 }
 
 const KATEGORIE = [
@@ -68,7 +71,11 @@ export default function Rynek() {
             wyniki = wyniki.filter(o =>
                 o.material.toLowerCase().includes(fraza) ||
                 o.lokalizacja.toLowerCase().includes(fraza) ||
-                (o.wojewodztwo && o.wojewodztwo.toLowerCase().includes(fraza))
+                (o.wojewodztwo && o.wojewodztwo.toLowerCase().includes(fraza)) ||
+                // 👇 DODANE: Przeszukiwanie całego opisu ogłoszenia
+                (o.opis && o.opis.toLowerCase().includes(fraza)) ||
+                // 👇 DODANE: Przeszukiwanie po kodzie BDO (np. jak ktoś wpisze "16 01 19")
+                (o.bdo_code && o.bdo_code.toLowerCase().includes(fraza))
             );
         }
 
