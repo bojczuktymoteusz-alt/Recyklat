@@ -241,7 +241,7 @@ export default function DodajOferteKrok1() {
                         onClick={handleNextStep}
                         className="w-full bg-slate-900 text-white py-5 rounded-[24px] font-black text-xl uppercase tracking-tighter shadow-2xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 group"
                     >
-                        {loading ? 'Przetwarzanie...' : 'Dalej - Parametry ⯈'}
+                        {loading ? 'Przetwarzanie...' : 'Dalej - Parametry'}
                         <CheckCircle size={24} className="text-blue-400 shrink-0 group-hover:text-white transition-colors" />
                     </button>
                 </form>

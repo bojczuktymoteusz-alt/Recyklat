@@ -50,7 +50,7 @@ export default function ParametryDetailsPage() {
         e.preventDefault();
 
         // 🛑 TWARDA WALIDACJA DLA KROKU 2 (Dodano wymóg kodu BDO!)
-        if (!cena || !impurity || !form || !bdo) {
+        if (!cena || !impurity || !form) {
             alert("Uzupełnij obowiązkowe pola: Kod odpadu (BDO), Cena, Zanieczyszczenie oraz Forma towaru!");
             return;
         }
@@ -151,9 +151,11 @@ export default function ParametryDetailsPage() {
                     {/* CZYSTA SIATKA 2x2: BDO, Cena, Zanieczyszczenie, E-mail */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Kod BDO</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                                Kod BDO <span className="text-slate-400 font-normal text-[10px]">(Zostaw puste dla regranulatu/produktu)</span>
+                            </label>
                             <input
-                                required
+
                                 type="text"
                                 placeholder="np. 15 01 01"
                                 className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 tracking-widest"
