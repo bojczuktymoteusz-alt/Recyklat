@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
     ArrowLeft, MapPin, Phone, Info, Truck,
-    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck, Map, FileText
+    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck, Map, FileText, AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -167,6 +167,17 @@ export default function SzczegolyOferty() {
                     {/* PRAWA KOLUMNA - PARAMETRY */}
                     <div className="space-y-6">
 
+                        {/* DODANY BANER INFORMACYJNY DLA SPRZEDANYCH OFERT */}
+                        {jestSprzedane && (
+                            <div className="bg-red-50 border-2 border-red-500 text-red-700 p-6 rounded-[32px] flex items-center gap-4 shadow-sm">
+                                <AlertCircle size={32} className="shrink-0" />
+                                <div>
+                                    <h3 className="font-black text-xl uppercase tracking-tight">Oferta Zakończona</h3>
+                                    <p className="text-sm font-bold opacity-80">Ten towar został już sprzedany i kontakt ze sprzedającym został zablokowany.</p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* NOWA SEKCJA: OPIS (Wyświetla dane firmy, kolor, pochodzenie itp.) */}
                         {oferta.opis && (
                             <div className="bg-white p-8 rounded-[40px] border shadow-sm">
@@ -263,7 +274,7 @@ export default function SzczegolyOferty() {
             <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 p-4 z-50">
                 <div className="max-w-4xl mx-auto">
                     {jestSprzedane ? (
-                        <div className="h-16 w-full bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-center gap-3">
+                        <div className="h-16 w-full bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-center gap-3 shadow-sm">
                             <CheckCircle size={24} className="text-red-600" />
                             <span className="text-red-600 font-black uppercase tracking-tighter text-xl">Oferta zakończona</span>
                         </div>

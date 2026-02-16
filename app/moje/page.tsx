@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { Trash2, ArrowLeft, Package, ExternalLink, AlertCircle, CheckCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Oferta {
     id: number;
@@ -15,6 +16,7 @@ interface Oferta {
 }
 
 export default function MojeOgłoszenia() {
+    const router = useRouter();
     const [mojeOferty, setMojeOferty] = useState<Oferta[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -59,6 +61,7 @@ export default function MojeOgłoszenia() {
         } else {
             // Aktualizacja lokalnego stanu, aby UI zareagowało natychmiast
             setMojeOferty(prev => prev.map(o => o.id === id ? { ...o, status: 'sprzedane' } : o));
+            router.refresh();
         }
     }
 
@@ -79,6 +82,7 @@ export default function MojeOgłoszenia() {
             const nowaLista = zapisaneIds.filter((oldId: number) => oldId !== id);
             localStorage.setItem('moje_oferty', JSON.stringify(nowaLista));
             alert("Ogłoszenie zostało usunięte.");
+            router.refresh();
         }
     }
 
