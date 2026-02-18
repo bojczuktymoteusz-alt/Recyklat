@@ -12,7 +12,7 @@ import {
 
 interface Oferta {
     id: number;
-    title?: string; // 👈 DODANE: Nowe pole tytułu
+    title?: string;
     material: string;
     waga: number;
     cena: number;
@@ -22,8 +22,6 @@ interface Oferta {
     zdjecie_url?: string;
     created_at: string;
     form?: string;
-    pickup_hours?: string;
-    extra_photo_docs?: boolean;
     status?: string;
     opis?: string;
     bdo_code?: string;
@@ -63,23 +61,18 @@ export default function Rynek() {
 
     useEffect(() => {
         let wyniki = wszystkieOferty;
-
         if (aktywnyFiltr !== "Wszystko") {
             wyniki = wyniki.filter(o => o.material.toLowerCase().includes(aktywnyFiltr.toLowerCase()));
         }
-
         if (szukanaFraza) {
             const fraza = szukanaFraza.toLowerCase();
             wyniki = wyniki.filter(o =>
-                (o.title && o.title.toLowerCase().includes(fraza)) || // 👈 DODANE: Szukanie po tytule
+                (o.title && o.title.toLowerCase().includes(fraza)) ||
                 o.material.toLowerCase().includes(fraza) ||
                 o.lokalizacja.toLowerCase().includes(fraza) ||
-                (o.wojewodztwo && o.wojewodztwo.toLowerCase().includes(fraza)) ||
-                (o.opis && o.opis.toLowerCase().includes(fraza)) ||
-                (o.bdo_code && o.bdo_code.toLowerCase().includes(fraza))
+                (o.wojewodztwo && o.wojewodztwo.toLowerCase().includes(fraza))
             );
         }
-
         setFiltrowaneOferty(wyniki);
     }, [aktywnyFiltr, szukanaFraza, wszystkieOferty]);
 
@@ -173,7 +166,7 @@ export default function Rynek() {
                                             {o.zdjecie_url ? (
                                                 <img
                                                     src={o.zdjecie_url}
-                                                    alt={o.title || o.material} // 👈 ZMIENIONO: Tytuł w ALT
+                                                    alt={o.title || o.material}
                                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                                 />
                                             ) : (
@@ -233,8 +226,9 @@ export default function Rynek() {
                                             </div>
                                         </div>
 
-                                        <div className="mt-6 flex items-center justify-end text-blue-600 group-hover:translate-x-2 transition-transform font-black uppercase tracking-tight text-sm">
-                                            Zobacz szczegóły <ArrowRight size={20} className="ml-2" />
+                                        <div className="flex items-center gap-4 text-blue-600 font-black uppercase text-xl md:text-Xl tracking-tighter group-hover:gap-8 group-hover:text-blue-500 transition-all duration-300">
+                                            ZOBACZ SZCZEGÓŁY
+                                            <ArrowRight size={40} className="group-hover:scale-150 transition-transform duration-300 fill-blue-600" />
                                         </div>
                                     </div>
                                 </div>
