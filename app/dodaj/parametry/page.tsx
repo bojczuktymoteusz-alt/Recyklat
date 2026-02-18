@@ -305,7 +305,7 @@ export default function ParametryDetailsPage() {
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Informacje dodatkowe</label>
                         <textarea
                             rows={3}
-                            placeholder="Kolor/Pochodzenie towaru, Nazwa firmy, Adres, imię/nazwisko"
+                            placeholder="Kolor, MFI, Pochodzenie, Dane adresowe firmy"
                             className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 resize-none"
                             value={description} onChange={(e) => setDescription(e.target.value)}
                         />
