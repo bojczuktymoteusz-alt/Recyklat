@@ -40,6 +40,8 @@ const getIcon = (material: string) => {
 export default function DodajOferteKrok1() {
     const router = useRouter();
 
+    // --- DODANO STAN DLA TYTUŁU ---
+    const [title, setTitle] = useState('');
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
     const [lokalizacja, setLokalizacja] = useState(''); // Miejscowość
@@ -97,9 +99,9 @@ export default function DodajOferteKrok1() {
     const handleDalej = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // 🛑 TWARDA WALIDACJA - BLOKADA PUSTYCH PÓŁ
-        if (!material || !telefon || !wojewodztwo || !lokalizacja) {
-            alert("Uzupełnij obowiązkowe pola: Rodzaj materiału, Telefon, Województwo i Miejscowość!");
+        // 🛑 ZAKTUALIZOWANA WALIDACJA - DODANO TYTUŁ
+        if (!title || !material || !telefon || !wojewodztwo || !lokalizacja) {
+            alert("Uzupełnij obowiązkowe pola: Tytuł, Rodzaj materiału, Telefon, Województwo i Miejscowość!");
             return;
         }
 
@@ -112,6 +114,7 @@ export default function DodajOferteKrok1() {
             }
 
             const step1Data = {
+                title, // <-- DODANO DO OBIEKTU
                 material,
                 waga: parseFloat(waga) || 0,
                 lokalizacja,
@@ -141,6 +144,20 @@ export default function DodajOferteKrok1() {
                 </div>
 
                 <form onSubmit={handleDalej} className="space-y-4">
+
+                    {/* --- NOWE POLE: TYTUŁ OGŁOSZENIA --- */}
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Tytuł ogłoszenia</label>
+                        <input
+                            required
+                            type="text"
+                            placeholder="np. Folia 100% PVC - stała podaż"
+                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 placeholder:text-slate-400"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                        />
+                    </div>
+
                     {/* Wybór materiału */}
                     <div>
                         <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-1 ml-1">

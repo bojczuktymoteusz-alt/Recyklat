@@ -6,11 +6,13 @@ import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import {
     Archive, Mountain, ShoppingBag, Layers, Box,
-    ArrowRight, User, Recycle, FileText, Wrench
+    ArrowRight, User, Recycle, FileText, Wrench,
+    MapPin, Clock
 } from 'lucide-react';
 
 interface Oferta {
     id: number;
+    title?: string; // 👈 DODANE: Nowe pole tytułu
     material: string;
     waga: number;
     cena: number;
@@ -69,12 +71,11 @@ export default function Rynek() {
         if (szukanaFraza) {
             const fraza = szukanaFraza.toLowerCase();
             wyniki = wyniki.filter(o =>
+                (o.title && o.title.toLowerCase().includes(fraza)) || // 👈 DODANE: Szukanie po tytule
                 o.material.toLowerCase().includes(fraza) ||
                 o.lokalizacja.toLowerCase().includes(fraza) ||
                 (o.wojewodztwo && o.wojewodztwo.toLowerCase().includes(fraza)) ||
-                // 👇 DODANE: Przeszukiwanie całego opisu ogłoszenia
                 (o.opis && o.opis.toLowerCase().includes(fraza)) ||
-                // 👇 DODANE: Przeszukiwanie po kodzie BDO (np. jak ktoś wpisze "16 01 19")
                 (o.bdo_code && o.bdo_code.toLowerCase().includes(fraza))
             );
         }
@@ -84,7 +85,6 @@ export default function Rynek() {
 
     async function fetchOferty() {
         setLoading(true);
-        // Pobieramy wszystkie dane, w tym kolumnę status
         const { data, error } = await supabase
             .from('oferty')
             .select('*')
@@ -129,7 +129,7 @@ export default function Rynek() {
                 <div className="mb-8">
                     <input
                         type="text"
-                        placeholder="Szukaj po materiale, mieście lub województwie..."
+                        placeholder="Szukaj po tytule, materiale, mieście..."
                         className="w-full p-6 bg-white rounded-3xl shadow-sm border border-slate-100 focus:ring-4 focus:ring-blue-50 transition-all font-bold text-lg outline-none"
                         value={szukanaFraza}
                         onChange={(e) => setSzukanaFraza(e.target.value)}
@@ -169,13 +169,11 @@ export default function Rynek() {
 
                                     {/* SEKCJA ZDJĘCIA */}
                                     <div className="w-full md:w-72 h-64 md:h-auto bg-slate-50 flex-shrink-0 relative overflow-hidden flex items-center justify-center">
-
-                                        {/* Kontener obrazka z grayscale */}
                                         <div className={`w-full h-full flex items-center justify-center transition-all duration-500 ${o.status === 'sprzedane' ? 'grayscale opacity-30 scale-95' : ''}`}>
                                             {o.zdjecie_url ? (
                                                 <img
                                                     src={o.zdjecie_url}
-                                                    alt={o.material}
+                                                    alt={o.title || o.material} // 👈 ZMIENIONO: Tytuł w ALT
                                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                                 />
                                             ) : (
@@ -183,83 +181,74 @@ export default function Rynek() {
                                             )}
                                         </div>
 
-                                        {/* BANER SPRZEDANE - musi być na samej górze (z-30) */}
                                         {o.status === 'sprzedane' && (
-                                            <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
-                                                <div className="bg-red-600 text-white font-black px-6 py-2 rounded-xl text-2xl uppercase tracking-tighter shadow-2xl -rotate-12 border-2 border-white animate-in zoom-in duration-300">
-                                                    SPRZEDANE
-                                                </div>
+                                            <div className="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/50 backdrop-blur-sm">
+                                                <span className="bg-red-500 text-white px-4 py-2 font-black uppercase tracking-widest -rotate-12 shadow-xl border-2 border-white">
+                                                    Sprzedane
+                                                </span>
                                             </div>
                                         )}
-
-                                        {/* Czas dodania */}
-                                        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur text-slate-700 text-[10px] px-3 py-1.5 rounded-full font-black uppercase tracking-wide shadow-sm z-20">
-                                            🕒 {formatDistanceToNow(new Date(o.created_at), { addSuffix: true, locale: pl })}
-                                        </div>
                                     </div>
 
-                                    {/* SEKCJA TREŚCI */}
-                                    <div className={`p-8 flex-grow flex flex-col justify-between transition-colors duration-500 ${o.status === 'sprzedane' ? 'bg-slate-50/50' : 'bg-white'}`}>
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div>
-                                                <div className="flex flex-wrap gap-2 mb-3">
-                                                    <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider">
-                                                        📍 {o.lokalizacja}{o.wojewodztwo && `, ${o.wojewodztwo}`}
-                                                    </span>
-                                                    {o.status === 'sprzedane' && (
-                                                        <span className="bg-red-100 text-red-600 text-[10px] px-2 py-1 rounded-lg font-black uppercase tracking-wider">
-                                                            Archiwum
-                                                        </span>
-                                                    )}
+                                    {/* TREŚĆ */}
+                                    <div className="flex-1 p-6 flex flex-col justify-between relative">
+                                        <div>
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <h2 className="text-2xl font-black text-slate-900 leading-tight uppercase tracking-tight line-clamp-2">
+                                                        {o.title || o.material}
+                                                    </h2>
+                                                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">
+                                                        {o.material}
+                                                    </p>
                                                 </div>
-                                                <h2 className={`text-2xl md:text-3xl font-black leading-tight mb-2 transition-colors ${o.status === 'sprzedane' ? 'text-slate-400' : 'text-slate-900 group-hover:text-blue-600'}`}>
-                                                    {o.material}
-                                                </h2>
+                                                <div className="bg-green-100 text-green-700 px-4 py-2 rounded-xl font-black text-lg whitespace-nowrap">
+                                                    {o.cena} zł/t
+                                                </div>
                                             </div>
 
-                                            {/* Pudełko ceny i wagi */}
-                                            <div className={`text-right p-4 rounded-2xl border min-w-[120px] transition-all ${o.status === 'sprzedane' ? 'bg-white border-slate-100 opacity-40' : 'bg-slate-50 border-slate-100 shadow-sm'}`}>
-                                                <p className="text-2xl font-black text-slate-900 leading-none mb-1">{o.cena} zł</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cena / t</p>
-                                                <div className="w-full h-px bg-slate-200 my-3"></div>
-                                                <p className="text-xl font-black text-blue-600 leading-none mb-1">{o.waga} t</p>
-                                                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Ilość</p>
+                                            <div className="space-y-3">
+                                                <div className="flex items-center gap-3 text-slate-600 font-medium">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                                                        <Box size={16} />
+                                                    </div>
+                                                    <span className="text-slate-900 font-bold">{o.waga} ton</span>
+                                                </div>
+
+                                                <div className="flex items-center gap-3 text-slate-600 font-medium">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                                                        <MapPin size={16} />
+                                                    </div>
+                                                    <span className="truncate">{o.lokalizacja} {o.wojewodztwo ? `(${o.wojewodztwo})` : ''}</span>
+                                                </div>
+
+                                                <div className="flex items-center gap-3 text-slate-600 font-medium">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                                                        <Clock size={16} />
+                                                    </div>
+                                                    <span className="text-xs uppercase tracking-wider font-bold text-slate-400">
+                                                        {formatDistanceToNow(new Date(o.created_at), { addSuffix: true, locale: pl })}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* DOLNY PASEK KARTY */}
-                                        <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-blue-600 font-black uppercase text-xs tracking-widest group-hover:translate-x-2 transition-transform">
-                                                Szczegóły <ArrowRight size={16} />
-                                            </div>
-
-                                            <div className="flex items-center gap-4">
-                                                <span className="text-slate-300 text-[10px] font-black uppercase tracking-widest">ID: #{o.id}</span>
-
-                                                {o.status === 'sprzedane' ? (
-                                                    <span className="text-red-500 font-black uppercase text-[10px] tracking-widest bg-red-50 px-3 py-2 rounded-lg border border-red-100">
-                                                        Oferta zakończona
-                                                    </span>
-                                                ) : (
-                                                    <div className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 text-sm uppercase shadow-lg group-hover:bg-blue-600 transition-colors">
-                                                        📞 Kontakt
-                                                    </div>
-                                                )}
-                                            </div>
+                                        <div className="mt-6 flex items-center justify-end text-blue-600 group-hover:translate-x-2 transition-transform font-black uppercase tracking-tight text-sm">
+                                            Zobacz szczegóły <ArrowRight size={20} className="ml-2" />
                                         </div>
                                     </div>
                                 </div>
                             </Link>
                         ))}
-
-                        {/* Pusta giełda */}
-                        {filtrowaneOferty.length === 0 && (
-                            <div className="text-center py-20 bg-white rounded-[40px] border-2 border-dashed border-slate-200">
-                                <p className="text-slate-400 font-bold uppercase text-sm tracking-widest">Nie znaleziono ofert pasujących do filtrów.</p>
-                            </div>
-                        )}
                     </div>
                 )}
+            </div>
+
+            {/* FLOATING BUTTON DLA MOBILE */}
+            <div className="md:hidden fixed bottom-6 right-6 z-50">
+                <Link href="/dodaj" className="bg-blue-600 text-white p-4 rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all">
+                    <span className="text-2xl font-black">+</span>
+                </Link>
             </div>
         </div>
     );

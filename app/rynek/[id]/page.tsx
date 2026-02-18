@@ -80,6 +80,8 @@ export default function SzczegolyOferty() {
     if (!oferta) return <div className="p-10 text-center font-black uppercase">Nie znaleziono oferty.</div>;
 
     const jestSprzedane = oferta.status === 'sprzedane';
+    // 👈 DODANE: Stała pomocnicza dla czytelności
+    const wyswietlanyTytul = oferta.title || oferta.material;
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col relative">
@@ -116,7 +118,7 @@ export default function SzczegolyOferty() {
                             {oferta.zdjecie_url ? (
                                 <img
                                     src={oferta.zdjecie_url}
-                                    alt={oferta.material}
+                                    alt={wyswietlanyTytul}
                                     className={`w-full h-full object-cover ${jestSprzedane ? 'grayscale opacity-50' : ''}`}
                                 />
                             ) : (
@@ -134,7 +136,7 @@ export default function SzczegolyOferty() {
 
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm space-y-6">
                             <h1 className={`text-4xl font-black tracking-tighter uppercase leading-none ${jestSprzedane ? 'text-gray-400' : 'text-slate-900'}`}>
-                                {oferta.material}
+                                {wyswietlanyTytul}
                             </h1>
                             <div className="flex flex-wrap gap-3 items-center pt-2">
                                 <span className={`px-5 py-3 rounded-2xl text-2xl font-black shadow-lg ${jestSprzedane ? 'bg-gray-100 text-gray-400 shadow-none' : 'bg-green-600 text-white shadow-green-100'}`}>
@@ -289,7 +291,7 @@ export default function SzczegolyOferty() {
                             </a>
                             {oferta.email && (
                                 <a
-                                    href={`mailto:${oferta.email}?subject=Zapytanie o: ${oferta.material}`}
+                                    href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
                                     className="px-8 bg-blue-50 text-blue-600 font-black uppercase tracking-widest rounded-[24px] flex items-center justify-center gap-2 border-2 border-blue-100 active:scale-95 transition-all"
                                 >
                                     <Mail size={24} />

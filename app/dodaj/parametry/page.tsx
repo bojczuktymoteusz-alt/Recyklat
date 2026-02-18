@@ -49,9 +49,9 @@ export default function ParametryDetailsPage() {
     const handleFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // 🛑 TWARDA WALIDACJA DLA KROKU 2 (Dodano wymóg kodu BDO!)
+        // 🛑 TWARDA WALIDACJA DLA KROKU 2
         if (!cena || !impurity || !form) {
-            alert("Uzupełnij obowiązkowe pola: Kod odpadu (BDO), Cena, Zanieczyszczenie oraz Forma towaru!");
+            alert("Uzupełnij obowiązkowe pola: Cena, Zanieczyszczenie oraz Forma towaru!");
             return;
         }
 
@@ -64,6 +64,7 @@ export default function ParametryDetailsPage() {
         }
 
         const finalOffer = {
+            title: step1Data.title, // 👈 KLUCZOWE: Tytuł z Kroku 1 trafia do bazy!
             material: step1Data.material,
             waga: step1Data.waga,
             lokalizacja: step1Data.lokalizacja,
@@ -84,9 +85,8 @@ export default function ParametryDetailsPage() {
             created_at: new Date(),
         };
 
-        console.log("Próba zapisu oferty...", finalOffer);
+        console.log("Próba zapisu oferty z tytułem:", finalOffer.title);
 
-        // KLUCZOWE: .select() musi tu być, żeby Supabase oddał nam ID!
         const { data, error } = await supabase
             .from('oferty')
             .insert([finalOffer])
@@ -102,7 +102,6 @@ export default function ParametryDetailsPage() {
             if (data && data.length > 0) {
                 const noweId = data[0].id;
 
-                // POBIERANIE I ZAPISYWANIE
                 try {
                     const suroweDane = localStorage.getItem('moje_oferty');
                     const zapisaneOferty = suroweDane ? JSON.parse(suroweDane) : [];
@@ -155,7 +154,6 @@ export default function ParametryDetailsPage() {
                                 Kod BDO <span className="text-slate-500 font-normal text-[10px]">(puste dla regranulatu / produktu)</span>
                             </label>
                             <input
-
                                 type="text"
                                 placeholder="np. 15 01 01"
                                 className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 tracking-widest"
@@ -241,9 +239,10 @@ export default function ParametryDetailsPage() {
                                 <option value="" disabled className="text-slate-400">Wybierz formę...</option>
                                 <option value="Bela">Bela</option>
                                 <option value="Luzem">Luzem</option>
-                                <option value="Przemiał/Mielony">Przemiał / Mielony</option>
                                 <option value="Regranulat">Regranulat</option>
+                                <option value="Przemiał/Mielony">Przemiał / Mielony</option>
                                 <option value="Odpad poprodukcyjny">Odpad poprodukcyjny</option>
+                                <option value="Płynne/Szlam">Płynne / Szlam</option>
                                 <option value="Inne">Inne</option>
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-500">
