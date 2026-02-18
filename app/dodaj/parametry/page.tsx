@@ -174,7 +174,9 @@ export default function ParametryDetailsPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Cena za tonę</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                                Cena za tonę <span className="text-red-500">*</span>
+                            </label>
                             <div className="relative">
                                 <input
                                     required
@@ -190,7 +192,9 @@ export default function ParametryDetailsPage() {
 
                         {/* ZMIENIONE POLE ZANIECZYSZCZENIA NA DROPDOWN */}
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Zanieczyszczenie</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                                Zanieczyszczenie <span className="text-red-500">*</span>
+                            </label>
                             <div className="relative">
                                 <select
                                     required
@@ -214,7 +218,7 @@ export default function ParametryDetailsPage() {
 
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
-                                E-mail <span className="text-slate-500 font-normal text-[10px]">(opcjonalnie)</span>
+                                E-mail
                             </label>
                             <input
                                 type="email"
@@ -228,7 +232,9 @@ export default function ParametryDetailsPage() {
 
                     {/* Forma towaru - Lista rozwijana */}
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Forma towaru</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                            Forma towaru <span className="text-red-500">*</span>
+                        </label>
                         <div className="relative">
                             <select
                                 required

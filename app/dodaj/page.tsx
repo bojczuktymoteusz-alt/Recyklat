@@ -147,7 +147,10 @@ export default function DodajOferteKrok1() {
 
                     {/* --- NOWE POLE: TYTUŁ OGŁOSZENIA --- */}
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Tytuł ogłoszenia</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                            Tytuł ogłoszenia <span className="text-red-500">*</span>
+                        </label>
+
                         <input
                             required
                             type="text"
@@ -160,8 +163,8 @@ export default function DodajOferteKrok1() {
 
                     {/* Wybór materiału */}
                     <div>
-                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-1 ml-1">
-                            Rodzaj materiału {material && <span>{getIcon(material)}</span>}
+                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                            Rodzaj Materiału <span className="text-red-500">*</span>
                         </label>
                         <select
                             required
@@ -194,18 +197,35 @@ export default function DodajOferteKrok1() {
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Telefon</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                                Telefon <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 required type="tel" placeholder="123 456 789"
                                 className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                                value={telefon} onChange={(e) => setTelefon(e.target.value)}
+                                value={telefon}
+                                onChange={(e) => {
+                                    // 1. Wyrzuca wszystko co nie jest cyfrą (litery, spacje, myślniki)
+                                    let val = e.target.value.replace(/\D/g, '');
+
+                                    // 2. Blokuje wpisywanie powyżej 9 cyfr
+                                    val = val.substring(0, 9);
+
+                                    // 3. Dzieli ciąg na grupy po 3 cyfry i wstawia między nie spację
+                                    const formatted = val.match(/.{1,3}/g)?.join(' ') || '';
+
+                                    // 4. Zapisuje sformatowany numer do stanu
+                                    setTelefon(formatted);
+                                }}
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Województwo</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                                Województwo <span className="text-red-500">*</span>
+                            </label>
                             <select
                                 required
                                 className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none transition-all cursor-pointer"
@@ -219,7 +239,9 @@ export default function DodajOferteKrok1() {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Miejscowość lub Rejon</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                                Miejscowość lub Rejon <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 required type="text" placeholder="np. pod Łaskiem"
                                 className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
@@ -229,7 +251,7 @@ export default function DodajOferteKrok1() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Zdjęcie (opcjonalnie)</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Zdjęcie</label>
                         <div
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={(e) => {
