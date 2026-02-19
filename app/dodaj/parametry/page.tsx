@@ -3,90 +3,145 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { sanitizeText } from "@/lib/security";
+
+// --- TYPY DANYCH (Dla bezpieczeństwa) ---
+interface Step1Data {
+    title: string;
+    material: string;
+    waga: string;
+    lokalizacja: string;
+    wojewodztwo: string;
+    telefon: string;
+    zdjecie_url: string;
+    bdo_code?: string;
+}
+
+interface FormData {
+    bdo: string;
+    cena: string;
+    email: string;
+    impurity: string;
+    form: string;
+    certs: string[];
+    logistics: string[];
+    pickupHours: string;
+    description: string;
+    hasExtraDocs: boolean;
+}
 
 export default function ParametryDetailsPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [step1Data, setStep1Data] = useState<any>(null);
+    const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
 
-    // --- TWOJE STANY ---
-    const [bdo, setBdo] = useState("");
-    const [cena, setCena] = useState("");
-    const [email, setEmail] = useState("");
-    const [impurity, setImpurity] = useState(""); // Puste, by wymusić wybór
-    const [form, setForm] = useState("");
-    const [certs, setCerts] = useState<string[]>([]);
-    const [logistics, setLogistics] = useState<string[]>([]);
-    const [pickupHours, setPickupHours] = useState("8-16");
-    const [description, setDescription] = useState("");
-    const [hasExtraDocs, setHasExtraDocs] = useState(false);
+    // --- SCALONY STAN FORMULARZA ---
+    const [formData, setFormData] = useState<FormData>({
+        bdo: "",
+        cena: "",
+        email: "",
+        impurity: "",
+        form: "",
+        certs: [],
+        logistics: [],
+        pickupHours: "8-16",
+        description: "",
+        hasExtraDocs: false,
+    });
 
-    // Pobieramy dane z Kroku 1 i automatycznie ustawiamy BDO
+    // Ładowanie danych z localStorage
     useEffect(() => {
         const savedData = localStorage.getItem("temp_offer");
         if (!savedData) {
             router.push("/dodaj");
-        } else {
-            const parsedData = JSON.parse(savedData);
+            return;
+        }
+
+        try {
+            const parsedData: Step1Data = JSON.parse(savedData);
             setStep1Data(parsedData);
 
-            // --- AUTOMATYCZNE BDO Z KROKU 1 ---
+            // Pre-fill BDO jeśli istnieje w kroku 1
             if (parsedData.bdo_code) {
-                setBdo(parsedData.bdo_code);
+                setFormData(prev => ({ ...prev, bdo: parsedData.bdo_code || "" }));
             }
+        } catch (e) {
+            console.error("Błąd parsowania danych", e);
+            router.push("/dodaj");
         }
     }, [router]);
 
-    // Obsługa multiselect
-    const toggleSelection = (item: string, list: string[], setList: any) => {
-        if (list.includes(item)) {
-            setList(list.filter((i: string) => i !== item));
-        } else {
-            setList([...list, item]);
-        }
+    // Uniwersalna funkcja zmiany pól tekstowych
+    const handleChange = (field: keyof FormData, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    // Specjalna obsługa BDO (formatowanie XX XX XX)
+    const handleBdoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let val = e.target.value.replace(/\D/g, '').substring(0, 6);
+        const formatted = val.match(/.{1,2}/g)?.join(' ') || val; // Fix: val jeśli match zwróci null
+        handleChange("bdo", formatted);
+    };
+
+    // Obsługa toggle (Certyfikaty, Logistyka)
+    const toggleListSelection = (field: 'certs' | 'logistics', item: string) => {
+        setFormData(prev => {
+            const list = prev[field];
+            const newList = list.includes(item)
+                ? list.filter(i => i !== item)
+                : [...list, item];
+            return { ...prev, [field]: newList };
+        });
     };
 
     const handleFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // 🛑 TWARDA WALIDACJA DLA KROKU 2
-        if (!cena || !impurity || !form) {
+        // 1. Walidacja podstawowa
+        if (!formData.cena || !formData.impurity || !formData.form) {
             alert("Uzupełnij obowiązkowe pola: Cena, Zanieczyszczenie oraz Forma towaru!");
             return;
         }
 
+        if (!step1Data) return;
         setLoading(true);
 
-        if (!step1Data) {
-            alert("Błąd: Brak danych z pierwszego kroku!");
-            setLoading(false);
-            return;
-        }
+        // 2. Bezpieczne parsowanie liczb (obsługa przecinka 100,50 -> 100.50)
+        const safePrice = parseFloat(formData.cena.replace(',', '.')) || 0;
+        const safeImpurity = parseFloat(formData.impurity) || 0;
+        // 👇 Konwertujemy na String przed użyciem replace, na wypadek gdyby to już była liczba
+        const safeWeight = parseFloat(String(step1Data.waga).replace(',', '.')) || 0;
 
+        // 3. Budowanie obiektu (Sanityzacja)
         const finalOffer = {
-            title: step1Data.title, // 👈 KLUCZOWE: Tytuł z Kroku 1 trafia do bazy!
-            material: step1Data.material,
-            waga: step1Data.waga,
-            lokalizacja: step1Data.lokalizacja,
-            wojewodztwo: step1Data.wojewodztwo,
-            telefon: step1Data.telefon,
+            // Step 1
+            title: sanitizeText(step1Data.title),
+            material: sanitizeText(step1Data.material),
+            waga: safeWeight,
+            lokalizacja: sanitizeText(step1Data.lokalizacja),
+            wojewodztwo: sanitizeText(step1Data.wojewodztwo),
+            telefon: sanitizeText(step1Data.telefon),
             zdjecie_url: step1Data.zdjecie_url,
-            cena: parseFloat(cena) || 0,
-            email: email || null,
-            bdo_code: bdo,
-            impurity: parseFloat(impurity) || 0,
-            form: form,
-            certificates: certs.join(", "),
-            logistics: logistics.join(", "),
-            pickup_hours: pickupHours,
-            opis: description,
-            extra_photo_docs: hasExtraDocs,
+
+            // Step 2
+            cena: safePrice,
+            email: sanitizeText(formData.email) || null,
+            bdo_code: sanitizeText(formData.bdo),
+            impurity: safeImpurity,
+            form: sanitizeText(formData.form),
+            certificates: formData.certs.join(", "),
+            logistics: formData.logistics.join(", "),
+            pickup_hours: sanitizeText(formData.pickupHours),
+            opis: sanitizeText(formData.description),
+            extra_photo_docs: formData.hasExtraDocs,
+
             status: 'aktywna',
-            created_at: new Date(),
+            created_at: new Date().toISOString(), // Lepiej używać ISO string dla bazy
         };
 
-        console.log("Próba zapisu oferty z tytułem:", finalOffer.title);
+        console.log("Wysyłanie:", finalOffer);
 
+        // 4. Wysyłka do Supabase
         const { data, error } = await supabase
             .from('oferty')
             .insert([finalOffer])
@@ -94,7 +149,6 @@ export default function ParametryDetailsPage() {
 
         if (error) {
             console.error("Błąd Supabase:", error);
-            alert("Błąd zapisu w bazie: " + error.message);
             setLoading(false);
         } else {
             console.log("Sukces! Otrzymano dane z bazy:", data);
@@ -109,13 +163,10 @@ export default function ParametryDetailsPage() {
                     if (!zapisaneOferty.includes(noweId)) {
                         zapisaneOferty.push(noweId);
                         localStorage.setItem('moje_oferty', JSON.stringify(zapisaneOferty));
-                        console.log("ID zapisane w localStorage:", noweId);
                     }
                 } catch (lsError) {
                     console.error("Błąd localStorage:", lsError);
                 }
-            } else {
-                console.warn("Baza nie zwróciła ID! Sprawdź uprawnienia RLS w Supabase.");
             }
 
             localStorage.removeItem("temp_offer");
@@ -130,7 +181,6 @@ export default function ParametryDetailsPage() {
         <main className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 py-12">
             <div className="bg-white p-8 rounded-[32px] shadow-xl max-w-xl w-full border border-slate-100">
 
-                {/* Pasek postępu */}
                 <div className="flex justify-between items-center mb-6">
                     <span className="text-[10px] font-black bg-green-100 text-green-700 px-3 py-1 rounded-full uppercase">
                         Krok 2/2: Szczegóły techniczne
@@ -147,7 +197,6 @@ export default function ParametryDetailsPage() {
 
                 <form onSubmit={handleFinalSubmit} className="space-y-6">
 
-                    {/* CZYSTA SIATKA 2x2: BDO, Cena, Zanieczyszczenie, E-mail */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
@@ -157,20 +206,8 @@ export default function ParametryDetailsPage() {
                                 type="text"
                                 placeholder="np. 15 01 01"
                                 className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 tracking-widest"
-                                value={bdo}
-                                onChange={(e) => {
-                                    // 1. Usuwamy wszystkie znaki, które nie są cyframi (np. litery, myślniki)
-                                    let val = e.target.value.replace(/\D/g, '');
-
-                                    // 2. Ograniczamy długość do maksymalnie 6 cyfr (bo kody BDO mają tylko 6)
-                                    val = val.substring(0, 6);
-
-                                    // 3. Dzielimy cyfry w pary (po 2) i łączymy je spacją
-                                    const formatted = val.match(/.{1,2}/g)?.join(' ') || '';
-
-                                    // 4. Zapisujemy pięknie sformatowany kod
-                                    setBdo(formatted);
-                                }}
+                                value={formData.bdo}
+                                onChange={handleBdoChange}
                             />
                         </div>
                         <div>
@@ -182,15 +219,14 @@ export default function ParametryDetailsPage() {
                                     required
                                     type="number"
                                     placeholder="0"
-                                    value={cena}
-                                    onChange={(e) => setCena(e.target.value)}
+                                    value={formData.cena}
+                                    onChange={(e) => handleChange('cena', e.target.value)}
                                     className="w-full p-4 pr-12 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
                                 />
                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">zł/t</span>
                             </div>
                         </div>
 
-                        {/* ZMIENIONE POLE ZANIECZYSZCZENIA NA DROPDOWN */}
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
                                 Zanieczyszczenie <span className="text-red-500">*</span>
@@ -199,8 +235,8 @@ export default function ParametryDetailsPage() {
                                 <select
                                     required
                                     className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none transition-all cursor-pointer"
-                                    value={impurity}
-                                    onChange={(e) => setImpurity(e.target.value)}
+                                    value={formData.impurity}
+                                    onChange={(e) => handleChange('impurity', e.target.value)}
                                 >
                                     <option value="" disabled className="text-slate-400">Wybierz...</option>
                                     <option value="0">0% (Idealny / Produkt)</option>
@@ -224,13 +260,12 @@ export default function ParametryDetailsPage() {
                                 type="email"
                                 placeholder="biuro@firma.pl"
                                 className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                value={formData.email}
+                                onChange={(e) => handleChange('email', e.target.value)}
                             />
                         </div>
                     </div>
 
-                    {/* Forma towaru - Lista rozwijana */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
                             Forma towaru <span className="text-red-500">*</span>
@@ -239,8 +274,8 @@ export default function ParametryDetailsPage() {
                             <select
                                 required
                                 className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none cursor-pointer"
-                                value={form}
-                                onChange={(e) => setForm(e.target.value)}
+                                value={formData.form}
+                                onChange={(e) => handleChange('form', e.target.value)}
                             >
                                 <option value="" disabled className="text-slate-400">Wybierz formę...</option>
                                 <option value="Bela">Bela</option>
@@ -257,15 +292,14 @@ export default function ParametryDetailsPage() {
                         </div>
                     </div>
 
-                    {/* Certyfikaty */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Dokumenty / Certyfikaty</label>
                         <div className="flex flex-wrap gap-2">
                             {["KPO (Karta Przekazania Odpadu)", "Certyfikat pochodzenia", "Dokumentacja zdjęciowa", "Analiza składu"].map(cert => (
                                 <button
                                     key={cert} type="button"
-                                    onClick={() => toggleSelection(cert, certs, setCerts)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${certs.includes(cert)
+                                    onClick={() => toggleListSelection('certs', cert)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${formData.certs.includes(cert)
                                         ? "bg-blue-600 border-blue-600 text-white"
                                         : "bg-white border-slate-200 text-slate-500 hover:border-blue-400"
                                         }`}
@@ -276,15 +310,14 @@ export default function ParametryDetailsPage() {
                         </div>
                     </div>
 
-                    {/* Logistyka */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Logistyka</label>
                         <div className="flex flex-wrap gap-2">
                             {["Transport sprzedającego", "Odbiór własny"].map(opt => (
                                 <button
                                     key={opt} type="button"
-                                    onClick={() => toggleSelection(opt, logistics, setLogistics)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${logistics.includes(opt)
+                                    onClick={() => toggleListSelection('logistics', opt)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${formData.logistics.includes(opt)
                                         ? "bg-slate-900 border-slate-900 text-white"
                                         : "bg-white border-slate-200 text-slate-500 hover:border-slate-400"
                                         }`}
@@ -295,48 +328,61 @@ export default function ParametryDetailsPage() {
                         </div>
                     </div>
 
-                    {/* Godziny odbioru */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Godziny odbioru</label>
                         <input
                             type="text" placeholder="np. 8:00 - 16:00"
                             className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                            value={pickupHours} onChange={(e) => setPickupHours(e.target.value)}
+                            value={formData.pickupHours} onChange={(e) => handleChange('pickupHours', e.target.value)}
                         />
                     </div>
 
-                    {/* Opis */}
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Informacje dodatkowe</label>
-                        <textarea
-                            rows={3}
-                            placeholder="Kolor, MFI, Pochodzenie, Dane adresowe firmy"
-                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 resize-none"
-                            value={description} onChange={(e) => setDescription(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="flex items-center gap-3 p-2 bg-blue-50 rounded-xl border border-blue-100">
-                        <input
-                            type="checkbox"
-                            id="extraDocs"
-                            checked={hasExtraDocs}
-                            onChange={(e) => setHasExtraDocs(e.target.checked)}
-                            className="w-5 h-5 accent-blue-600"
-                        />
-                        <label htmlFor="extraDocs" className="text-sm font-bold text-blue-800 cursor-pointer">
-                            Posiadam dodatkową dokumentację zdjęciową
+                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                            Dodatkowy opis
                         </label>
+                        <textarea
+                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 min-h-[120px] resize-y"
+                            placeholder="Wpisz dodatkowe informacje o towarze..."
+                            value={formData.description}
+                            onChange={(e) => handleChange('description', e.target.value)}
+                        />
                     </div>
 
-                    <button
-                        disabled={loading}
-                        type="submit"
-                        className={`w-full p-5 rounded-2xl font-black text-xl transition-all shadow-lg active:scale-95 uppercase tracking-tight flex items-center justify-center gap-3 mt-4 ${loading ? 'bg-slate-300 text-slate-500' : 'bg-green-600 text-white hover:bg-green-500'
-                            }`}
-                    >
-                        {loading ? 'Zapisywanie...' : 'Opublikuj Ofertę ✔'}
-                    </button>
+                    <div className="flex items-center gap-3 py-2">
+                        <button
+                            type="button"
+                            onClick={() => handleChange('hasExtraDocs', !formData.hasExtraDocs)}
+                            className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.hasExtraDocs ? "bg-blue-600 border-blue-600" : "bg-white border-slate-300"
+                                }`}
+                        >
+                            {formData.hasExtraDocs && (
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                            )}
+                        </button>
+                        <span
+                            onClick={() => handleChange('hasExtraDocs', !formData.hasExtraDocs)}
+                            className="text-sm font-bold text-slate-600 cursor-pointer select-none"
+                        >
+                            Posiadam dodatkową dokumentację (zdjęcia / analizy)
+                        </span>
+                    </div>
+
+                    <div className="pt-4">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`w-full py-5 rounded-2xl text-white font-black text-sm uppercase tracking-widest transition-all ${loading
+                                ? "bg-slate-300 cursor-not-allowed"
+                                : "bg-green-600 hover:bg-green-500 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-green-200"
+                                }`}
+                        >
+                            {loading ? "Zapisywanie..." : "Dodaj ofertę"}
+                        </button>
+                    </div>
+
                 </form>
             </div>
         </main>

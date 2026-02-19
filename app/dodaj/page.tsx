@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
 import { CheckCircle } from 'lucide-react';
+import { sanitizeText } from '@/lib/security';
 
-// 1. ROZSZERZONA LISTA Z KODAMI BDO
 const KATEGORIE_Z_BDO = [
     { nazwa: "Folia LDPE (stretch)", bdo: "" },
     { nazwa: "Folia kolorowa", bdo: "" },
@@ -19,7 +19,6 @@ const KATEGORIE_Z_BDO = [
     { nazwa: "Inne", bdo: "" }
 ];
 
-// LISTA WOJEWÓDZTW (alfabetycznie)
 const WOJEWODZTWA = [
     "dolnośląskie", "kujawsko-pomorskie", "lubelskie", "lubuskie",
     "łódzkie", "małopolskie", "mazowieckie", "opolskie",
@@ -27,32 +26,41 @@ const WOJEWODZTWA = [
     "świętokrzyskie", "warmińsko-mazurskie", "wielkopolskie", "zachodniopomorskie"
 ];
 
-const getIcon = (material: string) => {
-    const m = material.toLowerCase();
-    if (m.includes('folia')) return '🧻';
-    if (m.includes('tworzywa')) return '♻️';
-    if (m.includes('makulatura') || m.includes('karton')) return '📄';
-    if (m.includes('złom') || m.includes('stal')) return '🔩';
-    if (m.includes('drewno') || m.includes('palety')) return '🪵';
-    return '❓';
-};
-
 export default function DodajOferteKrok1() {
     const router = useRouter();
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-    // --- DODANO STAN DLA TYTUŁU ---
+    // Form states
     const [title, setTitle] = useState('');
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
-    const [lokalizacja, setLokalizacja] = useState(''); // Miejscowość
-    const [wojewodztwo, setWojewodztwo] = useState(''); // Województwo
+    const [lokalizacja, setLokalizacja] = useState('');
+    const [wojewodztwo, setWojewodztwo] = useState('');
     const [telefon, setTelefon] = useState('');
-
     const [autoBdo, setAutoBdo] = useState('');
+
+    // File states
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
+    // 🛡️ SPRAWDZANIE SESJI
+    useEffect(() => {
+        const checkUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+
+            // 👇 TYMCZASOWA ZMIANA: Zakomentowałem wyrzucanie, żebyś mógł testować na localhost
+            if (!session) {
+                console.log("Brak sesji (tryb deweloperski - nie wyrzucam)");
+                // router.push('/rynek'); // <--- ODKOMENTUJ TO, JAK JUŻ SKOŃCZYSZ APKIĘ!
+            }
+
+            setIsCheckingAuth(false);
+        };
+        checkUser();
+    }, [router]);
+
+    // Obsługa wklejania zdjęcia (Ctrl+V)
     useEffect(() => {
         const handlePaste = (e: ClipboardEvent) => {
             const item = e.clipboardData?.items[0];
@@ -78,7 +86,7 @@ export default function DodajOferteKrok1() {
         try {
             const compressedFile = await imageCompression(fileToUpload, options);
             const fileExt = compressedFile.name.split('.').pop() || 'png';
-            const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`; // Lepsze generowanie nazwy
             const filePath = `${fileName}`;
 
             const { error: uploadError } = await supabase.storage.from('oferty-zdjecia').upload(filePath, compressedFile);
@@ -92,16 +100,11 @@ export default function DodajOferteKrok1() {
         }
     };
 
-    const handleNextStep = (e: React.MouseEvent) => {
-        handleDalej(e as unknown as React.FormEvent);
-    };
-
     const handleDalej = async (e: React.FormEvent) => {
-        e.preventDefault();
+        e.preventDefault(); // Zatrzymaj przeładowanie strony
 
-        // 🛑 ZAKTUALIZOWANA WALIDACJA - DODANO TYTUŁ
         if (!title || !material || !telefon || !wojewodztwo || !lokalizacja) {
-            alert("Uzupełnij obowiązkowe pola: Tytuł, Rodzaj materiału, Telefon, Województwo i Miejscowość!");
+            alert("Uzupełnij obowiązkowe pola!");
             return;
         }
 
@@ -113,28 +116,44 @@ export default function DodajOferteKrok1() {
                 uploadedImageUrl = await uploadImage(file);
             }
 
+            // Sanityzacja danych
             const step1Data = {
-                title, // <-- DODANO DO OBIEKTU
-                material,
+                title: sanitizeText(title),
+                material: sanitizeText(material),
                 waga: parseFloat(waga) || 0,
-                lokalizacja,
-                wojewodztwo,
-                telefon,
+                lokalizacja: sanitizeText(lokalizacja),
+                wojewodztwo: sanitizeText(wojewodztwo),
+                telefon: sanitizeText(telefon),
                 zdjecie_url: uploadedImageUrl,
                 bdo_code: autoBdo
             };
 
+            // Zapis do localStorage
             localStorage.setItem('temp_offer', JSON.stringify(step1Data));
+
+            // Przejście do kroku 2
             router.push('/dodaj/parametry');
+
         } catch (err: any) {
+            console.error(err);
             alert('Błąd: ' + err.message);
             setLoading(false);
         }
     };
 
+    if (isCheckingAuth) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-slate-500 font-bold animate-pulse">Ładowanie...</div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 font-sans">
             <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+
+                {/* HEADER */}
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Dodaj Ofertę</h1>
@@ -145,12 +164,11 @@ export default function DodajOferteKrok1() {
 
                 <form onSubmit={handleDalej} className="space-y-4">
 
-                    {/* --- NOWE POLE: TYTUŁ OGŁOSZENIA --- */}
+                    {/* TYTUŁ */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
                             Tytuł ogłoszenia <span className="text-red-500">*</span>
                         </label>
-
                         <input
                             required
                             type="text"
@@ -161,14 +179,14 @@ export default function DodajOferteKrok1() {
                         />
                     </div>
 
-                    {/* Wybór materiału */}
+                    {/* MATERIAŁ */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
                             Rodzaj Materiału <span className="text-red-500">*</span>
                         </label>
                         <select
                             required
-                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-semibold text-slate-900 appearance-none transition-all cursor-pointer"
+                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-semibold text-slate-900 appearance-none cursor-pointer"
                             value={material}
                             onChange={(e) => {
                                 const val = e.target.value;
@@ -184,6 +202,7 @@ export default function DodajOferteKrok1() {
                         </select>
                     </div>
 
+                    {/* WAGA i TELEFON */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Waga towaru</label>
@@ -193,7 +212,7 @@ export default function DodajOferteKrok1() {
                                     className="w-full p-4 pr-12 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
                                     value={waga} onChange={(e) => setWaga(e.target.value)}
                                 />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-s font-black text-slate-400">/t</span>
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">/t</span>
                             </div>
                         </div>
                         <div>
@@ -205,22 +224,15 @@ export default function DodajOferteKrok1() {
                                 className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
                                 value={telefon}
                                 onChange={(e) => {
-                                    // 1. Wyrzuca wszystko co nie jest cyfrą (litery, spacje, myślniki)
-                                    let val = e.target.value.replace(/\D/g, '');
-
-                                    // 2. Blokuje wpisywanie powyżej 9 cyfr
-                                    val = val.substring(0, 9);
-
-                                    // 3. Dzieli ciąg na grupy po 3 cyfry i wstawia między nie spację
-                                    const formatted = val.match(/.{1,3}/g)?.join(' ') || '';
-
-                                    // 4. Zapisuje sformatowany numer do stanu
+                                    let val = e.target.value.replace(/\D/g, '').substring(0, 9);
+                                    const formatted = val.match(/.{1,3}/g)?.join(' ') || val;
                                     setTelefon(formatted);
                                 }}
                             />
                         </div>
                     </div>
 
+                    {/* LOKALIZACJA */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
@@ -228,7 +240,7 @@ export default function DodajOferteKrok1() {
                             </label>
                             <select
                                 required
-                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none transition-all cursor-pointer"
+                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none cursor-pointer"
                                 value={wojewodztwo}
                                 onChange={(e) => setWojewodztwo(e.target.value)}
                             >
@@ -240,7 +252,7 @@ export default function DodajOferteKrok1() {
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
-                                Miejscowość lub Rejon <span className="text-red-500">*</span>
+                                Miejscowość <span className="text-red-500">*</span>
                             </label>
                             <input
                                 required type="text" placeholder="np. pod Łaskiem"
@@ -250,6 +262,7 @@ export default function DodajOferteKrok1() {
                         </div>
                     </div>
 
+                    {/* ZDJĘCIE (Drag & Drop) */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Zdjęcie</label>
                         <div
@@ -276,12 +289,16 @@ export default function DodajOferteKrok1() {
                         </div>
                     </div>
 
+                    {/* PRZYCISK DALEJ */}
+                    {/* 👇 ZMIANA: Usunąłem onClick, dodałem type="submit". Teraz enter w polu formularza też zadziała! */}
                     <button
-                        onClick={handleNextStep}
-                        className="w-full bg-slate-900 text-white py-5 rounded-[24px] font-black text-xl uppercase tracking-tighter shadow-2xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 group"
+                        type="submit"
+                        disabled={loading}
+                        className={`w-full bg-slate-900 text-white py-5 rounded-[24px] font-black text-xl uppercase tracking-tighter shadow-xl transition-all flex items-center justify-center gap-3 group ${loading ? 'opacity-70 cursor-wait' : 'hover:bg-blue-600 hover:shadow-2xl hover:scale-[1.01] active:scale-[0.99]'
+                            }`}
                     >
                         {loading ? 'Przetwarzanie...' : 'Dalej - Parametry'}
-                        <CheckCircle size={24} className="text-blue-400 shrink-0 group-hover:text-white transition-colors" />
+                        {!loading && <CheckCircle size={24} className="text-blue-400 shrink-0 group-hover:text-white transition-colors" />}
                     </button>
                 </form>
             </div>

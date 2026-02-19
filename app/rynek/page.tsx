@@ -4,10 +4,11 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
+import LoginButton from '@/app/components/LoginButton'; // 👈 IMPORTUJEMY NASZ PRZYCISK
 import {
     Archive, Mountain, ShoppingBag, Layers, Box,
     ArrowRight, User, Recycle, FileText, Wrench,
-    MapPin, Clock
+    MapPin, Clock, Lock
 } from 'lucide-react';
 
 interface Oferta {
@@ -54,9 +55,22 @@ export default function Rynek() {
     const [aktywnyFiltr, setAktywnyFiltr] = useState("Wszystko");
     const [szukanaFraza, setSzukanaFraza] = useState("");
     const [loading, setLoading] = useState(true);
+    const [session, setSession] = useState<any>(null); // 👈 STAN SESJI
 
     useEffect(() => {
         fetchOferty();
+
+        // 🛡️ SPRAWDZANIE SESJI NA START
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+        });
+
+        // 🛡️ SŁUCHANIE ZMIAN SESJI (Logowanie/Wylogowanie)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
     useEffect(() => {
@@ -94,7 +108,7 @@ export default function Rynek() {
         <div className="min-h-screen bg-[#f8fafc] p-4 md:p-8 font-sans text-slate-900">
             <div className="max-w-5xl mx-auto">
 
-                {/* NAGŁÓWEK */}
+                {/* NAGŁÓWEK ZINTEGROWANY Z AUTH */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 gap-6">
                     <div>
                         <Link href="/" className="inline-block hover:scale-[1.02] active:scale-95 transition-transform">
@@ -107,14 +121,30 @@ export default function Rynek() {
                         </p>
                     </div>
 
-                    <div className="flex w-full md:w-auto gap-3">
-                        <Link href="/moje" className="flex-1 md:flex-none bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-bold hover:bg-slate-200 transition-all text-center uppercase text-sm flex items-center justify-center gap-2">
-                            <User size={18} />
-                            Moje
-                        </Link>
-                        <Link href="/dodaj" className="flex-[2] md:flex-none bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-blue-600 transition-all shadow-xl text-center uppercase tracking-tight flex items-center justify-center gap-2">
-                            <span>+</span> Wystaw towar
-                        </Link>
+                    <div className="flex w-full md:w-auto gap-3 items-center">
+                        {/* 🛡️ POKAZUJ PRZYCISKI TYLKO ZALOGOWANYM LUB PRZYCISK LOGOWANIA */}
+                        {session ? (
+                            <>
+                                <Link href="/moje" className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-bold hover:bg-slate-200 transition-all text-center uppercase text-sm flex items-center justify-center gap-2">
+                                    <User size={18} />
+                                    Panel
+                                </Link>
+                                <Link href="/dodaj" className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-blue-600 transition-all shadow-xl text-center uppercase tracking-tight flex items-center justify-center gap-2">
+                                    <span>+</span> Wystaw
+                                </Link>
+                                <button
+                                    onClick={() => supabase.auth.signOut()}
+                                    className="text-slate-400 hover:text-red-500 font-bold text-xs uppercase"
+                                >
+                                    Wyjdź
+                                </button>
+                            </>
+                        ) : (
+                            <div className="flex flex-col items-end gap-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase mr-2">Zaloguj się, aby wystawić:</span>
+                                <LoginButton />
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -173,21 +203,13 @@ export default function Rynek() {
                                                 <span className="text-7xl opacity-20">{getIcon(o.material)}</span>
                                             )}
                                         </div>
-
-                                        {o.status === 'sprzedane' && (
-                                            <div className="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/50 backdrop-blur-sm">
-                                                <span className="bg-red-500 text-white px-4 py-2 font-black uppercase tracking-widest -rotate-12 shadow-xl border-2 border-white">
-                                                    Sprzedane
-                                                </span>
-                                            </div>
-                                        )}
                                     </div>
 
                                     {/* TREŚĆ */}
                                     <div className="flex-1 p-6 flex flex-col justify-between relative">
                                         <div>
                                             <div className="flex justify-between items-start mb-4">
-                                                <div>
+                                                <div className="max-w-[70%]">
                                                     <h2 className="text-2xl font-black text-slate-900 leading-tight uppercase tracking-tight line-clamp-2">
                                                         {o.title || o.material}
                                                     </h2>
@@ -215,20 +237,26 @@ export default function Rynek() {
                                                     <span className="truncate">{o.lokalizacja} {o.wojewodztwo ? `(${o.wojewodztwo})` : ''}</span>
                                                 </div>
 
-                                                <div className="flex items-center gap-3 text-slate-600 font-medium">
-                                                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
-                                                        <Clock size={16} />
-                                                    </div>
-                                                    <span className="text-xs uppercase tracking-wider font-bold text-slate-400">
-                                                        {formatDistanceToNow(new Date(o.created_at), { addSuffix: true, locale: pl })}
-                                                    </span>
+                                                {/* 🛡️ ZASŁANIANIE KONTAKTU DLA NIEZALOGOWANYCH */}
+                                                <div className="flex items-center gap-3 text-slate-600 font-medium pt-2 border-t border-slate-50 mt-2">
+                                                    {session ? (
+                                                        <div className="flex items-center gap-2 text-blue-600 font-black">
+                                                            <User size={16} />
+                                                            <span>KONTAKT: {o.telefon}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 text-slate-300 italic text-sm">
+                                                            <Lock size={14} />
+                                                            <span>Zaloguj się, aby zobaczyć telefon</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-4 text-blue-600 font-black uppercase text-xl md:text-Xl tracking-tighter group-hover:gap-8 group-hover:text-blue-500 transition-all duration-300">
+                                        <div className="mt-6 flex items-center gap-4 text-blue-600 font-black uppercase text-xl tracking-tighter group-hover:gap-8 group-hover:text-blue-500 transition-all duration-300">
                                             ZOBACZ SZCZEGÓŁY
-                                            <ArrowRight size={40} className="group-hover:scale-150 transition-transform duration-300 fill-blue-600" />
+                                            <ArrowRight size={40} className="group-hover:scale-150 transition-transform duration-300" />
                                         </div>
                                     </div>
                                 </div>
@@ -238,12 +266,14 @@ export default function Rynek() {
                 )}
             </div>
 
-            {/* FLOATING BUTTON DLA MOBILE */}
-            <div className="md:hidden fixed bottom-6 right-6 z-50">
-                <Link href="/dodaj" className="bg-blue-600 text-white p-4 rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all">
-                    <span className="text-2xl font-black">+</span>
-                </Link>
-            </div>
+            {/* FLOATING BUTTON - TYLKO DLA ZALOGOWANYCH */}
+            {session && (
+                <div className="md:hidden fixed bottom-6 right-6 z-50">
+                    <Link href="/dodaj" className="bg-blue-600 text-white p-4 rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all">
+                        <span className="text-2xl font-black">+</span>
+                    </Link>
+                </div>
+            )}
         </div>
     );
 }
