@@ -162,8 +162,9 @@ export default function Rynek() {
                         </div>
                         <input
                             type="text"
-                            placeholder="Czego szukasz?"
-                            className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-800 border-2 border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all font-semibold"
+
+                            placeholder="np. folia, Toruń, 15 01 02, cokolwiek"
+                            className="w-full pl-14 pr-6 py-5 rounded-[28px] bg-slate-800 border-2 border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all font-bold text-lg shadow-2xl"
                             value={szukanaFraza}
                             onChange={(e) => setSzukanaFraza(e.target.value)}
                         />
