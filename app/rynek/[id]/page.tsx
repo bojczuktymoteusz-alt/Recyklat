@@ -214,13 +214,22 @@ export default function SzczegolyOferty() {
                             <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
                                 <Info size={16} /> Szczegóły techniczne
                             </h3>
+
+                            {/* 👇 NOWY KAFELEK: RODZAJ MATERIAŁU */}
+                            <div className="mb-4 p-5 bg-blue-50/50 rounded-[24px] border border-blue-100">
+                                <p className="text-[10px] uppercase font-black text-blue-500 mb-1 tracking-widest">Rodzaj materiału</p>
+                                <p className="font-black text-blue-700 text-lg uppercase">{oferta.material}</p>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-5 bg-slate-50 rounded-[24px] border border-slate-100">
                                     <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Kod BDO</p>
                                     <p className="font-black text-slate-700 text-lg">{oferta.bdo_code || '---'}</p>
                                 </div>
                                 <div className="p-5 bg-slate-50 rounded-[24px] border border-slate-100">
-                                    <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Zanieczyszczenie</p>
+                                    <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">
+                                        {jestZapotrzebowanie ? "Akceptowane zanieczyszczenie" : "Zanieczyszczenie"}
+                                    </p>
                                     <p className="font-black text-slate-700 text-lg">{getImpurityLabel(oferta.impurity)}</p>
                                 </div>
                             </div>
