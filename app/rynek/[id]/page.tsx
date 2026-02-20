@@ -135,7 +135,7 @@ export default function SzczegolyOferty() {
                         </div>
 
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm space-y-6">
-                            <h1 className={`text-3xl font-black tracking-tighter uppercase leading-none ${jestSprzedane ? 'text-gray-400' : 'text-slate-900'}`}>
+                            <h1 className={`text-2xl md:text-3xl font-black tracking-tighter uppercase leading-none ${jestSprzedane ? 'text-gray-400' : 'text-slate-900'}`}>
                                 {wyswietlanyTytul}
                             </h1>
                             <div className="flex flex-wrap gap-3 items-center pt-2">
