@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
     ArrowLeft, MapPin, Phone, Info, Truck,
-    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck, Map, FileText, AlertCircle, ShoppingBag, ArrowDownToLine
+    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck, Map, FileText, AlertCircle, ShoppingBag, ArrowDownToLine, PackageSearch, ImageOff
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -153,7 +153,19 @@ export default function SzczegolyOferty() {
                                     className={`w-full h-full object-cover ${jestSprzedane ? 'grayscale opacity-50' : ''}`}
                                 />
                             ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-200 bg-slate-50 text-8xl font-black opacity-20">?</div>
+                                <div className={`w-full h-full flex flex-col items-center justify-center ${jestZapotrzebowanie ? 'bg-blue-50/50' : 'bg-slate-50'}`}>
+                                    {jestZapotrzebowanie ? (
+                                        <div className="flex flex-col items-center justify-center text-blue-300">
+                                            <PackageSearch size={80} strokeWidth={1.5} />
+                                            <p className="text-blue-400 font-black uppercase text-xs tracking-widest mt-6 opacity-80">Szuka surowca</p>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center text-slate-300">
+                                            <ImageOff size={80} strokeWidth={1.5} />
+                                            <p className="font-black uppercase text-xs tracking-widest mt-6 opacity-60">Brak zdjęcia</p>
+                                        </div>
+                                    )}
+                                </div>
                             )}
 
                             {!jestSprzedane && (

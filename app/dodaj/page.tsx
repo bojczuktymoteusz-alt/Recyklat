@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
-import { CheckCircle, ShoppingBag, ArrowDownToLine } from 'lucide-react';
+import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus } from 'lucide-react';
 import { sanitizeText } from '@/lib/security';
 
 const KATEGORIE_Z_BDO = [
@@ -32,9 +32,7 @@ const WOJEWODZTWA = [
 export default function DodajOferteKrok1() {
     const router = useRouter();
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
-    // Form states
-    const [typOferty, setTypOferty] = useState<'sprzedam' | 'kupie'>('sprzedam'); // 👈 NOWY STAN DLA TYPU OFERTY
+    const [typOferty, setTypOferty] = useState<'sprzedam' | 'kupie'>('sprzedam');
     const [title, setTitle] = useState('');
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
@@ -42,87 +40,31 @@ export default function DodajOferteKrok1() {
     const [wojewodztwo, setWojewodztwo] = useState('');
     const [telefon, setTelefon] = useState('');
     const [autoBdo, setAutoBdo] = useState('');
-
-    // File states
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
-    // 🛡️ SPRAWDZANIE SESJI
-    useEffect(() => {
-        const checkUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-
-            // 👇 TYMCZASOWA ZMIANA: Zakomentowałem wyrzucanie, żebyś mógł testować na localhost
-            if (!session) {
-                console.log("Brak sesji (tryb deweloperski - nie wyrzucam)");
-                // router.push('/rynek'); // <--- ODKOMENTUJ TO, JAK JUŻ SKOŃCZYSZ APKIĘ!
-            }
-
-            setIsCheckingAuth(false);
-        };
-        checkUser();
-    }, [router]);
-
-    // Obsługa wklejania zdjęcia (Ctrl+V)
-    useEffect(() => {
-        const handlePaste = (e: ClipboardEvent) => {
-            const item = e.clipboardData?.items[0];
-            if (item?.type.indexOf('image') !== -1) {
-                const blob = item?.getAsFile();
-                if (blob) {
-                    setFile(blob);
-                    setPreview(URL.createObjectURL(blob));
-                }
-            }
-        };
-        window.addEventListener('paste', handlePaste);
-        return () => window.removeEventListener('paste', handlePaste);
-    }, []);
+    useEffect(() => { setIsCheckingAuth(false); }, []);
 
     const uploadImage = async (fileToUpload: File) => {
-        const options = {
-            maxSizeMB: 1,
-            maxWidthOrHeight: 1920,
-            useWebWorker: true
-        };
-
+        const options = { maxSizeMB: 1, maxWidthOrHeight: 1080, useWebWorker: true };
         try {
             const compressedFile = await imageCompression(fileToUpload, options);
-            const fileExt = compressedFile.name.split('.').pop() || 'png';
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`; // Lepsze generowanie nazwy
-            const filePath = `${fileName}`;
-
-            const { error: uploadError } = await supabase.storage.from('oferty-zdjecia').upload(filePath, compressedFile);
-            if (uploadError) throw uploadError;
-
-            const { data } = supabase.storage.from('oferty-zdjecia').getPublicUrl(filePath);
+            const fileName = `${Date.now()}.png`;
+            await supabase.storage.from('oferty-zdjecia').upload(fileName, compressedFile);
+            const { data } = supabase.storage.from('oferty-zdjecia').getPublicUrl(fileName);
             return data.publicUrl;
-        } catch (error) {
-            console.error("Błąd kompresji/uploadu:", error);
-            throw error;
-        }
+        } catch (error) { throw error; }
     };
 
     const handleDalej = async (e: React.FormEvent) => {
-        e.preventDefault(); // Zatrzymaj przeładowanie strony
-
-        if (!title || !material || !telefon || !wojewodztwo || !lokalizacja) {
-            alert("Uzupełnij obowiązkowe pola!");
-            return;
-        }
-
+        e.preventDefault();
         setLoading(true);
-
         try {
             let uploadedImageUrl = '';
-            if (file) {
-                uploadedImageUrl = await uploadImage(file);
-            }
-
-            // Sanityzacja danych
+            if (file) uploadedImageUrl = await uploadImage(file);
             const step1Data = {
-                typOferty, // 👈 DODANO DO DANYCH
+                typ_oferty: typOferty,
                 title: sanitizeText(title),
                 material: sanitizeText(material),
                 waga: parseFloat(waga) || 0,
@@ -132,171 +74,130 @@ export default function DodajOferteKrok1() {
                 zdjecie_url: uploadedImageUrl,
                 bdo_code: autoBdo
             };
-
-            // Zapis do localStorage
             localStorage.setItem('temp_offer', JSON.stringify(step1Data));
-
-            // Przejście do kroku 2
             router.push('/dodaj/parametry');
-
-        } catch (err: any) {
-            console.error(err);
-            alert('Błąd: ' + err.message);
-            setLoading(false);
-        }
+        } catch (err: any) { alert(err.message); setLoading(false); }
     };
 
-    if (isCheckingAuth) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-slate-500 font-bold animate-pulse">Ładowanie...</div>
-            </div>
-        );
-    }
+    if (isCheckingAuth) return null;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 font-sans">
-            <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 sm:p-8 font-sans">
+            <div className="max-w-xl w-full bg-white rounded-[40px] shadow-2xl p-8 md:p-12 border-4 border-white">
 
-                {/* HEADER */}
-                <div className="flex justify-between items-center mb-6">
+                {/* NAGŁÓWEK */}
+                <div className="flex justify-between items-start mb-10">
                     <div>
-                        <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Dodaj Ofertę</h1>
-                        <p className="text-xs font-bold text-slate-400">KROK 1/2</p>
+                        <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">Dodaj Ofertę</h1>
+                        <div className="flex items-center gap-2">
+                            <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">Krok 1</span>
+                            <p className="text-sm font-extrabold text-slate-500 uppercase tracking-tight">Informacje podstawowe</p>
+                        </div>
                     </div>
-                    <Link href="/" className="text-slate-400 hover:text-slate-900 text-sm font-bold transition-colors">Anuluj</Link>
+                    <Link href="/rynek" className="bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 p-3 rounded-2xl transition-all font-black text-[10px] uppercase">Anuluj</Link>
                 </div>
 
-                <form onSubmit={handleDalej} className="space-y-4">
+                <form onSubmit={handleDalej} className="space-y-8">
 
-                    {/* TYP OFERTY - TOGGLE */}
-                    <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-2xl mb-6">
-                        <button
-                            type="button"
-                            onClick={() => setTypOferty('sprzedam')}
-                            className={`py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all ${typOferty === 'sprzedam'
-                                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
-                                    : 'text-slate-400 hover:text-slate-600'
-                                }`}
-                        >
-                            Sprzedam
+                    {/* PRZEŁĄCZNIK TYPU */}
+                    <div className="grid grid-cols-2 gap-3 bg-slate-100 p-2 rounded-[28px] border-2 border-slate-200 shadow-inner">
+                        <button type="button" onClick={() => setTypOferty('sprzedam')}
+                            className={`py-4 rounded-[20px] text-sm font-black uppercase tracking-tight transition-all flex items-center justify-center gap-3 ${typOferty === 'sprzedam' ? 'bg-white text-blue-600 shadow-xl ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>
+                            <ShoppingBag size={20} /> Sprzedam
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => setTypOferty('kupie')}
-                            className={`py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all ${typOferty === 'kupie'
-                                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
-                                    : 'text-slate-400 hover:text-slate-600'
-                                }`}
-                        >
-                            Kupię
+                        <button type="button" onClick={() => setTypOferty('kupie')}
+                            className={`py-4 rounded-[20px] text-sm font-black uppercase tracking-tight transition-all flex items-center justify-center gap-3 ${typOferty === 'kupie' ? 'bg-white text-emerald-600 shadow-xl ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>
+                            <ArrowDownToLine size={20} /> Kupię
                         </button>
                     </div>
 
                     {/* TYTUŁ */}
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
-                            Tytuł ogłoszenia <span className="text-red-500">*</span>
+                    <div className="space-y-2">
+                        <label className="block text-sm font-black text-slate-900 uppercase ml-1">
+                            Tytuł ogłoszenia <span className="text-blue-600">*</span>
                         </label>
-                        <input
-                            required
-                            type="text"
-                            placeholder="np. Folia 100% PVC - stała podaż"
-                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 placeholder:text-slate-400"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                        />
+                        <input required type="text" placeholder="Np. Regranulat czarny ABS (wysoki połysk)"
+                            className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 placeholder:text-slate-400 shadow-sm transition-all text-lg"
+                            value={title} onChange={(e) => setTitle(e.target.value)} />
                     </div>
 
                     {/* MATERIAŁ */}
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
-                            Rodzaj Materiału <span className="text-red-500">*</span>
+                    <div className="space-y-2">
+                        <label className="block text-sm font-black text-slate-900 uppercase ml-1">
+                            Rodzaj Materiału <span className="text-blue-600">*</span>
                         </label>
-                        <select
-                            required
-                            className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-semibold text-slate-900 appearance-none cursor-pointer"
-                            value={material}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setMaterial(val);
-                                const found = KATEGORIE_Z_BDO.find(item => item.nazwa === val);
-                                if (found) setAutoBdo(found.bdo);
-                            }}
-                        >
-                            <option value="" disabled>-- Wybierz z listy --</option>
-                            {KATEGORIE_Z_BDO.map(kat => (
-                                <option key={kat.nazwa} value={kat.nazwa}>{kat.nazwa}</option>
-                            ))}
-                        </select>
+                        <div className="relative">
+                            <select required className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 appearance-none cursor-pointer shadow-sm text-lg"
+                                value={material} onChange={(e) => {
+                                    setMaterial(e.target.value);
+                                    const found = KATEGORIE_Z_BDO.find(item => item.nazwa === e.target.value);
+                                    if (found) setAutoBdo(found.bdo);
+                                }}>
+                                <option value="" disabled>Wybierz kategorię...</option>
+                                {KATEGORIE_Z_BDO.map(kat => <option key={kat.nazwa} value={kat.nazwa}>{kat.nazwa}</option>)}
+                            </select>
+                            <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
+                        </div>
                     </div>
 
                     {/* WAGA i TELEFON */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
-                                Waga towaru <span className="text-slate-500 font-normal text-[10px] ml-1">(opcjonalnie)</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">
+                                Waga (tony)
                             </label>
                             <div className="relative">
-                                {/* 👇 USUNIĘTO 'required', zmieniono placeholder */}
-                                <input
-                                    type="number" step="0.01" placeholder="np. 10"
-                                    className="w-full p-4 pr-12 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                                    value={waga} onChange={(e) => setWaga(e.target.value)}
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">/t</span>
+                                <input type="number" step="0.01" placeholder="Np. 1.5"
+                                    className="w-full p-5 pr-14 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg shadow-sm"
+                                    value={waga} onChange={(e) => setWaga(e.target.value)} />
+                                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xs uppercase tracking-widest">ton</span>
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
-                                Telefon <span className="text-red-500">*</span>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">
+                                Telefon kontaktowy <span className="text-blue-600">*</span>
                             </label>
-                            <input
-                                required type="tel" placeholder="123 456 789"
-                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                                value={telefon}
-                                onChange={(e) => {
+                            <input required type="tel" placeholder="123 456 789"
+                                className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg shadow-sm"
+                                value={telefon} onChange={(e) => {
                                     let val = e.target.value.replace(/\D/g, '').substring(0, 9);
                                     const formatted = val.match(/.{1,3}/g)?.join(' ') || val;
                                     setTelefon(formatted);
-                                }}
-                            />
+                                }} />
                         </div>
                     </div>
 
                     {/* LOKALIZACJA */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
-                                Województwo <span className="text-red-500">*</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">
+                                Województwo <span className="text-blue-600">*</span>
                             </label>
-                            <select
-                                required
-                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900 appearance-none cursor-pointer"
-                                value={wojewodztwo}
-                                onChange={(e) => setWojewodztwo(e.target.value)}
-                            >
-                                <option value="" disabled>-- wybierz --</option>
-                                {WOJEWODZTWA.map(w => (
-                                    <option key={w} value={w}>{w}</option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <select required className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 appearance-none cursor-pointer shadow-sm text-lg"
+                                    value={wojewodztwo} onChange={(e) => setWojewodztwo(e.target.value)}>
+                                    <option value="" disabled>Wybierz...</option>
+                                    {WOJEWODZTWA.map(w => <option key={w} value={w}>{w}</option>)}
+                                </select>
+                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
-                                Miejscowość <span className="text-red-500">*</span>
+                        <div className="space-y-2">
+                            {/* MIEJSCOWOŚĆ JEST TERAZ OPCJONALNA, BEZ GWIAZDKI */}
+                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">
+                                Miejscowość
                             </label>
-                            <input
-                                required type="text" placeholder="np. pod Łaskiem"
-                                className="w-full p-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
-                                value={lokalizacja} onChange={(e) => setLokalizacja(e.target.value)}
-                            />
+                            <input type="text" placeholder="Np. Łódź"
+                                className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg shadow-sm"
+                                value={lokalizacja} onChange={(e) => setLokalizacja(e.target.value)} />
                         </div>
                     </div>
 
-                    {/* ZDJĘCIE (Drag & Drop) */}
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Zdjęcie</label>
+                    {/* ZDJĘCIE */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-black text-slate-900 uppercase ml-1">
+                            Zdjęcie główne towaru
+                        </label>
                         <div
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={(e) => {
@@ -305,7 +206,7 @@ export default function DodajOferteKrok1() {
                                 if (f) { setFile(f); setPreview(URL.createObjectURL(f)); }
                             }}
                             onClick={() => document.getElementById('fileInput')?.click()}
-                            className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:border-blue-500 transition-all cursor-pointer bg-gray-100 relative overflow-hidden"
+                            className="border-4 border-dashed border-slate-100 rounded-[40px] p-10 text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer bg-slate-50 group relative overflow-hidden"
                         >
                             <input type="file" id="fileInput" className="hidden" accept="image/*"
                                 onChange={(e) => {
@@ -314,26 +215,40 @@ export default function DodajOferteKrok1() {
                                 }}
                             />
                             {preview ? (
-                                <img src={preview} alt="Podgląd" className="h-32 mx-auto rounded-lg object-cover shadow-md" />
+                                <div className="relative inline-block">
+                                    <img src={preview} alt="Podgląd" className="h-48 mx-auto rounded-[32px] object-cover shadow-2xl border-4 border-white" />
+                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-[32px] flex items-center justify-center">
+                                        <span className="text-white font-black text-xs uppercase bg-black/50 px-4 py-2 rounded-full backdrop-blur-md">Zmień zdjęcie</span>
+                                    </div>
+                                </div>
                             ) : (
-                                <div className="text-slate-500 text-sm italic">Kliknij lub wklej (Ctrl+V)</div>
+                                <div className="flex flex-col items-center justify-center py-6">
+                                    <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-xl mb-4 group-hover:scale-110 transition-transform">
+                                        <ImagePlus size={32} className="text-blue-600" />
+                                    </div>
+                                    <p className="text-slate-900 font-black text-lg">Kliknij tutaj lub przeciągnij plik</p>
+                                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Obsługujemy PNG, JPG (max 10MB)</p>
+                                </div>
                             )}
                         </div>
                     </div>
 
-                    {/* PRZYCISK DALEJ */}
-                    {/* 👇 ZMIANA: Usunąłem onClick, dodałem type="submit". Teraz enter w polu formularza też zadziała! */}
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full bg-slate-900 text-white py-5 rounded-[24px] font-black text-xl uppercase tracking-tighter shadow-xl transition-all flex items-center justify-center gap-3 group ${loading ? 'opacity-70 cursor-wait' : 'hover:bg-blue-600 hover:shadow-2xl hover:scale-[1.01] active:scale-[0.99]'
-                            }`}
+                        className={`w-full bg-slate-900 text-white py-8 rounded-[32px] font-black text-2xl uppercase tracking-tighter shadow-2xl transition-all flex items-center justify-center gap-4 group hover:bg-blue-600 hover:shadow-blue-200 hover:-translate-y-1 active:scale-[0.98] ${loading ? 'opacity-70 cursor-wait' : ''}`}
                     >
-                        {loading ? 'Przetwarzanie...' : 'Dalej - Parametry'}
-                        {!loading && <CheckCircle size={24} className="text-blue-400 shrink-0 group-hover:text-white transition-colors" />}
+                        {loading ? 'Przetwarzanie...' : 'Dalej do parametrów'}
+                        {!loading && <CheckCircle size={28} className="text-blue-400 group-hover:text-white transition-colors" />}
                     </button>
+
                 </form>
             </div>
+
+            <p className="mt-10 text-slate-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span>
+                Zawsze darmowe ogłoszenia dla firm
+            </p>
         </div>
     );
 }
