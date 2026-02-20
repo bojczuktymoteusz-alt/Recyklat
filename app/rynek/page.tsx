@@ -300,7 +300,7 @@ export default function Rynek() {
                                         <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
                                             <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Ilość</span>
                                             <span className="block text-lg font-black text-slate-900">
-                                                {oferta.waga} t
+                                                {oferta.waga > 0 ? `${oferta.waga} t` : 'Do ustalenia'}
                                             </span>
                                         </div>
                                     </div>

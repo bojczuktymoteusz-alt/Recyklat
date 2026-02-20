@@ -71,6 +71,25 @@ export default function SzczegolyOferty() {
         }
     };
 
+    // 👇 NOWA FUNKCJA: Oznaczanie jako sprzedane/zakończone
+    const oznaczJakoZakonczone = async () => {
+        const potwierdzenie = confirm("Czy na pewno chcesz oznaczyć to ogłoszenie jako zakończone/sprzedane?");
+        if (!potwierdzenie) return;
+
+        const { error } = await supabase
+            .from('oferty')
+            .update({ status: 'sprzedane' })
+            .eq('id', id);
+
+        if (error) {
+            alert("Błąd bazy: " + error.message);
+        } else {
+            // Natychmiastowa aktualizacja widoku bez przeładowania strony
+            setOferta({ ...oferta, status: 'sprzedane' });
+            alert("Ogłoszenie zostało zakończone.");
+        }
+    };
+
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-white">
             <div className="animate-spin text-4xl">♻️</div>
@@ -81,7 +100,6 @@ export default function SzczegolyOferty() {
 
     const jestSprzedane = oferta.status === 'sprzedane';
     const wyswietlanyTytul = oferta.title || oferta.material;
-    // 👇 DODANE: Zmienna sprawdzająca czy to zapotrzebowanie
     const jestZapotrzebowanie = oferta.typ_oferty === 'kupie';
 
     return (
@@ -95,14 +113,26 @@ export default function SzczegolyOferty() {
                     </Link>
 
                     <div className="flex items-center gap-4">
+                        {/* 👇 ZMIENIONA SEKCJA PRZYCISKÓW */}
                         {czyToMoje && (
-                            <button
-                                onClick={usunOferte}
-                                className="flex items-center gap-2 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-xl transition-all border border-red-100 text-[10px] font-black uppercase"
-                            >
-                                <Trash2 size={14} />
-                                Usuń ogłoszenie
-                            </button>
+                            <>
+                                {!jestSprzedane && (
+                                    <button
+                                        onClick={oznaczJakoZakonczone}
+                                        className="flex items-center gap-2 text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-xl transition-all border border-emerald-100 text-[10px] font-black uppercase"
+                                    >
+                                        <CheckCircle size={14} />
+                                        Zakończ ofertę
+                                    </button>
+                                )}
+                                <button
+                                    onClick={usunOferte}
+                                    className="flex items-center gap-2 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-xl transition-all border border-red-100 text-[10px] font-black uppercase"
+                                >
+                                    <Trash2 size={14} />
+                                    Usuń
+                                </button>
+                            </>
                         )}
                         <span className="text-[10px] text-gray-400 font-black bg-gray-100 px-2 py-1 rounded uppercase">ID: #{oferta.id}</span>
                     </div>
@@ -126,7 +156,6 @@ export default function SzczegolyOferty() {
                                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-200 bg-slate-50 text-8xl font-black opacity-20">?</div>
                             )}
 
-                            {/* 👇 NOWY ELEMENT: Plakietka typu oferty na zdjęciu */}
                             {!jestSprzedane && (
                                 <div className="absolute top-4 left-4 z-10">
                                     {jestZapotrzebowanie ? (
@@ -158,14 +187,12 @@ export default function SzczegolyOferty() {
                                 <span className={`px-5 py-3 rounded-2xl text-2xl font-black shadow-lg ${jestSprzedane ? 'bg-gray-100 text-gray-400 shadow-none' : jestZapotrzebowanie ? 'bg-blue-600 text-white shadow-blue-100' : 'bg-emerald-600 text-white shadow-emerald-100'}`}>
                                     {oferta.cena > 0 ? `${oferta.cena} zł / t` : 'Cena do negocjacji'}
                                 </span>
-                                {/* 👇 ZMIANA: Etykieta wagi */}
                                 <span className="bg-slate-50 text-slate-600 px-5 py-3 rounded-2xl text-lg font-bold border border-slate-100 flex items-center gap-2">
                                     <Scale size={18} className={jestZapotrzebowanie ? "text-blue-500" : "text-emerald-500"} />
                                     {jestZapotrzebowanie ? "Szukam: " : "Dostępne: "} {oferta.waga > 0 ? `${oferta.waga} t` : '-'}
                                 </span>
                             </div>
 
-                            {/* POPRAWIONA SEKCJA LOKALIZACJI I WOJEWÓDZTWA */}
                             <div className="flex flex-col pt-6 border-t border-slate-50 gap-2">
                                 <div className="flex items-center gap-3 text-gray-600">
                                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 shrink-0">
@@ -187,7 +214,6 @@ export default function SzczegolyOferty() {
                     {/* PRAWA KOLUMNA - PARAMETRY */}
                     <div className="space-y-6">
 
-                        {/* DODANY BANER INFORMACYJNY DLA SPRZEDANYCH OFERT */}
                         {jestSprzedane && (
                             <div className="bg-red-50 border-2 border-red-500 text-red-700 p-6 rounded-[32px] flex items-center gap-4 shadow-sm">
                                 <AlertCircle size={32} className="shrink-0" />
@@ -198,7 +224,6 @@ export default function SzczegolyOferty() {
                             </div>
                         )}
 
-                        {/* NOWA SEKCJA: OPIS */}
                         {oferta.opis && (
                             <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                                 <h3 className="font-black text-gray-900 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
@@ -215,7 +240,6 @@ export default function SzczegolyOferty() {
                                 <Info size={16} /> Szczegóły techniczne
                             </h3>
 
-                            {/* 👇 NOWY KAFELEK: RODZAJ MATERIAŁU */}
                             <div className="mb-4 p-5 bg-blue-50/50 rounded-[24px] border border-blue-100">
                                 <p className="text-[10px] uppercase font-black text-blue-500 mb-1 tracking-widest">Rodzaj materiału</p>
                                 <p className="font-black text-blue-700 text-lg uppercase">{oferta.material}</p>
@@ -239,7 +263,6 @@ export default function SzczegolyOferty() {
                             </div>
                         </div>
 
-                        {/* SEKCJA: CERTYFIKATY */}
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                             <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
                                 <Award size={16} className="text-purple-500" /> Dokumentacja
