@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
     ArrowLeft, MapPin, Phone, Info, Truck,
-    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck, Map, FileText, AlertCircle
+    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck, Map, FileText, AlertCircle, ShoppingBag, ArrowDownToLine
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -80,8 +80,9 @@ export default function SzczegolyOferty() {
     if (!oferta) return <div className="p-10 text-center font-black uppercase">Nie znaleziono oferty.</div>;
 
     const jestSprzedane = oferta.status === 'sprzedane';
-    // 👈 DODANE: Stała pomocnicza dla czytelności
     const wyswietlanyTytul = oferta.title || oferta.material;
+    // 👇 DODANE: Zmienna sprawdzająca czy to zapotrzebowanie
+    const jestZapotrzebowanie = oferta.typ_oferty === 'kupie';
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col relative">
@@ -125,10 +126,25 @@ export default function SzczegolyOferty() {
                                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-200 bg-slate-50 text-8xl font-black opacity-20">?</div>
                             )}
 
+                            {/* 👇 NOWY ELEMENT: Plakietka typu oferty na zdjęciu */}
+                            {!jestSprzedane && (
+                                <div className="absolute top-4 left-4 z-10">
+                                    {jestZapotrzebowanie ? (
+                                        <span className="inline-flex items-center gap-2 bg-blue-600/90 backdrop-blur-md text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg border border-blue-400/50">
+                                            <ArrowDownToLine size={16} /> Zapotrzebowanie
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-2 bg-emerald-600/90 backdrop-blur-md text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg border border-emerald-400/50">
+                                            <ShoppingBag size={16} /> Oferta sprzedaży
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+
                             {jestSprzedane && (
-                                <div className="absolute inset-0 bg-red-600/30 backdrop-blur-[2px] flex items-center justify-center">
+                                <div className="absolute inset-0 bg-red-600/30 backdrop-blur-[2px] flex items-center justify-center z-20">
                                     <div className="bg-white text-red-600 px-8 py-3 rounded-2xl font-black text-3xl uppercase tracking-tighter shadow-2xl -rotate-6 border-4 border-red-600">
-                                        Sprzedane
+                                        Zakończone
                                     </div>
                                 </div>
                             )}
@@ -139,11 +155,13 @@ export default function SzczegolyOferty() {
                                 {wyswietlanyTytul}
                             </h1>
                             <div className="flex flex-wrap gap-3 items-center pt-2">
-                                <span className={`px-5 py-3 rounded-2xl text-2xl font-black shadow-lg ${jestSprzedane ? 'bg-gray-100 text-gray-400 shadow-none' : 'bg-green-600 text-white shadow-green-100'}`}>
-                                    {oferta.cena} zł / t
+                                <span className={`px-5 py-3 rounded-2xl text-2xl font-black shadow-lg ${jestSprzedane ? 'bg-gray-100 text-gray-400 shadow-none' : jestZapotrzebowanie ? 'bg-blue-600 text-white shadow-blue-100' : 'bg-emerald-600 text-white shadow-emerald-100'}`}>
+                                    {oferta.cena > 0 ? `${oferta.cena} zł / t` : 'Cena do negocjacji'}
                                 </span>
+                                {/* 👇 ZMIANA: Etykieta wagi */}
                                 <span className="bg-slate-50 text-slate-600 px-5 py-3 rounded-2xl text-lg font-bold border border-slate-100 flex items-center gap-2">
-                                    <Scale size={18} /> {oferta.waga} t
+                                    <Scale size={18} className={jestZapotrzebowanie ? "text-blue-500" : "text-emerald-500"} />
+                                    {jestZapotrzebowanie ? "Szukam: " : "Dostępne: "} {oferta.waga > 0 ? `${oferta.waga} t` : '-'}
                                 </span>
                             </div>
 
@@ -151,12 +169,12 @@ export default function SzczegolyOferty() {
                             <div className="flex flex-col pt-6 border-t border-slate-50 gap-2">
                                 <div className="flex items-center gap-3 text-gray-600">
                                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 shrink-0">
-                                        <MapPin size={24} className="text-blue-500" />
+                                        <MapPin size={24} className={jestZapotrzebowanie ? "text-blue-500" : "text-emerald-500"} />
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="font-black text-xl uppercase tracking-tight text-slate-900">{oferta.lokalizacja}</span>
                                         {oferta.wojewodztwo && (
-                                            <span className="text-xs font-bold text-blue-600 flex items-center gap-1 mt-1 uppercase tracking-widest">
+                                            <span className="text-xs font-bold text-slate-400 flex items-center gap-1 mt-1 uppercase tracking-widest">
                                                 <Map size={12} /> Woj. {oferta.wojewodztwo.toLowerCase()}
                                             </span>
                                         )}
@@ -174,17 +192,17 @@ export default function SzczegolyOferty() {
                             <div className="bg-red-50 border-2 border-red-500 text-red-700 p-6 rounded-[32px] flex items-center gap-4 shadow-sm">
                                 <AlertCircle size={32} className="shrink-0" />
                                 <div>
-                                    <h3 className="font-black text-xl uppercase tracking-tight">Oferta Zakończona</h3>
-                                    <p className="text-sm font-bold opacity-80">Ten towar został już sprzedany i kontakt ze sprzedającym został zablokowany.</p>
+                                    <h3 className="font-black text-xl uppercase tracking-tight">Ogłoszenie Zakończone</h3>
+                                    <p className="text-sm font-bold opacity-80">Ten towar został już sprzedany/kupiony i kontakt został zablokowany.</p>
                                 </div>
                             </div>
                         )}
 
-                        {/* NOWA SEKCJA: OPIS (Wyświetla dane firmy, kolor, pochodzenie itp.) */}
+                        {/* NOWA SEKCJA: OPIS */}
                         {oferta.opis && (
                             <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                                 <h3 className="font-black text-gray-900 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
-                                    <FileText size={16} className="text-blue-600" /> Opis i kontakt dodatkowy
+                                    <FileText size={16} className={jestZapotrzebowanie ? "text-blue-600" : "text-emerald-600"} /> Opis ogłoszenia
                                 </h3>
                                 <p className="text-sm font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">
                                     {oferta.opis}
@@ -194,11 +212,11 @@ export default function SzczegolyOferty() {
 
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                             <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
-                                <Info size={16} /> Szczegóły
+                                <Info size={16} /> Szczegóły techniczne
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-5 bg-slate-50 rounded-[24px] border border-slate-100">
-                                    <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">BDO</p>
+                                    <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Kod BDO</p>
                                     <p className="font-black text-slate-700 text-lg">{oferta.bdo_code || '---'}</p>
                                 </div>
                                 <div className="p-5 bg-slate-50 rounded-[24px] border border-slate-100">
@@ -207,21 +225,21 @@ export default function SzczegolyOferty() {
                                 </div>
                             </div>
                             <div className="mt-4 p-5 bg-slate-50 rounded-[24px] border border-slate-100">
-                                <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Postać</p>
-                                <p className="font-black text-slate-700 text-lg uppercase">{oferta.form || 'Luzem'}</p>
+                                <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Postać surowca</p>
+                                <p className="font-black text-slate-700 text-lg uppercase">{oferta.form || 'Do ustalenia'}</p>
                             </div>
                         </div>
 
-                        {/* SEKCJA: CERTYFIKATY I DOKUMENTY */}
-                        <div className="bg-white p-8 rounded-[40px] border shadow-sm mt-6">
+                        {/* SEKCJA: CERTYFIKATY */}
+                        <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                             <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
-                                <Award size={16} className="text-purple-500" /> Dokumentacja i Jakość
+                                <Award size={16} className="text-purple-500" /> Dokumentacja
                             </h3>
 
                             {oferta.certificates && (Array.isArray(oferta.certificates) ? oferta.certificates.length > 0 : oferta.certificates.length > 0) ? (
                                 <div className="p-5 bg-purple-50 rounded-[24px] border border-purple-100">
                                     <p className="text-[10px] uppercase font-black text-purple-400 mb-3 tracking-widest">
-                                        Gwarantowane dokumenty:
+                                        Wymagane/Gwarantowane:
                                     </p>
                                     <div className="flex flex-wrap gap-2">
                                         {(Array.isArray(oferta.certificates)
@@ -241,7 +259,7 @@ export default function SzczegolyOferty() {
                             ) : (
                                 <div className="p-6 bg-slate-50 rounded-[24px] border border-slate-100 border-dashed text-center">
                                     <p className="text-slate-400 font-bold text-sm italic">
-                                        Sprzedający nie wskazał dodatkowych certyfikatów.
+                                        Brak informacji o dodatkowych dokumentach.
                                     </p>
                                 </div>
                             )}
@@ -253,17 +271,17 @@ export default function SzczegolyOferty() {
                             </h3>
                             <div className="space-y-4">
                                 <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-[24px] border border-slate-100">
-                                    <Truck size={20} className="text-blue-600 shrink-0" />
+                                    <Truck size={20} className={jestZapotrzebowanie ? "text-blue-600" : "text-emerald-600"} />
                                     <div>
                                         <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest leading-none mb-1">Transport</p>
                                         <p className="text-sm font-black text-slate-700">{oferta.logistics || 'Do ustalenia'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-[24px] border border-slate-100">
-                                    <Clock size={20} className="text-blue-600 shrink-0" />
+                                    <Clock size={20} className={jestZapotrzebowanie ? "text-blue-600" : "text-emerald-600"} />
                                     <div>
-                                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest leading-none mb-1">Odbiór</p>
-                                        <p className="text-sm font-black text-slate-700">{oferta.pickup_hours || 'Brak danych'}</p>
+                                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest leading-none mb-1">Dostępność</p>
+                                        <p className="text-sm font-black text-slate-700">{oferta.pickup_hours || 'Całodobowo'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -278,13 +296,13 @@ export default function SzczegolyOferty() {
                     {jestSprzedane ? (
                         <div className="h-16 w-full bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-center gap-3 shadow-sm">
                             <CheckCircle size={24} className="text-red-600" />
-                            <span className="text-red-600 font-black uppercase tracking-tighter text-xl">Oferta zakończona</span>
+                            <span className="text-red-600 font-black uppercase tracking-tighter text-xl">Ogłoszenie archiwalne</span>
                         </div>
                     ) : (
                         <div className="flex gap-3">
                             <a
                                 href={`tel:${oferta.telefon}`}
-                                className="flex-1 bg-slate-900 text-white rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight"
+                                className={`flex-1 rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${jestZapotrzebowanie ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'}`}
                             >
                                 <Phone size={24} fill="currentColor" />
                                 Zadzwoń: {oferta.telefon}
@@ -292,7 +310,7 @@ export default function SzczegolyOferty() {
                             {oferta.email && (
                                 <a
                                     href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
-                                    className="px-8 bg-blue-50 text-blue-600 font-black uppercase tracking-widest rounded-[24px] flex items-center justify-center gap-2 border-2 border-blue-100 active:scale-95 transition-all"
+                                    className={`px-8 font-black uppercase tracking-widest rounded-[24px] flex items-center justify-center gap-2 border-2 active:scale-95 transition-all ${jestZapotrzebowanie ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}
                                 >
                                     <Mail size={24} />
                                     <span>Napisz</span>

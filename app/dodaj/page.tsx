@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, ShoppingBag, ArrowDownToLine } from 'lucide-react';
 import { sanitizeText } from '@/lib/security';
 
 const KATEGORIE_Z_BDO = [
@@ -34,6 +34,7 @@ export default function DodajOferteKrok1() {
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
     // Form states
+    const [typOferty, setTypOferty] = useState<'sprzedam' | 'kupie'>('sprzedam'); // 👈 NOWY STAN DLA TYPU OFERTY
     const [title, setTitle] = useState('');
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
@@ -121,6 +122,7 @@ export default function DodajOferteKrok1() {
 
             // Sanityzacja danych
             const step1Data = {
+                typOferty, // 👈 DODANO DO DANYCH
                 title: sanitizeText(title),
                 material: sanitizeText(material),
                 waga: parseFloat(waga) || 0,
@@ -166,6 +168,30 @@ export default function DodajOferteKrok1() {
                 </div>
 
                 <form onSubmit={handleDalej} className="space-y-4">
+
+                    {/* TYP OFERTY - TOGGLE */}
+                    <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-2xl mb-6">
+                        <button
+                            type="button"
+                            onClick={() => setTypOferty('sprzedam')}
+                            className={`py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all ${typOferty === 'sprzedam'
+                                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                        >
+                            Sprzedam
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setTypOferty('kupie')}
+                            className={`py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all ${typOferty === 'kupie'
+                                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                        >
+                            Kupię
+                        </button>
+                    </div>
 
                     {/* TYTUŁ */}
                     <div>

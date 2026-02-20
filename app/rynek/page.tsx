@@ -4,11 +4,10 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
-// Usunięty import LoginButton
 import {
     Archive, Mountain, ShoppingBag, Layers, Box,
     ArrowRight, User, Recycle, FileText, Wrench,
-    MapPin, Clock, Search
+    MapPin, Clock, Search, ArrowDownToLine // 👈 Ikony zaimportowane poprawnie
 } from 'lucide-react';
 
 interface Oferta {
@@ -27,6 +26,7 @@ interface Oferta {
     opis?: string;
     bdo_code?: string;
     impurity?: number;
+    typ_oferty?: string; // 👈 Pole typu dodane do interfejsu
 }
 
 const KATEGORIE = [
@@ -54,6 +54,7 @@ export default function Rynek() {
     const [filtrowaneOferty, setFiltrowaneOferty] = useState<Oferta[]>([]);
     const [aktywnyFiltr, setAktywnyFiltr] = useState("Wszystko");
     const [szukanaFraza, setSzukanaFraza] = useState("");
+    const [typFiltr, setTypFiltr] = useState<'wszystkie' | 'sprzedam' | 'kupie'>('wszystkie'); // 👈 NOWY STAN DLA FILTRU TYPU OFERTY
     const [loading, setLoading] = useState(true);
     const [session, setSession] = useState<any>(null);
 
@@ -98,7 +99,12 @@ export default function Rynek() {
     useEffect(() => {
         let wynik = wszystkieOferty;
 
-        // Filtracja po kategorii
+        // 1. Filtracja po typie oferty (Sprzedam/Kupię)
+        if (typFiltr !== 'wszystkie') {
+            wynik = wynik.filter(o => o.typ_oferty === typFiltr || (!o.typ_oferty && typFiltr === 'sprzedam')); // Fallback: brak typu = sprzedam
+        }
+
+        // 2. Filtracja po kategorii materiału
         if (aktywnyFiltr !== "Wszystko") {
             wynik = wynik.filter(o => {
                 const mat = o.material.toLowerCase();
@@ -107,7 +113,7 @@ export default function Rynek() {
             });
         }
 
-        // Filtracja po wyszukiwarce
+        // 3. Filtracja po wyszukiwarce tekstowej
         if (szukanaFraza) {
             const fraza = szukanaFraza.toLowerCase();
             wynik = wynik.filter(o =>
@@ -120,8 +126,7 @@ export default function Rynek() {
         }
 
         setFiltrowaneOferty(wynik);
-    }, [aktywnyFiltr, szukanaFraza, wszystkieOferty]);
-
+    }, [aktywnyFiltr, szukanaFraza, typFiltr, wszystkieOferty]);
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-20">
@@ -139,9 +144,8 @@ export default function Rynek() {
                             </span>
                         </Link>
 
-                        {/* NAV LINKS (Usunięto link "Giełda" i przycisk logowania GitHub) */}
+                        {/* NAV LINKS */}
                         <div className="hidden md:flex items-center gap-8">
-
                             <Link href="/dodaj" className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors bg-slate-100 px-4 py-2 rounded-lg">Dodaj Ofertę</Link>
                         </div>
                     </div>
@@ -157,6 +161,33 @@ export default function Rynek() {
                     <p className="text-slate-400 font-medium mb-8 text-lg">
                         Przeglądaj ogłoszenia, znajdź surowce i sprzedawaj odpady. Szybko i bezpiecznie.
                     </p>
+
+                    {/* NOWY TOGGLE: TYP OFERTY (Dla szukającego) */}
+                    <div className="flex justify-center mb-8">
+                        <div className="bg-slate-800 p-1 rounded-2xl flex gap-1">
+                            <button
+                                onClick={() => setTypFiltr('wszystkie')}
+                                className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${typFiltr === 'wszystkie' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+                                    }`}
+                            >
+                                Wszystkie
+                            </button>
+                            <button
+                                onClick={() => setTypFiltr('sprzedam')}
+                                className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${typFiltr === 'sprzedam' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+                                    }`}
+                            >
+                                Sprzedam
+                            </button>
+                            <button
+                                onClick={() => setTypFiltr('kupie')}
+                                className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${typFiltr === 'kupie' ? 'bg-green-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+                                    }`}
+                            >
+                                Kupię
+                            </button>
+                        </div>
+                    </div>
 
                     <div className="relative max-w-2xl mx-auto group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -239,12 +270,12 @@ export default function Rynek() {
                                     <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-black text-slate-900 uppercase tracking-wide shadow-sm flex items-center gap-1">
                                         {getIcon(oferta.material)} {oferta.material}
                                     </div>
-                                    {oferta.created_at && (
-                                        <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
-                                            <Clock className="w-3 h-3" />
-                                            {formatDistanceToNow(new Date(oferta.created_at), { addSuffix: true, locale: pl })}
-                                        </div>
-                                    )}
+
+                                    {/* STATUS SPRZEDAM / KUPIĘ na karcie */}
+                                    <div className={`absolute top-4 right-4 backdrop-blur-md text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 uppercase tracking-wider ${oferta.typ_oferty === 'kupie' ? 'bg-green-600/90' : 'bg-blue-600/90'
+                                        }`}>
+                                        {oferta.typ_oferty === 'kupie' ? 'Kupię' : 'Sprzedam'}
+                                    </div>
                                 </div>
 
                                 {/* CARD BODY */}
@@ -276,8 +307,8 @@ export default function Rynek() {
 
                                     <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
                                         <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                                            <User className="w-3 h-3" />
-                                            Sprzedawca
+                                            <Clock className="w-3 h-3" />
+                                            {formatDistanceToNow(new Date(oferta.created_at), { addSuffix: true, locale: pl })}
                                         </span>
                                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-blue-600 transition-colors">
                                             <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />

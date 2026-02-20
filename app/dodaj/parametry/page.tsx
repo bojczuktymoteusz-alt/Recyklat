@@ -7,6 +7,7 @@ import { sanitizeText } from "@/lib/security";
 
 // --- TYPY DANYCH (Dla bezpieczeństwa) ---
 interface Step1Data {
+    typ_oferty?: string; // 👈 DODANE POLE: Obsługa typu z kroku 1
     title: string;
     material: string;
     waga: string;
@@ -79,7 +80,7 @@ export default function ParametryDetailsPage() {
     // Specjalna obsługa BDO (formatowanie XX XX XX)
     const handleBdoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let val = e.target.value.replace(/\D/g, '').substring(0, 6);
-        const formatted = val.match(/.{1,2}/g)?.join(' ') || val; // Fix: val jeśli match zwróci null
+        const formatted = val.match(/.{1,2}/g)?.join(' ') || val;
         handleChange("bdo", formatted);
     };
 
@@ -115,6 +116,7 @@ export default function ParametryDetailsPage() {
         // 3. Budowanie obiektu (Sanityzacja)
         const finalOffer = {
             // Step 1
+            typ_oferty: step1Data.typ_oferty || 'sprzedam', // 👈 DODANO: Domyślnie 'sprzedam'
             title: sanitizeText(step1Data.title),
             material: sanitizeText(step1Data.material),
             waga: safeWeight,
@@ -150,6 +152,7 @@ export default function ParametryDetailsPage() {
         if (error) {
             console.error("Błąd Supabase:", error);
             setLoading(false);
+            alert("Błąd zapisu! Sprawdź konsolę.");
         } else {
             console.log("Sukces! Otrzymano dane z bazy:", data);
 
@@ -171,7 +174,7 @@ export default function ParametryDetailsPage() {
 
             localStorage.removeItem("temp_offer");
             setLoading(false);
-            router.push("/dodano");
+            router.push("/dodano"); // Upewnij się, że masz stronę /dodano lub przekieruj gdzie indziej
         }
     };
 
