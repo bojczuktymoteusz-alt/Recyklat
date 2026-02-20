@@ -8,14 +8,17 @@ import { CheckCircle } from 'lucide-react';
 import { sanitizeText } from '@/lib/security';
 
 const KATEGORIE_Z_BDO = [
-    { nazwa: "Folia LDPE (stretch)", bdo: "" },
-    { nazwa: "Folia kolorowa", bdo: "" },
-    { nazwa: "Tworzywa sztuczne (mix)", bdo: "" },
-    { nazwa: "Makulatura (karton)", bdo: "" },
-    { nazwa: "Makulatura (papier)", bdo: "" },
-    { nazwa: "Złom stalowy", bdo: "" },
-    { nazwa: "Złom kolorowy", bdo: "" },
-    { nazwa: "Drewno / Palety", bdo: "" },
+    { nazwa: "Folia bezbarwna (LDPE / LLDPE)", bdo: "15 01 02" },
+    { nazwa: "Folia kolorowa / rolnicza", bdo: "15 01 02" },
+    { nazwa: "Opakowania PET", bdo: "15 01 02" },
+    { nazwa: "Tworzywa twarde (PP, PE, HDPE)", bdo: "19 12 04" },
+    { nazwa: "Tworzywa techniczne (ABS, PC, PS, PA)", bdo: "19 12 04" },
+    { nazwa: "Elektroodpady (WEEE) / Kable", bdo: "16 02 14" },
+    { nazwa: "Makulatura (Karton / Tektura)", bdo: "15 01 01" },
+    { nazwa: "Makulatura (Gazety / Mix)", bdo: "20 01 01" },
+    { nazwa: "Złom stalowy i żeliwny", bdo: "19 12 02" },
+    { nazwa: "Złom kolorowy (Al, Cu, inne)", bdo: "19 12 03" },
+    { nazwa: "Drewno i Palety", bdo: "15 01 03" },
     { nazwa: "Inne", bdo: "" }
 ];
 
@@ -205,10 +208,13 @@ export default function DodajOferteKrok1() {
                     {/* WAGA i TELEFON */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">Waga towaru</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1 ml-1">
+                                Waga towaru <span className="text-slate-500 font-normal text-[10px] ml-1">(opcjonalnie)</span>
+                            </label>
                             <div className="relative">
+                                {/* 👇 USUNIĘTO 'required', zmieniono placeholder */}
                                 <input
-                                    required type="number" step="0.01" placeholder="0.00"
+                                    type="number" step="0.01" placeholder="np. 10"
                                     className="w-full p-4 pr-12 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-slate-900"
                                     value={waga} onChange={(e) => setWaga(e.target.value)}
                                 />
