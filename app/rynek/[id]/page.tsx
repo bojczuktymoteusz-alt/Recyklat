@@ -343,21 +343,24 @@ export default function SzczegolyOferty() {
                             <span className="text-red-600 font-black uppercase tracking-tighter text-xl">Ogłoszenie archiwalne</span>
                         </div>
                     ) : (
-                        <div className="flex gap-3">
+                        <div className="flex gap-2 sm:gap-3">
                             <a
                                 href={`tel:${oferta.telefon}`}
-                                className={`flex-1 rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${jestZapotrzebowanie ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'}`}
+                                className={`flex-[3] sm:flex-[2] rounded-[24px] h-16 flex flex-col sm:flex-row items-center justify-center sm:gap-3 font-black text-sm sm:text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${jestZapotrzebowanie ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'}`}
                             >
-                                <Phone size={24} fill="currentColor" />
-                                Zadzwoń: {oferta.telefon}
+                                <div className="flex items-center gap-2">
+                                    <Phone size={20} fill="currentColor" className="sm:w-6 sm:h-6" />
+                                    <span className="hidden sm:inline">Zadzwoń:</span>
+                                </div>
+                                <span className="whitespace-nowrap mt-0.5 sm:mt-0 leading-none">{oferta.telefon}</span>
                             </a>
                             {oferta.email && (
                                 <a
                                     href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
-                                    className={`px-8 font-black uppercase tracking-widest rounded-[24px] flex items-center justify-center gap-2 border-2 active:scale-95 transition-all ${jestZapotrzebowanie ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}
+                                    className={`flex-[1.5] sm:flex-1 sm:px-8 font-black text-sm sm:text-base uppercase tracking-widest rounded-[24px] h-16 flex flex-col sm:flex-row items-center justify-center sm:gap-2 border-2 active:scale-95 transition-all ${jestZapotrzebowanie ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}
                                 >
-                                    <Mail size={24} />
-                                    <span>Napisz</span>
+                                    <Mail size={20} className="sm:w-6 sm:h-6 mb-0.5 sm:mb-0" />
+                                    <span className="leading-none">Napisz</span>
                                 </a>
                             )}
                         </div>

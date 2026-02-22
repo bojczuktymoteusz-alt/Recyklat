@@ -88,7 +88,7 @@ export default function Home() {
             <span className="text-blue-600">w kapitał</span>
           </h1>
           <p className="text-xl text-slate-500 font-medium max-w-xl mb-12 leading-relaxed">
-            Najszybsza w Polsce giełda surowców wtórnych. Kupuj, sprzedawaj i zgłaszaj zapotrzebowanie w 30 sekund.
+            Najszybsza giełda surowców wtórnych. W 100% polska platforma. Kupuj, sprzedawaj i zgłaszaj zapotrzebowanie w 30 sekund.
           </p>
 
           <div className="flex flex-col md:flex-row gap-4 mb-16">
@@ -159,6 +159,18 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-6 flex justify-between items-center">
           <span className="font-black uppercase text-xl">Recyklat</span>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">© 2026 Recyklat B2B System</p>
+          {/* FOOTER */}
+          <footer className="py-8 border-t border-slate-100 bg-white mt-auto">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                © {new Date().getFullYear()} Recyklat.pl - W 100% polska platforma
+              </div>
+              <div className="flex items-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <Link href="/regulamin" className="hover:text-slate-900 transition-colors">Regulamin</Link>
+                <Link href="/polityka-prywatnosci" className="hover:text-slate-900 transition-colors">Polityka Prywatności</Link>
+              </div>
+            </div>
+          </footer>
         </div>
       </footer>
     </main>

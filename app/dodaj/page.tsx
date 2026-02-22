@@ -114,7 +114,7 @@ export default function DodajOferteKrok1() {
                     {/* TYTUŁ */}
                     <div className="space-y-2">
                         <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                            Tytuł ogłoszenia <span className="text-blue-600">*</span>
+                            Tytuł ogłoszenia <span className="text-blue-600 text-lg">*</span>
                         </label>
                         <input required type="text" placeholder="Np. Regranulat czarny ABS (wysoki połysk)"
                             className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 placeholder:text-slate-400 shadow-sm transition-all text-lg"
@@ -124,7 +124,7 @@ export default function DodajOferteKrok1() {
                     {/* MATERIAŁ */}
                     <div className="space-y-2">
                         <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                            Rodzaj Materiału <span className="text-blue-600">*</span>
+                            Rodzaj Materiału <span className="text-blue-600 text-lg">*</span>
                         </label>
                         <div className="relative">
                             <select required className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 appearance-none cursor-pointer shadow-sm text-lg"
@@ -155,13 +155,17 @@ export default function DodajOferteKrok1() {
                         </div>
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                Telefon kontaktowy <span className="text-blue-600">*</span>
+                                Telefon kontaktowy <span className="text-blue-600 text-lg">*</span>
                             </label>
                             <input required type="tel" placeholder="123 456 789"
                                 className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg shadow-sm"
                                 value={telefon} onChange={(e) => {
-                                    let val = e.target.value.replace(/\D/g, '').substring(0, 9);
+
+                                    let val = e.target.value.replace(/[^\d+]/g, '').substring(0, 15);
+
+                                    // 2. Przywracamy Twoje formatowanie: dzielimy ciąg na bloki po 3 znaki i łączymy spacją
                                     const formatted = val.match(/.{1,3}/g)?.join(' ') || val;
+
                                     setTelefon(formatted);
                                 }} />
                         </div>
@@ -171,7 +175,7 @@ export default function DodajOferteKrok1() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                Województwo <span className="text-blue-600">*</span>
+                                Województwo <span className="text-blue-600 text-lg">*</span>
                             </label>
                             <div className="relative">
                                 <select required className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 appearance-none cursor-pointer shadow-sm text-lg"

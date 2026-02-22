@@ -184,7 +184,7 @@ export default function ParametryDetailsPage() {
                         </div>
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                {jestKupno ? "Budżet (zł/t)" : "Cena (zł/t)"} <span className="text-blue-600">*</span>
+                                {jestKupno ? "Budżet (zł/t)" : "Cena (zł/t)"} <span className="text-blue-600 text-lg">*</span>
                             </label>
                             <div className="relative">
                                 <input
@@ -200,7 +200,7 @@ export default function ParametryDetailsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                {jestKupno ? "Akcept. zabrudzenie" : "Zanieczyszczenie"} <span className="text-blue-600">*</span>
+                                {jestKupno ? "Akcept. zabrudzenie" : "Zanieczyszczenie"} <span className="text-blue-600 text-lg">*</span>
                             </label>
                             <div className="relative">
                                 <select
@@ -230,7 +230,7 @@ export default function ParametryDetailsPage() {
 
                     <div className="space-y-2">
                         <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                            Postać surowca <span className="text-blue-600">*</span>
+                            Postać surowca <span className="text-blue-600 text-lg">*</span>
                         </label>
                         <div className="relative">
                             <select
