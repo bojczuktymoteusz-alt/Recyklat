@@ -7,7 +7,7 @@ import { pl } from 'date-fns/locale';
 import {
     Archive, Mountain, ShoppingBag, Layers, Box,
     ArrowRight, User, Recycle, FileText, Wrench,
-    MapPin, Clock, Search, ArrowDownToLine, PackageSearch, ImageOff
+    MapPin, Clock, Search, ArrowDownToLine, PackageSearch, ImageOff, Package
 } from 'lucide-react';
 
 interface Oferta {
@@ -82,7 +82,8 @@ export default function Rynek() {
     };
 
     useEffect(() => {
-        let wynik = wszystkieOferty;
+        // 1. Bierzemy wszystkie oferty (Sprzedane zostają jako "Social Proof" i reklama)
+        let wynik = [...wszystkieOferty];
 
         if (typFiltr !== 'wszystkie') {
             wynik = wynik.filter(o => o.typ_oferty === typFiltr || (!o.typ_oferty && typFiltr === 'sprzedam'));
@@ -107,9 +108,20 @@ export default function Rynek() {
             );
         }
 
+        // 2. SORTOWANIE B2B: Aktywne na samej górze, Sprzedane spychamy na dół
+        wynik.sort((a, b) => {
+            const aSprzedane = a.status === 'sprzedane';
+            const bSprzedane = b.status === 'sprzedane';
+
+            if (aSprzedane && !bSprzedane) return 1;  // 'a' jest sprzedane, więc leci na dół
+            if (!aSprzedane && bSprzedane) return -1; // 'b' jest sprzedane, więc 'a' wygrywa i leci do góry
+
+            // Jeśli oba mają ten sam status (oba aktywne lub oba sprzedane), sortujemy klasycznie po dacie (najnowsze wyżej)
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+
         setFiltrowaneOferty(wynik);
     }, [aktywnyFiltr, szukanaFraza, typFiltr, wszystkieOferty]);
-
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-20">
             {/* NAVBAR */}
@@ -124,8 +136,22 @@ export default function Rynek() {
                                 RECYKLAT<span className="text-blue-600">.PL</span>
                             </span>
                         </Link>
-                        <div className="hidden md:flex items-center gap-8">
-                            <Link href="/dodaj" className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors bg-slate-100 px-4 py-2 rounded-lg">Dodaj Ofertę</Link>
+
+                        {/* ZMIENIONA SEKCJA PRZYCISKÓW W NAGŁÓWKU */}
+                        <div className="flex items-center gap-3">
+                            <Link
+                                href="/moje"
+                                className="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95 border-2 border-transparent hover:border-slate-300"
+                            >
+                                <Package size={16} />
+                                <span className="hidden sm:inline">Moje Ogłoszenia</span>
+                            </Link>
+                            <Link
+                                href="/dodaj"
+                                className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-xl hover:bg-blue-600 transition-all active:scale-95"
+                            >
+                                Dodaj Ofertę
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -162,138 +188,130 @@ export default function Rynek() {
                         </div>
                         <input
                             type="text"
-
-                            placeholder="np. folia, Toruń, 15 01 02, cokolwiek"
-                            className="w-full pl-14 pr-6 py-5 rounded-[28px] bg-slate-800 border-2 border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all font-bold text-lg shadow-2xl"
+                            placeholder="np. folia, Toruń, cokolwiek..."
                             value={szukanaFraza}
                             onChange={(e) => setSzukanaFraza(e.target.value)}
+                            className="w-full pl-12 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 focus:ring-0 transition-all outline-none text-lg font-medium"
                         />
                     </div>
                 </div>
             </div>
 
-            {/* CATEGORIES */}
-            <div className="max-w-7xl mx-auto px-4 -mt-8 relative z-10">
-                <div className="bg-white rounded-2xl shadow-lg p-4 flex gap-4 overflow-x-auto no-scrollbar border border-gray-100 items-center justify-start md:justify-center">
-                    {KATEGORIE.map((kategoria) => (
+            {/* KATEGORIE */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
+                <div className="bg-white p-2 rounded-3xl shadow-xl border border-gray-100 flex gap-2 overflow-x-auto no-scrollbar">
+                    {KATEGORIE.map((kat) => (
                         <button
-                            key={kategoria.nazwa}
-                            onClick={() => setAktywnyFiltr(kategoria.nazwa)}
-                            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${aktywnyFiltr === kategoria.nazwa
-                                ? 'bg-slate-900 text-white shadow-md scale-105'
-                                : 'bg-gray-50 text-slate-600 hover:bg-gray-100 hover:text-slate-900'
+                            key={kat.nazwa}
+                            onClick={() => setAktywnyFiltr(kat.nazwa)}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-2xl whitespace-nowrap transition-all font-black text-xs uppercase tracking-widest ${aktywnyFiltr === kat.nazwa
+                                ? 'bg-slate-900 text-white shadow-lg scale-105'
+                                : 'text-slate-500 hover:bg-slate-50'
                                 }`}
                         >
-                            <span className="text-xl">{kategoria.ikona}</span>
-                            {kategoria.nazwa}
+                            <span className="text-lg">{kat.ikona}</span>
+                            {kat.nazwa}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* GRID */}
-            <div className="max-w-7xl mx-auto px-4 py-12">
-                <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-                        <ShoppingBag className="w-6 h-6 text-blue-600" />
-                        Dostępne oferty
-                        <span className="text-sm font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg ml-2">{filtrowaneOferty.length}</span>
-                    </h2>
-                </div>
-
+            {/* LISTING */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center py-20">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        <p className="font-black text-slate-400 uppercase tracking-widest animate-pulse">Ładowanie ofert...</p>
+                    </div>
+                ) : filtrowaneOferty.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {filtrowaneOferty.map((o) => (
+                            <Link
+                                href={`/rynek/${o.id}`}
+                                key={o.id}
+                                className="group bg-white rounded-[32px] border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-300 flex flex-col overflow-hidden"
+                            >
+                                <div className="aspect-[4/3] relative overflow-hidden bg-slate-100">
+                                    {o.zdjecie_url ? (
+                                        <img
+                                            src={o.zdjecie_url}
+                                            alt={o.title || o.material}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
+                                            {o.typ_oferty === 'kupie' ? <PackageSearch size={48} /> : <ImageOff size={48} />}
+                                        </div>
+                                    )}
+
+                                    <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+                                        <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'
+                                            }`}>
+                                            {o.typ_oferty === 'kupie' ? 'Kupię' : 'Sprzedam'}
+                                        </div>
+                                        <div className="bg-white/90 backdrop-blur px-2 py-1.5 rounded-xl flex items-center gap-1 shadow-md">
+                                            <span className="text-lg">{getIcon(o.material)}</span>
+                                        </div>
+                                    </div>
+
+                                    {o.status === 'sprzedane' && (
+                                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                                            <span className="bg-red-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase -rotate-12 border-2 border-white shadow-xl">
+                                                Zakończone
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="p-6 flex flex-col flex-1">
+                                    <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight mb-2 group-hover:text-blue-600 transition-colors uppercase">
+                                        {o.title || o.material}
+                                    </h3>
+
+                                    <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4">
+                                        <MapPin size={12} className="text-blue-500" />
+                                        {o.lokalizacja} {o.wojewodztwo ? `| ${o.wojewodztwo}` : ''}
+                                    </div>
+
+                                    <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-4">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Cena ok.</span>
+                                            <span className="text-xl font-black text-slate-900 tracking-tighter">
+                                                {o.cena > 0 ? `${o.cena} zł/t` : 'Negocjacja'}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Ilość</span>
+                                            <span className="text-sm font-black text-blue-600">{o.waga} t</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filtrowaneOferty.map((oferta) => {
-                            const jestKupno = oferta.typ_oferty === 'kupie';
-                            const jestSprzedane = oferta.status === 'sprzedane';
-
-                            return (
-                                <Link key={oferta.id} href={`/rynek/${oferta.id}`} className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl border border-gray-100 transition-all duration-300 hover:-translate-y-1 block h-full flex flex-col">
-                                    {/* CARD IMAGE */}
-                                    <div className={`h-48 relative overflow-hidden ${jestKupno && !oferta.zdjecie_url ? 'bg-blue-50/50' : 'bg-slate-100'}`}>
-                                        {oferta.zdjecie_url ? (
-                                            <img src={oferta.zdjecie_url} alt={oferta.title} className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${jestSprzedane ? 'grayscale opacity-50' : ''}`} />
-                                        ) : (
-                                            <div className="w-full h-full flex flex-col items-center justify-center">
-                                                {jestKupno ? (
-                                                    <div className="flex flex-col items-center text-blue-300">
-                                                        <PackageSearch size={48} strokeWidth={1.5} />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest mt-2">Szuka surowca</span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col items-center text-slate-300">
-                                                        <span className="text-5xl mb-1 grayscale opacity-50">{getIcon(oferta.material)}</span>
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Brak zdjęcia</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* KATEGORIA */}
-                                        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black text-slate-900 uppercase tracking-wide shadow-sm flex items-center gap-1">
-                                            {getIcon(oferta.material)} {oferta.material}
-                                        </div>
-
-                                        {/* STATUS BADGE */}
-                                        <div className={`absolute top-4 right-4 backdrop-blur-md text-white px-3 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 uppercase tracking-wider ${jestKupno ? 'bg-emerald-600/90' : 'bg-blue-600/90'}`}>
-                                            {jestKupno ? <ArrowDownToLine size={12} /> : <ShoppingBag size={12} />}
-                                            {jestKupno ? 'Kupię' : 'Sprzedam'}
-                                        </div>
-
-                                        {jestSprzedane && (
-                                            <div className="absolute inset-0 bg-red-600/20 backdrop-blur-[1px] flex items-center justify-center">
-                                                <span className="bg-white text-red-600 px-4 py-1 rounded-lg font-black text-sm uppercase -rotate-12 border-2 border-red-600">Zakończone</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* CARD BODY */}
-                                    <div className="p-6 flex-1 flex flex-col">
-                                        <div className="mb-4">
-                                            <h3 className={`text-lg font-black leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase ${jestSprzedane ? 'text-slate-400' : 'text-slate-900'}`}>
-                                                {oferta.title || oferta.material}
-                                            </h3>
-                                            <div className="flex items-center gap-2 text-slate-500 text-sm font-medium">
-                                                <MapPin className="w-4 h-4 text-slate-300" />
-                                                {oferta.lokalizacja} {oferta.wojewodztwo && `(${oferta.wojewodztwo})`}
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4 mb-6">
-                                            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Cena</span>
-                                                <span className={`block text-lg font-black ${jestSprzedane ? 'text-slate-400' : 'text-slate-900'}`}>
-                                                    {oferta.cena > 0 ? `${oferta.cena} zł / t` : 'Zapytaj o cenę'}
-                                                </span>
-                                            </div>
-                                            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{jestKupno ? 'Szukam' : 'Ilość'}</span>
-                                                <span className={`block text-lg font-black ${jestSprzedane ? 'text-slate-400' : 'text-slate-900'}`}>
-                                                    {oferta.waga > 0 ? `${oferta.waga} t` : '-'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 opacity-60">
-                                                <Clock className="w-3.5 h-3.5" strokeWidth={2.5} />
-                                                {formatDistanceToNow(new Date(oferta.created_at), { addSuffix: true, locale: pl })}
-                                            </span>
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${jestSprzedane ? 'bg-slate-50' : 'bg-slate-100 group-hover:bg-blue-600'}`}>
-                                                <ArrowRight className={`w-4 h-4 transition-colors ${jestSprzedane ? 'text-slate-200' : 'text-slate-400 group-hover:text-white'}`} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
-                            );
-                        })}
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <div className="w-24 h-24 bg-slate-100 rounded-[40px] flex items-center justify-center text-slate-300 mb-6">
+                            <Search size={48} />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">Brak wyników</h2>
+                        <p className="text-slate-500 font-medium">Spróbuj zmienić filtry lub wyszukiwaną frazę.</p>
+                        <button
+                            onClick={() => { setAktywnyFiltr("Wszystko"); setSzukanaFraza(""); setTypFiltr('wszystkie'); }}
+                            className="mt-6 text-blue-600 font-black uppercase text-xs tracking-widest hover:underline"
+                        >
+                            Wyczyść wszystkie filtry
+                        </button>
                     </div>
                 )}
             </div>
+            <footer className="py-12 border-t border-slate-100">
+                <div className="max-w-7xl mx-auto px-4 text-center">
+                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">
+                        &copy; 2024 Recyklat.pl - System Obrotu Surowcami Wtórnymi
+                    </p>
+                </div>
+            </footer>
         </div>
     );
 }

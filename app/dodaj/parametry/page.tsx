@@ -89,7 +89,6 @@ export default function ParametryDetailsPage() {
 
     const handleFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
         if (!formData.cena || !formData.impurity || !formData.form) {
             alert("Uzupełnij obowiązkowe pola!");
             return;
@@ -102,6 +101,9 @@ export default function ParametryDetailsPage() {
         const safeImpurity = parseFloat(formData.impurity) || 0;
         const safeWeight = parseFloat(String(step1Data.waga).replace(',', '.')) || 0;
 
+        // 👇 NOWE: GENERUJEMY UNIKALNY TOKEN DLA TEGO OGŁOSZENIA
+        const wygenerowanyToken = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+
         const finalOffer = {
             typ_oferty: step1Data.typ_oferty || 'sprzedam',
             title: sanitizeText(step1Data.title),
@@ -109,11 +111,11 @@ export default function ParametryDetailsPage() {
             waga: safeWeight,
             lokalizacja: sanitizeText(step1Data.lokalizacja),
             wojewodztwo: sanitizeText(step1Data.wojewodztwo),
-            telefon: sanitizeText(step1Data.telefon),
+            telefon: sanitizeText(step1Data.telefon).replace(/\s/g, ''),
             zdjecie_url: step1Data.zdjecie_url,
             cena: safePrice,
             email: sanitizeText(formData.email) || null,
-            bdo_code: sanitizeText(formData.bdo),
+            bdo_code: sanitizeText(formData.bdo).replace(/\s/g, ''),
             impurity: safeImpurity,
             form: sanitizeText(formData.form),
             certificates: formData.certs.join(", "),
@@ -122,6 +124,7 @@ export default function ParametryDetailsPage() {
             opis: sanitizeText(formData.description),
             extra_photo_docs: formData.hasExtraDocs,
             status: 'aktywna',
+            manage_token: wygenerowanyToken, // 👇 ZAPISUJEMY TOKEN DO BAZY SUPABASE
             created_at: new Date().toISOString(),
         };
 
@@ -141,6 +144,10 @@ export default function ParametryDetailsPage() {
                 }
             }
             localStorage.removeItem("temp_offer");
+
+            // 👇 PRZEKAZUJEMY TOKEN DO EKRANU SUKCESU
+            localStorage.setItem("ostatni_token", wygenerowanyToken);
+
             router.push("/dodano");
         }
     };

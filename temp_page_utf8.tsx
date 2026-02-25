@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -15,16 +15,16 @@ export default function SzczegolyOferty() {
     const [loading, setLoading] = useState(true);
     const [czyToMoje, setCzyToMoje] = useState(false);
 
-    // --- FUNKCJA TŁUMACZĄCA WARTOŚĆ ZANIECZYSZCZENIA ---
+    // --- FUNKCJA T┼üUMACZ─äCA WARTO┼Ü─å ZANIECZYSZCZENIA ---
     const getImpurityLabel = (val: number | string) => {
         const v = Number(val);
         if (v === 0) return "0% (Idealny)";
         if (v === 2) return "Do 2% (Bardzo czysty)";
         if (v === 5) return "Do 5% (Czysty)";
         if (v === 10) return "Do 10% (Lekko zabrudzony)";
-        if (v === 20) return "Powyżej 10% (Zabrudzony)";
-        if (v === 99) return "Nie potrafię ocenić";
-        return v + "%"; // Fallback dla starych wpisów ręcznych
+        if (v === 20) return "Powy┼╝ej 10% (Zabrudzony)";
+        if (v === 99) return "Nie potrafi─Ö oceni─ç";
+        return v + "%"; // Fallback dla starych wpis├│w r─Öcznych
     };
 
     useEffect(() => {
@@ -36,7 +36,7 @@ export default function SzczegolyOferty() {
                 .single();
 
             if (error) {
-                console.error('Błąd:', error);
+                console.error('B┼é─àd:', error);
                 router.push('/rynek');
             } else {
                 setOferta(data);
@@ -51,7 +51,7 @@ export default function SzczegolyOferty() {
     }, [id, router]);
 
     const usunOferte = async () => {
-        const potwierdzenie = confirm("Czy na pewno chcesz TRWALE usunąć tę ofertę z bazy danych?");
+        const potwierdzenie = confirm("Czy na pewno chcesz TRWALE usun─à─ç t─Ö ofert─Ö z bazy danych?");
         if (!potwierdzenie) return;
 
         const { error } = await supabase
@@ -60,20 +60,20 @@ export default function SzczegolyOferty() {
             .eq('id', id);
 
         if (error) {
-            alert("Błąd bazy: " + error.message);
+            alert("B┼é─àd bazy: " + error.message);
         } else {
             const mojeIds = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
             const noweIds = mojeIds.filter((oldId: number) => oldId !== Number(id));
             localStorage.setItem('moje_oferty', JSON.stringify(noweIds));
 
-            alert("Oferta została usunięta.");
+            alert("Oferta zosta┼éa usuni─Öta.");
             router.push('/rynek');
         }
     };
 
-    // 👇 NOWA FUNKCJA: Oznaczanie jako sprzedane/zakończone
+    // ≡ƒæç NOWA FUNKCJA: Oznaczanie jako sprzedane/zako┼äczone
     const oznaczJakoZakonczone = async () => {
-        const potwierdzenie = confirm("Czy na pewno chcesz oznaczyć to ogłoszenie jako zakończone/sprzedane?");
+        const potwierdzenie = confirm("Czy na pewno chcesz oznaczy─ç to og┼éoszenie jako zako┼äczone/sprzedane?");
         if (!potwierdzenie) return;
 
         const { error } = await supabase
@@ -82,17 +82,17 @@ export default function SzczegolyOferty() {
             .eq('id', id);
 
         if (error) {
-            alert("Błąd bazy: " + error.message);
+            alert("B┼é─àd bazy: " + error.message);
         } else {
-            // Natychmiastowa aktualizacja widoku bez przeładowania strony
+            // Natychmiastowa aktualizacja widoku bez prze┼éadowania strony
             setOferta({ ...oferta, status: 'sprzedane' });
-            alert("Ogłoszenie zostało zakończone.");
+            alert("Og┼éoszenie zosta┼éo zako┼äczone.");
         }
     };
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-white">
-            <div className="animate-spin text-4xl">♻️</div>
+            <div className="animate-spin text-4xl">ΓÖ╗∩╕Å</div>
         </div>
     );
 
@@ -109,11 +109,11 @@ export default function SzczegolyOferty() {
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
                     <Link href="/rynek" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-bold uppercase text-xs tracking-widest">
                         <ArrowLeft size={18} />
-                        <span>Powrót</span>
+                        <span>Powr├│t</span>
                     </Link>
 
                     <div className="flex items-center gap-4">
-                        {/* 👇 ZMIENIONA SEKCJA PRZYCISKÓW */}
+                        {/* ≡ƒæç ZMIENIONA SEKCJA PRZYCISK├ôW */}
                         {czyToMoje && (
                             <>
                                 {!jestSprzedane && (
@@ -122,7 +122,7 @@ export default function SzczegolyOferty() {
                                         className="flex items-center gap-2 text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-xl transition-all border border-emerald-100 text-[10px] font-black uppercase"
                                     >
                                         <CheckCircle size={14} />
-                                        Zakończ ofertę
+                                        Zako┼äcz ofert─Ö
                                     </button>
                                 )}
                                 <button
@@ -130,7 +130,7 @@ export default function SzczegolyOferty() {
                                     className="flex items-center gap-2 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-xl transition-all border border-red-100 text-[10px] font-black uppercase"
                                 >
                                     <Trash2 size={14} />
-                                    Usuń
+                                    Usu┼ä
                                 </button>
                             </>
                         )}
@@ -143,7 +143,7 @@ export default function SzczegolyOferty() {
             <div className="max-w-4xl mx-auto px-4 py-8 w-full pb-32">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-                    {/* LEWA KOLUMNA - ZDJĘCIE I TYTUŁ */}
+                    {/* LEWA KOLUMNA - ZDJ─ÿCIE I TYTU┼ü */}
                     <div className="space-y-6">
                         <div className="aspect-square bg-white rounded-[40px] overflow-hidden border shadow-sm relative">
                             {oferta.zdjecie_url ? (
@@ -162,7 +162,7 @@ export default function SzczegolyOferty() {
                                     ) : (
                                         <div className="flex flex-col items-center justify-center text-slate-300">
                                             <ImageOff size={80} strokeWidth={1.5} />
-                                            <p className="font-black uppercase text-xs tracking-widest mt-6 opacity-60">Brak zdjęcia</p>
+                                            <p className="font-black uppercase text-xs tracking-widest mt-6 opacity-60">Brak zdj─Öcia</p>
                                         </div>
                                     )}
                                 </div>
@@ -176,7 +176,7 @@ export default function SzczegolyOferty() {
                                         </span>
                                     ) : (
                                         <span className="inline-flex items-center gap-2 bg-emerald-600/90 backdrop-blur-md text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg border border-emerald-400/50">
-                                            <ShoppingBag size={16} /> Oferta sprzedaży
+                                            <ShoppingBag size={16} /> Oferta sprzeda┼╝y
                                         </span>
                                     )}
                                 </div>
@@ -185,7 +185,7 @@ export default function SzczegolyOferty() {
                             {jestSprzedane && (
                                 <div className="absolute inset-0 bg-red-600/30 backdrop-blur-[2px] flex items-center justify-center z-20">
                                     <div className="bg-white text-red-600 px-8 py-3 rounded-2xl font-black text-3xl uppercase tracking-tighter shadow-2xl -rotate-6 border-4 border-red-600">
-                                        Zakończone
+                                        Zako┼äczone
                                     </div>
                                 </div>
                             )}
@@ -197,11 +197,11 @@ export default function SzczegolyOferty() {
                             </h1>
                             <div className="flex flex-wrap gap-3 items-center pt-2">
                                 <span className={`px-5 py-3 rounded-2xl text-2xl font-black shadow-lg ${jestSprzedane ? 'bg-gray-100 text-gray-400 shadow-none' : jestZapotrzebowanie ? 'bg-blue-600 text-white shadow-blue-100' : 'bg-emerald-600 text-white shadow-emerald-100'}`}>
-                                    {oferta.cena > 0 ? `${oferta.cena} zł / t` : 'Cena do negocjacji'}
+                                    {oferta.cena > 0 ? `${oferta.cena} z┼é / t` : 'Cena do negocjacji'}
                                 </span>
                                 <span className="bg-slate-50 text-slate-600 px-5 py-3 rounded-2xl text-lg font-bold border border-slate-100 flex items-center gap-2">
                                     <Scale size={18} className={jestZapotrzebowanie ? "text-blue-500" : "text-emerald-500"} />
-                                    {jestZapotrzebowanie ? "Szukam: " : "Dostępne: "} {oferta.waga > 0 ? `${oferta.waga} t` : '-'}
+                                    {jestZapotrzebowanie ? "Szukam: " : "Dost─Öpne: "} {oferta.waga > 0 ? `${oferta.waga} t` : '-'}
                                 </span>
                             </div>
 
@@ -230,8 +230,8 @@ export default function SzczegolyOferty() {
                             <div className="bg-red-50 border-2 border-red-500 text-red-700 p-6 rounded-[32px] flex items-center gap-4 shadow-sm">
                                 <AlertCircle size={32} className="shrink-0" />
                                 <div>
-                                    <h3 className="font-black text-xl uppercase tracking-tight">Ogłoszenie Zakończone</h3>
-                                    <p className="text-sm font-bold opacity-80">Ten towar został już sprzedany/kupiony i kontakt został zablokowany.</p>
+                                    <h3 className="font-black text-xl uppercase tracking-tight">Og┼éoszenie Zako┼äczone</h3>
+                                    <p className="text-sm font-bold opacity-80">Ten towar zosta┼é ju┼╝ sprzedany/kupiony i kontakt zosta┼é zablokowany.</p>
                                 </div>
                             </div>
                         )}
@@ -239,7 +239,7 @@ export default function SzczegolyOferty() {
                         {oferta.opis && (
                             <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                                 <h3 className="font-black text-gray-900 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
-                                    <FileText size={16} className={jestZapotrzebowanie ? "text-blue-600" : "text-emerald-600"} /> Opis ogłoszenia
+                                    <FileText size={16} className={jestZapotrzebowanie ? "text-blue-600" : "text-emerald-600"} /> Opis og┼éoszenia
                                 </h3>
                                 <p className="text-sm font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">
                                     {oferta.opis}
@@ -249,11 +249,11 @@ export default function SzczegolyOferty() {
 
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                             <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
-                                <Info size={16} /> Szczegóły techniczne
+                                <Info size={16} /> Szczeg├│┼éy techniczne
                             </h3>
 
                             <div className="mb-4 p-5 bg-blue-50/50 rounded-[24px] border border-blue-100">
-                                <p className="text-[10px] uppercase font-black text-blue-500 mb-1 tracking-widest">Rodzaj materiału</p>
+                                <p className="text-[10px] uppercase font-black text-blue-500 mb-1 tracking-widest">Rodzaj materia┼éu</p>
                                 <p className="font-black text-blue-700 text-lg uppercase">{oferta.material}</p>
                             </div>
 
@@ -270,7 +270,7 @@ export default function SzczegolyOferty() {
                                 </div>
                             </div>
                             <div className="mt-4 p-5 bg-slate-50 rounded-[24px] border border-slate-100">
-                                <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Postać surowca</p>
+                                <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest">Posta─ç surowca</p>
                                 <p className="font-black text-slate-700 text-lg uppercase">{oferta.form || 'Do ustalenia'}</p>
                             </div>
                         </div>
@@ -324,8 +324,8 @@ export default function SzczegolyOferty() {
                                 <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-[24px] border border-slate-100">
                                     <Clock size={20} className={jestZapotrzebowanie ? "text-blue-600" : "text-emerald-600"} />
                                     <div>
-                                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest leading-none mb-1">Dostępność</p>
-                                        <p className="text-sm font-black text-slate-700">{oferta.pickup_hours || 'Całodobowo'}</p>
+                                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest leading-none mb-1">Dost─Öpno┼¢─ç</p>
+                                        <p className="text-sm font-black text-slate-700">{oferta.pickup_hours || 'Ca┼éodobowo'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -340,7 +340,7 @@ export default function SzczegolyOferty() {
                     {jestSprzedane ? (
                         <div className="h-16 w-full bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-center gap-3 shadow-sm">
                             <CheckCircle size={24} className="text-red-600" />
-                            <span className="text-red-600 font-black uppercase tracking-tighter text-xl">Ogłoszenie archiwalne</span>
+                            <span className="text-red-600 font-black uppercase tracking-tighter text-xl">Og┼éoszenie archiwalne</span>
                         </div>
                     ) : (
                         <div className="flex gap-3">
@@ -349,7 +349,7 @@ export default function SzczegolyOferty() {
                                 className={`flex-1 rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${jestZapotrzebowanie ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'}`}
                             >
                                 <Phone size={24} fill="currentColor" />
-                                Zadzwoń: {oferta.telefon}
+                                Zadzwo┼ä: {oferta.telefon}
                             </a>
                             {oferta.email && (
                                 <a

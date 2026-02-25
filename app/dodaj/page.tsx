@@ -50,7 +50,7 @@ export default function DodajOferteKrok1() {
         const options = { maxSizeMB: 1, maxWidthOrHeight: 1080, useWebWorker: true };
         try {
             const compressedFile = await imageCompression(fileToUpload, options);
-            const fileName = `${Date.now()}.png`;
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.png`;
             await supabase.storage.from('oferty-zdjecia').upload(fileName, compressedFile);
             const { data } = supabase.storage.from('oferty-zdjecia').getPublicUrl(fileName);
             return data.publicUrl;
