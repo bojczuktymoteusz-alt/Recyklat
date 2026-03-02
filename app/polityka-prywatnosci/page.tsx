@@ -5,12 +5,12 @@ export default function PolitykaPrywatnosciPage() {
     return (
         <main style={{ padding: '40px', maxWidth: '800px', margin: '0 auto', lineHeight: '1.6', fontFamily: 'sans-serif' }}>
             <h1>Polityka Prywatności serwisu Recyklat.pl</h1>
-            <p>Ostatnia aktualizacja: 16 lutego 2026 r.</p>
+            <p>Ostatnia aktualizacja: 02 marca 2026 r.</p>
 
             <section style={{ marginTop: '30px' }}>
                 <h2>1. Kto jest administratorem Twoich danych?</h2>
                 <p>
-                    Administratorem danych osobowych zbieranych za pośrednictwem serwisu jest <strong>recyklat.pl</strong>
+                    Administratorem danych osobowych zbieranych za pośrednictwem serwisu <strong>recyklat.pl</strong> jest Tymoteusz Bojczuk, zamieszkały w Częstochowie, ul. Okólna 111/27 42-218. Adres do korespondencji elektronicznej: kontakt@recyklat.pl
                 </p>
             </section>
 

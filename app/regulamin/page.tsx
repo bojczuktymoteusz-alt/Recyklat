@@ -8,8 +8,7 @@ export default function RegulaminPage() {
 
             <section>
                 <h2>1. Postanowienia ogólne</h2>
-                <p>Serwis dostępny pod adresem <strong>recyklat.pl</strong> jest platformą typu marketplace służącą do nawiązywania kontaktów handlowych w branży recyklingu.</p>
-                <p>Właścicielem serwisu jest Recyklat.pl.</p>
+                <p>Właścicielem i administratorem serwisu internetowego dostępnego pod adresem <strong>recyklat.pl</strong> z siedzibą na ul. Okólna 111/27, 42-218 Częstochowa, jest Tymoteusz Bojczuk.  <strong>Recyklat.pl</strong> jest platformą typu marketplace, służącą do nawiązywania kontaktów handlowych w branży recyklingu.</p>
             </section>
 
             <section>
@@ -25,7 +24,7 @@ export default function RegulaminPage() {
 
             <section>
                 <h2>4. Kontakt</h2>
-                <p>Wszelkie pytania dotyczące regulaminu należy kierować na adres e-mail: bojczuktymoteusz@gmail.com.</p>
+                <p>Wszelkie pytania dotyczące regulaminu należy kierować na adres e-mail: kontakt@recyklat.pl</p>
             </section>
 
             <div style={{ marginTop: '40px' }}>
