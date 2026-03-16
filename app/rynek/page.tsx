@@ -282,7 +282,13 @@ export default function Rynek() {
                                         </div>
                                         <div className="flex flex-col items-end">
                                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Ilość</span>
-                                            <span className="text-sm font-black text-blue-600">{o.waga} t</span>
+                                            <span className="text-sm font-black text-blue-600 flex items-center h-5">
+                                                {o.waga > 0 ? (
+                                                    `${o.waga} t`
+                                                ) : (
+                                                    <span className="text-2xl -mb-2 translate-y-[1px]">∞</span>
+                                                )}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>

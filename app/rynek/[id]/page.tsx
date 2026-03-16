@@ -201,7 +201,8 @@ export default function SzczegolyOferty() {
                                 </span>
                                 <span className="bg-slate-50 text-slate-600 px-5 py-3 rounded-2xl text-lg font-bold border border-slate-100 flex items-center gap-2">
                                     <Scale size={18} className={jestZapotrzebowanie ? "text-blue-500" : "text-emerald-500"} />
-                                    {jestZapotrzebowanie ? "Szukam: " : "Dostępne: "} {oferta.waga > 0 ? `${oferta.waga} t` : '-'}
+                                    {jestZapotrzebowanie ? "Szukam: " : "Dostępne: "}
+                                    {oferta.waga > 0 ? `${oferta.waga} t` : 'Ilości hurtowe'}
                                 </span>
                             </div>
 
