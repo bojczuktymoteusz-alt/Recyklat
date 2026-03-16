@@ -57,38 +57,53 @@ export default function Rynek() {
     const [typFiltr, setTypFiltr] = useState<'wszystkie' | 'sprzedam' | 'kupie'>('wszystkie');
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetchOferty();
-    }, []);
 
-    const fetchOferty = async () => {
+
+    // Nowa wersja funkcji fetchOferty obsługująca Asystenta
+    const fetchOferty = async (query = "") => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('oferty')
-                .select('*')
-                .order('created_at', { ascending: false });
+            let result;
 
-            if (error) throw error;
-            if (data) {
-                setWszystkieOferty(data);
-                setFiltrowaneOferty(data);
+            if (query.trim() !== "") {
+                result = await supabase.rpc('szukaj_ogloszen', { search_query: query });
+            } else {
+                result = await supabase.from('oferty').select('*').order('created_at', { ascending: false });
             }
-        } catch (error) {
-            console.error('Błąd pobierania ofert:', error);
+
+            if (result.error) throw result.error;
+
+            if (result.data) {
+                setWszystkieOferty(result.data); // Asystent daje nam od razu przefiltrowaną bazę
+            }
+        } catch (error: any) {
+            console.error("Błąd Asystenta:", error.message);
         } finally {
             setLoading(false);
         }
     };
 
+    // Automatyczne odpalanie szukania, gdy przestajesz pisać
     useEffect(() => {
-        // 1. Bierzemy wszystkie oferty (Sprzedane zostają jako "Social Proof" i reklama)
+        const delayDebounceFn = setTimeout(() => {
+            fetchOferty(szukanaFraza);
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [szukanaFraza]);
+
+
+
+    useEffect(() => {
+        // 1. Pobieramy bazę, którą dostarczył fetchOferty (już przefiltrowaną przez Asystenta)
         let wynik = [...wszystkieOferty];
 
+        // 2. Filtrujemy po typie (Sprzedam/Kupię)
         if (typFiltr !== 'wszystkie') {
             wynik = wynik.filter(o => o.typ_oferty === typFiltr || (!o.typ_oferty && typFiltr === 'sprzedam'));
         }
 
+        // 3. Filtrujemy po kategorii (ikony: Folia, Tworzywa itd.)
         if (aktywnyFiltr !== "Wszystko") {
             wynik = wynik.filter(o => {
                 const mat = o.material.toLowerCase();
@@ -97,31 +112,19 @@ export default function Rynek() {
             });
         }
 
-        if (szukanaFraza) {
-            const fraza = szukanaFraza.toLowerCase();
-            wynik = wynik.filter(o =>
-                (o.title && o.title.toLowerCase().includes(fraza)) ||
-                o.material.toLowerCase().includes(fraza) ||
-                (o.opis && o.opis.toLowerCase().includes(fraza)) ||
-                o.lokalizacja.toLowerCase().includes(fraza) ||
-                (o.wojewodztwo && o.wojewodztwo.toLowerCase().includes(fraza))
-            );
-        }
-
-        // 2. SORTOWANIE B2B: Aktywne na samej górze, Sprzedane spychamy na dół
+        // 4. SORTOWANIE: Aktywne na górze, Sprzedane na dół
         wynik.sort((a, b) => {
             const aSprzedane = a.status === 'sprzedane';
             const bSprzedane = b.status === 'sprzedane';
-
-            if (aSprzedane && !bSprzedane) return 1;  // 'a' jest sprzedane, więc leci na dół
-            if (!aSprzedane && bSprzedane) return -1; // 'b' jest sprzedane, więc 'a' wygrywa i leci do góry
-
-            // Jeśli oba mają ten sam status (oba aktywne lub oba sprzedane), sortujemy klasycznie po dacie (najnowsze wyżej)
+            if (aSprzedane && !bSprzedane) return 1;
+            if (!aSprzedane && bSprzedane) return -1;
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
 
         setFiltrowaneOferty(wynik);
-    }, [aktywnyFiltr, szukanaFraza, typFiltr, wszystkieOferty]);
+
+        // Zabrany stąd 'szukanaFraza', bo szukaniem zajmuje się teraz funkcja fetchOferty
+    }, [aktywnyFiltr, typFiltr, wszystkieOferty]);
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-20">
             {/* NAVBAR */}
@@ -188,11 +191,26 @@ export default function Rynek() {
                         </div>
                         <input
                             type="text"
-                            placeholder="np. folia, Toruń, cokolwiek..."
+                            placeholder="Asystent AI: wpisz materiał lub miasto..." // Nowy placeholder
                             value={szukanaFraza}
                             onChange={(e) => setSzukanaFraza(e.target.value)}
                             className="w-full pl-12 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 focus:ring-0 transition-all outline-none text-lg font-medium"
                         />
+                    </div>
+                    {/* SZYBKIE TAGI / SUGESTIE */}
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-6 opacity-90 animate-in fade-in slide-in-from-top-2 duration-700">
+                        <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest hidden sm:block mr-1">
+                            Szybkie wyszukiwanie:
+                        </span>
+                        {['LDPE', 'Hurt', 'Kujawsko-Pomorskie', 'ABS', 'Makulatura'].map((tag) => (
+                            <button
+                                key={tag}
+                                onClick={() => setSzukanaFraza(tag)}
+                                className="text-[10px] font-black uppercase tracking-widest bg-slate-800/40 text-slate-300 px-4 py-2 rounded-xl hover:bg-blue-600 hover:text-white hover:scale-105 transition-all border border-slate-700/50 backdrop-blur-sm shadow-lg"
+                            >
+                                #{tag}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
