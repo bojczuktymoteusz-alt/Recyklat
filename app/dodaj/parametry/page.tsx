@@ -28,7 +28,9 @@ interface FormData {
     logistics: string[];
     pickupHours: string;
     description: string;
+    firma: string;
     hasExtraDocs: boolean;
+
 }
 
 export default function ParametryDetailsPage() {
@@ -46,6 +48,7 @@ export default function ParametryDetailsPage() {
         logistics: [],
         pickupHours: "8-16",
         description: "",
+        firma: "",
         hasExtraDocs: false,
     });
 
@@ -67,8 +70,11 @@ export default function ParametryDetailsPage() {
         }
     }, [router]);
 
-    const handleChange = (field: keyof FormData, value: any) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+    const handleChange = (key: keyof FormData, value: any) => {
+        setFormData(prev => ({
+            ...prev,
+            [key]: value
+        }));
     };
 
     const handleBdoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,7 +128,7 @@ export default function ParametryDetailsPage() {
             logistics: formData.logistics.join(", "),
             pickup_hours: sanitizeText(formData.pickupHours),
             opis: sanitizeText(formData.description),
-            extra_photo_docs: formData.hasExtraDocs,
+            firma: sanitizeText(formData.firma),
             status: 'aktywna',
             manage_token: wygenerowanyToken, // 👇 ZAPISUJEMY TOKEN DO BAZY SUPABASE
             created_at: new Date().toISOString(),
@@ -306,20 +312,17 @@ export default function ParametryDetailsPage() {
                                 value={formData.pickupHours} onChange={(e) => handleChange('pickupHours', e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center pb-1">
-                            <button
-                                type="button"
-                                onClick={() => handleChange('hasExtraDocs', !formData.hasExtraDocs)}
-                                className={`flex items-center gap-4 p-5 rounded-[24px] border-2 transition-all w-full shadow-sm ${formData.hasExtraDocs
-                                    ? "bg-blue-50 border-blue-600 text-blue-700"
-                                    : "bg-slate-50 border-slate-200 text-slate-500 hover:border-blue-400"
-                                    }`}
-                            >
-                                <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${formData.hasExtraDocs ? "bg-blue-600" : "border-2 border-slate-300 bg-white"}`}>
-                                    {formData.hasExtraDocs && <CheckCircle size={16} className="text-white" />}
-                                </div>
-                                <span className="text-xs font-black uppercase tracking-widest text-left">Posiadam dodatkową dokumentację</span>
-                            </button>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">
+                                Firma / Wystawca
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="np. Adam Nowak"
+                                value={formData.firma} // ✅ To naprawi błąd "Cannot find name 'firma'"
+                                onChange={(e) => handleChange('firma', e.target.value)} // ✅ To naprawi błąd "setFirma"
+                                className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 transition-all text-lg shadow-sm"
+                            />
                         </div>
                     </div>
 
@@ -327,7 +330,7 @@ export default function ParametryDetailsPage() {
                         <label className="block text-sm font-black text-slate-900 uppercase ml-1">Dodatkowy Opis</label>
                         <textarea
                             className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[32px] outline-none font-bold text-slate-900 min-h-[160px] resize-none transition-all placeholder:text-slate-400 shadow-sm text-lg"
-                            placeholder="Wpisz dodatkowe szczegóły, warunki płatności lub wymagania..."
+                            placeholder="Szczegóły oferty, parametry..."
                             value={formData.description}
                             onChange={(e) => handleChange('description', e.target.value)}
                         />

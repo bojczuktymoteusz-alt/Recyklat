@@ -197,21 +197,7 @@ export default function Rynek() {
                             className="w-full pl-12 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 focus:ring-0 transition-all outline-none text-lg font-medium"
                         />
                     </div>
-                    {/* SZYBKIE TAGI / SUGESTIE */}
-                    <div className="flex flex-wrap items-center justify-center gap-2 mt-6 opacity-90 animate-in fade-in slide-in-from-top-2 duration-700">
-                        <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest hidden sm:block mr-1">
-                            Szybkie wyszukiwanie:
-                        </span>
-                        {['LDPE', 'Hurt', 'Kujawsko-Pomorskie', 'ABS', 'Makulatura'].map((tag) => (
-                            <button
-                                key={tag}
-                                onClick={() => setSzukanaFraza(tag)}
-                                className="text-[10px] font-black uppercase tracking-widest bg-slate-800/40 text-slate-300 px-4 py-2 rounded-xl hover:bg-blue-600 hover:text-white hover:scale-105 transition-all border border-slate-700/50 backdrop-blur-sm shadow-lg"
-                            >
-                                #{tag}
-                            </button>
-                        ))}
-                    </div>
+
                 </div>
             </div>
 

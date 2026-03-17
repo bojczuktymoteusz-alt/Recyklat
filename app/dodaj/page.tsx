@@ -43,6 +43,7 @@ export default function DodajOferteKrok1() {
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [hp, setHp] = useState("");
 
     useEffect(() => { setIsCheckingAuth(false); }, []);
 
@@ -59,10 +60,15 @@ export default function DodajOferteKrok1() {
 
     const handleDalej = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (hp !== "") {
+            router.push('/rynek');
+            return;
+        }
         setLoading(true);
         try {
             let uploadedImageUrl = '';
             if (file) uploadedImageUrl = await uploadImage(file);
+
             const step1Data = {
                 typ_oferty: typOferty,
                 title: sanitizeText(title),
@@ -76,7 +82,10 @@ export default function DodajOferteKrok1() {
             };
             localStorage.setItem('temp_offer', JSON.stringify(step1Data));
             router.push('/dodaj/parametry');
-        } catch (err: any) { alert(err.message); setLoading(false); }
+        } catch (err: any) {
+            alert(err.message);
+            setLoading(false);
+        }
     };
 
     if (isCheckingAuth) return null;
@@ -84,6 +93,11 @@ export default function DodajOferteKrok1() {
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 sm:p-8 font-sans">
             <div className="max-w-xl w-full bg-white rounded-[40px] shadow-2xl p-8 md:p-12 border-4 border-white">
+
+                {/* Honeypot */}
+                <div style={{ opacity: 0, position: 'absolute', top: 0, left: 0, height: 0, width: 0, zIndex: -1 }}>
+                    <input type="text" value={hp} onChange={(e) => setHp(e.target.value)} tabIndex={-1} autoComplete="off" />
+                </div>
 
                 {/* NAGŁÓWEK */}
                 <div className="flex justify-between items-start mb-10">
@@ -98,161 +112,72 @@ export default function DodajOferteKrok1() {
                 </div>
 
                 <form onSubmit={handleDalej} className="space-y-8">
-
-                    {/* PRZEŁĄCZNIK TYPU */}
-                    <div className="grid grid-cols-2 gap-3 bg-slate-100 p-2 rounded-[28px] border-2 border-slate-200 shadow-inner">
-                        <button type="button" onClick={() => setTypOferty('sprzedam')}
-                            className={`py-4 rounded-[20px] text-sm font-black uppercase tracking-tight transition-all flex items-center justify-center gap-3 ${typOferty === 'sprzedam' ? 'bg-white text-blue-600 shadow-xl ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>
+                    {/* TYP OFERTY */}
+                    <div className="grid grid-cols-2 gap-3 bg-slate-100 p-2 rounded-[28px]">
+                        <button
+                            type="button"
+                            onClick={() => setTypOferty('sprzedam')}
+                            className={`py-4 rounded-[20px] text-sm font-black uppercase flex items-center justify-center gap-3 transition-all ${typOferty === 'sprzedam' ? 'bg-white text-emerald-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
+                        >
                             <ShoppingBag size={20} /> Sprzedam
                         </button>
-                        <button type="button" onClick={() => setTypOferty('kupie')}
-                            className={`py-4 rounded-[20px] text-sm font-black uppercase tracking-tight transition-all flex items-center justify-center gap-3 ${typOferty === 'kupie' ? 'bg-white text-emerald-600 shadow-xl ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>
+                        <button
+                            type="button"
+                            onClick={() => setTypOferty('kupie')}
+                            className={`py-4 rounded-[20px] text-sm font-black uppercase flex items-center justify-center gap-3 transition-all ${typOferty === 'kupie' ? 'bg-white text-blue-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
+                        >
                             <ArrowDownToLine size={20} /> Kupię
                         </button>
                     </div>
 
-                    {/* TYTUŁ */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                            Tytuł ogłoszenia <span className="text-blue-600 text-lg">*</span>
-                        </label>
-                        <input required type="text" placeholder="Np. Regranulat czarny ABS (wysoki połysk)"
-                            className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 placeholder:text-slate-400 shadow-sm transition-all text-lg"
-                            value={title} onChange={(e) => setTitle(e.target.value)} />
+                    <input required type="text" placeholder="Tytuł ogłoszenia" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={title} onChange={(e) => setTitle(e.target.value)} />
+
+                    <select required className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={material} onChange={(e) => {
+                        setMaterial(e.target.value);
+                        const found = KATEGORIE_Z_BDO.find(k => k.nazwa === e.target.value);
+                        if (found) setAutoBdo(found.bdo);
+                    }}>
+                        <option value="">Wybierz kategorię...</option>
+                        {KATEGORIE_Z_BDO.map(k => <option key={k.nazwa} value={k.nazwa}>{k.nazwa}</option>)}
+                    </select>
+
+                    <div className="grid grid-cols-2 gap-6">
+                        <input type="number" placeholder="Waga (tony)" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={waga} onChange={(e) => setWaga(e.target.value)} />
+                        <input required type="tel" placeholder="Telefon" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={telefon} onChange={(e) => setTelefon(e.target.value)} />
                     </div>
 
-                    {/* MATERIAŁ */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                            Rodzaj Materiału <span className="text-blue-600 text-lg">*</span>
-                        </label>
-                        <div className="relative">
-                            <select required className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 appearance-none cursor-pointer shadow-sm text-lg"
-                                value={material} onChange={(e) => {
-                                    setMaterial(e.target.value);
-                                    const found = KATEGORIE_Z_BDO.find(item => item.nazwa === e.target.value);
-                                    if (found) setAutoBdo(found.bdo);
-                                }}>
-                                <option value="" disabled>Wybierz kategorię...</option>
-                                {KATEGORIE_Z_BDO.map(kat => <option key={kat.nazwa} value={kat.nazwa}>{kat.nazwa}</option>)}
-                            </select>
-                            <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
-                        </div>
+                    <div className="grid grid-cols-2 gap-6">
+                        <select required className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={wojewodztwo} onChange={(e) => setWojewodztwo(e.target.value)}>
+                            <option value="">Województwo...</option>
+                            {WOJEWODZTWA.map(w => <option key={w} value={w}>{w}</option>)}
+                        </select>
+                        <input type="text" placeholder="Miejscowość" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={lokalizacja} onChange={(e) => setLokalizacja(e.target.value)} />
                     </div>
 
-                    {/* WAGA i TELEFON */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                Waga (tony)
-                            </label>
-                            <div className="relative">
-                                <input type="number" step="0.01" placeholder="Np. 1.5"
-                                    className="w-full p-5 pr-14 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg shadow-sm"
-                                    value={waga} onChange={(e) => setWaga(e.target.value)} />
-                                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xs uppercase tracking-widest">ton</span>
+                    <div onClick={() => document.getElementById('fileInput')?.click()} className="border-4 border-dashed rounded-[40px] p-10 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                        <input type="file" id="fileInput" className="hidden" accept="image/*" onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) { setFile(f); setPreview(URL.createObjectURL(f)); }
+                        }} />
+                        {preview ? (
+                            <div className="relative inline-block">
+                                <img src={preview} className="h-40 mx-auto rounded-2xl shadow-lg" alt="Podgląd" />
+                                <div className="absolute -top-2 -right-2 bg-blue-600 text-white p-1 rounded-full"><CheckCircle size={16} /></div>
                             </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                Telefon kontaktowy <span className="text-blue-600 text-lg">*</span>
-                            </label>
-                            <input required type="tel" placeholder="123 456 789"
-                                className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg shadow-sm"
-                                value={telefon} onChange={(e) => {
-
-                                    let val = e.target.value.replace(/[^\d+]/g, '').substring(0, 15);
-
-                                    // 2. Przywracamy Twoje formatowanie: dzielimy ciąg na bloki po 3 znaki i łączymy spacją
-                                    const formatted = val.match(/.{1,3}/g)?.join(' ') || val;
-
-                                    setTelefon(formatted);
-                                }} />
-                        </div>
-                    </div>
-
-                    {/* LOKALIZACJA */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                Województwo <span className="text-blue-600 text-lg">*</span>
-                            </label>
-                            <div className="relative">
-                                <select required className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 appearance-none cursor-pointer shadow-sm text-lg"
-                                    value={wojewodztwo} onChange={(e) => setWojewodztwo(e.target.value)}>
-                                    <option value="" disabled>Wybierz...</option>
-                                    {WOJEWODZTWA.map(w => <option key={w} value={w}>{w}</option>)}
-                                </select>
-                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
+                        ) : (
+                            <div className="flex flex-col items-center gap-2">
+                                <ImagePlus size={40} className="text-slate-300" />
+                                <p className="font-black text-slate-400 uppercase text-sm">Kliknij, aby dodać zdjęcie</p>
                             </div>
-                        </div>
-                        <div className="space-y-2">
-                            {/* MIEJSCOWOŚĆ JEST TERAZ OPCJONALNA, BEZ GWIAZDKI */}
-                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                Miejscowość
-                            </label>
-                            <input type="text" placeholder="Np. Łódź"
-                                className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg shadow-sm"
-                                value={lokalizacja} onChange={(e) => setLokalizacja(e.target.value)} />
-                        </div>
+                        )}
                     </div>
 
-                    {/* ZDJĘCIE */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                            Zdjęcie główne towaru
-                        </label>
-                        <div
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                                e.preventDefault();
-                                const f = e.dataTransfer.files[0];
-                                if (f) { setFile(f); setPreview(URL.createObjectURL(f)); }
-                            }}
-                            onClick={() => document.getElementById('fileInput')?.click()}
-                            className="border-4 border-dashed border-slate-100 rounded-[40px] p-10 text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer bg-slate-50 group relative overflow-hidden"
-                        >
-                            <input type="file" id="fileInput" className="hidden" accept="image/*"
-                                onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) { setFile(f); setPreview(URL.createObjectURL(f)); }
-                                }}
-                            />
-                            {preview ? (
-                                <div className="relative inline-block">
-                                    <img src={preview} alt="Podgląd" className="h-48 mx-auto rounded-[32px] object-cover shadow-2xl border-4 border-white" />
-                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-[32px] flex items-center justify-center">
-                                        <span className="text-white font-black text-xs uppercase bg-black/50 px-4 py-2 rounded-full backdrop-blur-md">Zmień zdjęcie</span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-6">
-                                    <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-xl mb-4 group-hover:scale-110 transition-transform">
-                                        <ImagePlus size={32} className="text-blue-600" />
-                                    </div>
-                                    <p className="text-slate-900 font-black text-lg">Kliknij tutaj lub przeciągnij plik</p>
-                                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Obsługujemy PNG, JPG (max 10MB)</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className={`w-full bg-slate-900 text-white py-8 rounded-[32px] font-black text-2xl uppercase tracking-tighter shadow-2xl transition-all flex items-center justify-center gap-4 group hover:bg-blue-600 hover:shadow-blue-200 hover:-translate-y-1 active:scale-[0.98] ${loading ? 'opacity-70 cursor-wait' : ''}`}
-                    >
+                    <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-8 rounded-[32px] font-black text-2xl uppercase flex items-center justify-center gap-4 hover:bg-blue-600 transition-all shadow-xl active:scale-95 disabled:opacity-50">
                         {loading ? 'Przetwarzanie...' : 'Dalej do parametrów'}
-                        {!loading && <CheckCircle size={28} className="text-blue-400 group-hover:text-white transition-colors" />}
+                        <CheckCircle size={28} />
                     </button>
-
                 </form>
             </div>
-
-            <p className="mt-10 text-slate-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span>
-                Zawsze darmowe ogłoszenia dla firm
-            </p>
         </div>
     );
 }
