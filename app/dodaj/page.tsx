@@ -29,6 +29,13 @@ const WOJEWODZTWA = [
     "świętokrzyskie", "warmińsko-mazurskie", "wielkopolskie", "zachodniopomorskie"
 ];
 
+// FUNKCJA FORMATUJĄCA TELEFON
+const formatujTelefon = (value: string) => {
+    const tylkoCyfry = value.replace(/\D/g, '').substring(0, 9);
+    const grupy = tylkoCyfry.match(/(\d{0,3})(\d{0,3})(\d{0,3})/);
+    return !grupy ? "" : [grupy[1], grupy[2], grupy[3]].filter(Boolean).join(' ').trim();
+};
+
 export default function DodajOferteKrok1() {
     const router = useRouter();
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -111,7 +118,7 @@ export default function DodajOferteKrok1() {
                     <Link href="/rynek" className="bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 p-3 rounded-2xl transition-all font-black text-[10px] uppercase">Anuluj</Link>
                 </div>
 
-                <form onSubmit={handleDalej} className="space-y-8">
+                <form onSubmit={handleDalej} className="space-y-6">
                     {/* TYP OFERTY */}
                     <div className="grid grid-cols-2 gap-3 bg-slate-100 p-2 rounded-[28px]">
                         <button
@@ -130,31 +137,74 @@ export default function DodajOferteKrok1() {
                         </button>
                     </div>
 
-                    <input required type="text" placeholder="Tytuł ogłoszenia" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={title} onChange={(e) => setTitle(e.target.value)} />
-
-                    <select required className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={material} onChange={(e) => {
-                        setMaterial(e.target.value);
-                        const found = KATEGORIE_Z_BDO.find(k => k.nazwa === e.target.value);
-                        if (found) setAutoBdo(found.bdo);
-                    }}>
-                        <option value="">Wybierz kategorię...</option>
-                        {KATEGORIE_Z_BDO.map(k => <option key={k.nazwa} value={k.nazwa}>{k.nazwa}</option>)}
-                    </select>
-
-                    <div className="grid grid-cols-2 gap-6">
-                        <input type="number" placeholder="Waga (tony)" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={waga} onChange={(e) => setWaga(e.target.value)} />
-                        <input required type="tel" placeholder="Telefon" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={telefon} onChange={(e) => setTelefon(e.target.value)} />
+                    {/* TYTUŁ */}
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">
+                            Tytuł ogłoszenia <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            required
+                            type="text"
+                            placeholder="np. Regranulat LDPE jasny"
+                            className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold focus:border-blue-500 outline-none transition-colors"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                        />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
-                        <select required className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={wojewodztwo} onChange={(e) => setWojewodztwo(e.target.value)}>
-                            <option value="">Województwo...</option>
-                            {WOJEWODZTWA.map(w => <option key={w} value={w}>{w}</option>)}
+                    {/* KATEGORIA / MATERIAŁ */}
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">
+                            Kategoria surowca <span className="text-red-500">*</span>
+                        </label>
+                        <select required className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors" value={material} onChange={(e) => {
+                            setMaterial(e.target.value);
+                            const found = KATEGORIE_Z_BDO.find(k => k.nazwa === e.target.value);
+                            if (found) setAutoBdo(found.bdo);
+                        }}>
+                            <option value="">Wybierz kategorię...</option>
+                            {KATEGORIE_Z_BDO.map(k => <option key={k.nazwa} value={k.nazwa}>{k.nazwa}</option>)}
                         </select>
-                        <input type="text" placeholder="Miejscowość" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold" value={lokalizacja} onChange={(e) => setLokalizacja(e.target.value)} />
                     </div>
 
-                    <div onClick={() => document.getElementById('fileInput')?.click()} className="border-4 border-dashed rounded-[40px] p-10 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                    {/* WAGA I TELEFON */}
+                    <div className="grid grid-cols-2 gap-6">
+                        <div>
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">
+                                Waga (tony)
+                            </label>
+                            <input type="number" placeholder="np. 24" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors" value={waga} onChange={(e) => setWaga(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">
+                                Telefon <span className="text-red-500">*</span>
+                            </label>
+                            {/* PODPIĘTA FUNKCJA FORMATUJĄCA */}
+                            <input required type="tel" placeholder="000 000 000" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors" value={telefon} onChange={(e) => setTelefon(formatujTelefon(e.target.value))} />
+                        </div>
+                    </div>
+
+                    {/* WOJEWÓDZTWO I LOKALIZACJA */}
+                    <div className="grid grid-cols-2 gap-6">
+                        <div>
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">
+                                Województwo <span className="text-red-500">*</span>
+                            </label>
+                            <select required className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors" value={wojewodztwo} onChange={(e) => setWojewodztwo(e.target.value)}>
+                                <option value="">Wybierz...</option>
+                                {WOJEWODZTWA.map(w => <option key={w} value={w}>{w}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">
+                                Miejscowość
+                            </label>
+                            <input type="text" placeholder="np. Warszawa" className="w-full p-5 bg-slate-50 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors" value={lokalizacja} onChange={(e) => setLokalizacja(e.target.value)} />
+                        </div>
+                    </div>
+
+                    {/* ZDJĘCIE */}
+                    <div onClick={() => document.getElementById('fileInput')?.click()} className="border-4 border-dashed rounded-[40px] p-10 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors mt-4">
                         <input type="file" id="fileInput" className="hidden" accept="image/*" onChange={(e) => {
                             const f = e.target.files?.[0];
                             if (f) { setFile(f); setPreview(URL.createObjectURL(f)); }
@@ -172,7 +222,8 @@ export default function DodajOferteKrok1() {
                         )}
                     </div>
 
-                    <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-8 rounded-[32px] font-black text-2xl uppercase flex items-center justify-center gap-4 hover:bg-blue-600 transition-all shadow-xl active:scale-95 disabled:opacity-50">
+                    {/* PRZYCISK */}
+                    <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-8 rounded-[32px] font-black text-2xl uppercase flex items-center justify-center gap-4 hover:bg-blue-600 transition-all shadow-xl active:scale-95 disabled:opacity-50 mt-4">
                         {loading ? 'Przetwarzanie...' : 'Dalej do parametrów'}
                         <CheckCircle size={28} />
                     </button>
@@ -180,4 +231,4 @@ export default function DodajOferteKrok1() {
             </div>
         </div>
     );
-}
+} // <--- TO ZAMYKA CAŁY KOMPONENT DodajOferteKrok1
