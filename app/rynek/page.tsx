@@ -2,14 +2,11 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
-import { pl } from 'date-fns/locale';
 import {
-    Archive, Mountain, ShoppingBag, Layers, Box,
-    ArrowRight, User, Recycle, FileText, Wrench,
-    MapPin, Clock, Search, ArrowDownToLine, PackageSearch, ImageOff, Package
+    Recycle, MapPin, Search, ImageOff, PackageSearch, Package, ChevronDown
 } from 'lucide-react';
 
+// --- TYPY ---
 interface Oferta {
     id: number;
     title?: string;
@@ -18,15 +15,11 @@ interface Oferta {
     cena: number;
     lokalizacja: string;
     wojewodztwo?: string;
-    telefon: string;
     zdjecie_url?: string;
     created_at: string;
-    form?: string;
     status?: string;
-    opis?: string;
-    bdo_code?: string;
-    impurity?: number;
     typ_oferty?: string;
+    // 'opis' celowo pominięty dla szybkości listingu
 }
 
 const KATEGORIE = [
@@ -49,6 +42,8 @@ const getIcon = (material: string) => {
     return '📦';
 };
 
+const ITEMS_PER_PAGE = 12; // Ile ofert na start
+
 export default function Rynek() {
     const [wszystkieOferty, setWszystkieOferty] = useState<Oferta[]>([]);
     const [filtrowaneOferty, setFiltrowaneOferty] = useState<Oferta[]>([]);
@@ -56,10 +51,9 @@ export default function Rynek() {
     const [szukanaFraza, setSzukanaFraza] = useState("");
     const [typFiltr, setTypFiltr] = useState<'wszystkie' | 'sprzedam' | 'kupie'>('wszystkie');
     const [loading, setLoading] = useState(true);
+    const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
-
-
-    // Nowa wersja funkcji fetchOferty obsługująca Asystenta
+    // OPTYMALIZACJA: Pobieramy tylko niezbędne pola (bez ciężkiego opisu)
     const fetchOferty = async (query = "") => {
         try {
             setLoading(true);
@@ -68,42 +62,37 @@ export default function Rynek() {
             if (query.trim() !== "") {
                 result = await supabase.rpc('szukaj_ogloszen', { search_query: query });
             } else {
-                result = await supabase.from('oferty').select('*').order('created_at', { ascending: false });
+                result = await supabase
+                    .from('oferty')
+                    .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty')
+                    .order('created_at', { ascending: false });
             }
 
             if (result.error) throw result.error;
+            if (result.data) setWszystkieOferty(result.data);
 
-            if (result.data) {
-                setWszystkieOferty(result.data); // Asystent daje nam od razu przefiltrowaną bazę
-            }
         } catch (error: any) {
-            console.error("Błąd Asystenta:", error.message);
+            console.error("Błąd pobierania:", error.message);
         } finally {
             setLoading(false);
         }
     };
 
-    // Automatyczne odpalanie szukania, gdy przestajesz pisać
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             fetchOferty(szukanaFraza);
+            setVisibleCount(ITEMS_PER_PAGE); // Resetujemy licznik przy nowym szukaniu
         }, 300);
-
         return () => clearTimeout(delayDebounceFn);
     }, [szukanaFraza]);
 
-
-
     useEffect(() => {
-        // 1. Pobieramy bazę, którą dostarczył fetchOferty (już przefiltrowaną przez Asystenta)
         let wynik = [...wszystkieOferty];
 
-        // 2. Filtrujemy po typie (Sprzedam/Kupię)
         if (typFiltr !== 'wszystkie') {
             wynik = wynik.filter(o => o.typ_oferty === typFiltr || (!o.typ_oferty && typFiltr === 'sprzedam'));
         }
 
-        // 3. Filtrujemy po kategorii (ikony: Folia, Tworzywa itd.)
         if (aktywnyFiltr !== "Wszystko") {
             wynik = wynik.filter(o => {
                 const mat = o.material.toLowerCase();
@@ -112,7 +101,6 @@ export default function Rynek() {
             });
         }
 
-        // 4. SORTOWANIE: Aktywne na górze, Sprzedane na dół
         wynik.sort((a, b) => {
             const aSprzedane = a.status === 'sprzedane';
             const bSprzedane = b.status === 'sprzedane';
@@ -122,12 +110,14 @@ export default function Rynek() {
         });
 
         setFiltrowaneOferty(wynik);
-
-        // Zabrany stąd 'szukanaFraza', bo szukaniem zajmuje się teraz funkcja fetchOferty
     }, [aktywnyFiltr, typFiltr, wszystkieOferty]);
+
+    // Dane do wyświetlenia (tylko tyle, ile pozwala visibleCount)
+    const wyswietlaneOferty = filtrowaneOferty.slice(0, visibleCount);
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-20">
-            {/* NAVBAR */}
+            {/* NAVBAR & SEARCH - Zostawiamy jak u Ciebie, bo wyglądają świetnie */}
             <div className="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-20">
@@ -139,20 +129,11 @@ export default function Rynek() {
                                 RECYKLAT<span className="text-blue-600">.PL</span>
                             </span>
                         </Link>
-
-                        {/* ZMIENIONA SEKCJA PRZYCISKÓW W NAGŁÓWKU */}
                         <div className="flex items-center gap-3">
-                            <Link
-                                href="/moje"
-                                className="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95 border-2 border-transparent hover:border-slate-300"
-                            >
-                                <Package size={16} />
-                                <span className="hidden sm:inline">Moje Ogłoszenia</span>
+                            <Link href="/moje" className="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all">
+                                <Package size={16} /><span className="hidden sm:inline">Moje Ogłoszenia</span>
                             </Link>
-                            <Link
-                                href="/dodaj"
-                                className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-xl hover:bg-blue-600 transition-all active:scale-95"
-                            >
+                            <Link href="/dodaj" className="bg-slate-900 text-white px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-600 transition-all">
                                 Dodaj Ofertę
                             </Link>
                         </div>
@@ -160,24 +141,19 @@ export default function Rynek() {
                 </div>
             </div>
 
-            {/* SEARCH */}
             <div className="bg-slate-900 py-12 px-4 shadow-xl">
                 <div className="max-w-4xl mx-auto text-center">
                     <h1 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight">
                         Rynek Odpadów <span className="text-blue-500">Recyklingowych</span>
                     </h1>
 
-                    {/* TOGGLE TYPU */}
                     <div className="flex justify-center mb-8">
                         <div className="bg-slate-800 p-1 rounded-2xl flex gap-1">
                             {(['wszystkie', 'sprzedam', 'kupie'] as const).map((t) => (
                                 <button
                                     key={t}
                                     onClick={() => setTypFiltr(t)}
-                                    className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${typFiltr === t
-                                        ? (t === 'kupie' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-blue-600 text-white shadow-lg')
-                                        : 'text-slate-400 hover:text-white'
-                                        }`}
+                                    className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${typFiltr === t ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                                 >
                                     {t === 'wszystkie' ? 'Wszystkie' : t === 'sprzedam' ? 'Sprzedam' : 'Kupię'}
                                 </button>
@@ -186,18 +162,15 @@ export default function Rynek() {
                     </div>
 
                     <div className="relative max-w-2xl mx-auto group">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <Search className="h-6 w-6 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                        </div>
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Asystent AI: wpisz materiał lub miasto..." // Nowy placeholder
+                            placeholder="Wyszukaj materiał lub lokalizację..."
                             value={szukanaFraza}
                             onChange={(e) => setSzukanaFraza(e.target.value)}
-                            className="w-full pl-12 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 focus:ring-0 transition-all outline-none text-lg font-medium"
+                            className="w-full pl-12 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 outline-none text-lg"
                         />
                     </div>
-
                 </div>
             </div>
 
@@ -208,13 +181,9 @@ export default function Rynek() {
                         <button
                             key={kat.nazwa}
                             onClick={() => setAktywnyFiltr(kat.nazwa)}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-2xl whitespace-nowrap transition-all font-black text-xs uppercase tracking-widest ${aktywnyFiltr === kat.nazwa
-                                ? 'bg-slate-900 text-white shadow-lg scale-105'
-                                : 'text-slate-500 hover:bg-slate-50'
-                                }`}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
                         >
-                            <span className="text-lg">{kat.ikona}</span>
-                            {kat.nazwa}
+                            <span>{kat.ikona}</span>{kat.nazwa}
                         </button>
                     ))}
                 </div>
@@ -222,105 +191,103 @@ export default function Rynek() {
 
             {/* LISTING */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-20 gap-4">
-                        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                        <p className="font-black text-slate-400 uppercase tracking-widest animate-pulse">Ładowanie ofert...</p>
+                {loading && wszystkieOferty.length === 0 ? (
+                    <div className="flex flex-col items-center py-20 animate-pulse">
+                        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+                        <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Pobieranie danych...</p>
                     </div>
-                ) : filtrowaneOferty.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {filtrowaneOferty.map((o) => (
-                            <Link
-                                href={`/rynek/${o.id}`}
-                                key={o.id}
-                                className="group bg-white rounded-[32px] border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-300 flex flex-col overflow-hidden"
-                            >
-                                <div className="aspect-[4/3] relative overflow-hidden bg-slate-100">
-                                    {o.zdjecie_url ? (
-                                        <img
-                                            src={o.zdjecie_url}
-                                            alt={o.title || o.material}
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
-                                            {o.typ_oferty === 'kupie' ? <PackageSearch size={48} /> : <ImageOff size={48} />}
+                ) : wyswietlaneOferty.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {wyswietlaneOferty.map((o) => (
+                                <Link
+                                    href={`/rynek/${o.id}`}
+                                    key={o.id}
+                                    className="group bg-white rounded-[32px] border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-300 flex flex-col overflow-hidden"
+                                >
+                                    <div className="aspect-[4/3] relative overflow-hidden bg-slate-100">
+                                        {o.zdjecie_url ? (
+                                            <img
+                                                src={o.zdjecie_url}
+                                                alt={o.title || o.material}
+                                                loading="lazy" // OPTYMALIZACJA: Leniwe ładowanie
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                                {o.typ_oferty === 'kupie' ? <PackageSearch size={48} /> : <ImageOff size={48} />}
+                                            </div>
+                                        )}
+                                        {/* Status & Ikona */}
+                                        <div className="absolute top-4 left-4 right-4 flex justify-between">
+                                            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
+                                                {o.typ_oferty === 'kupie' ? 'Kupię' : 'Sprzedam'}
+                                            </div>
+                                            <div className="bg-white/90 backdrop-blur px-2 py-1.5 rounded-xl text-lg shadow-md">
+                                                {getIcon(o.material)}
+                                            </div>
                                         </div>
-                                    )}
-
-                                    <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
-                                        <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'
-                                            }`}>
-                                            {o.typ_oferty === 'kupie' ? 'Kupię' : 'Sprzedam'}
-                                        </div>
-                                        <div className="bg-white/90 backdrop-blur px-2 py-1.5 rounded-xl flex items-center gap-1 shadow-md">
-                                            <span className="text-lg">{getIcon(o.material)}</span>
-                                        </div>
+                                        {o.status === 'sprzedane' && (
+                                            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                                                <span className="bg-red-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase -rotate-12 border-2 border-white">Zakończone</span>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {o.status === 'sprzedane' && (
-                                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
-                                            <span className="bg-red-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase -rotate-12 border-2 border-white shadow-xl">
-                                                Zakończone
-                                            </span>
+                                    <div className="p-6 flex flex-col flex-1">
+                                        <h3 className="text-lg font-black text-slate-900 line-clamp-2 uppercase mb-2 group-hover:text-blue-600 transition-colors">
+                                            {o.title || o.material}
+                                        </h3>
+                                        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase mb-4">
+                                            <MapPin size={12} className="text-blue-500" />
+                                            {o.lokalizacja} {o.wojewodztwo ? `| ${o.wojewodztwo}` : ''}
                                         </div>
-                                    )}
-                                </div>
-
-                                <div className="p-6 flex flex-col flex-1">
-                                    <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight mb-2 group-hover:text-blue-600 transition-colors uppercase">
-                                        {o.title || o.material}
-                                    </h3>
-
-                                    <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4">
-                                        <MapPin size={12} className="text-blue-500" />
-                                        {o.lokalizacja} {o.wojewodztwo ? `| ${o.wojewodztwo}` : ''}
-                                    </div>
-
-                                    <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-4">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Cena ok.</span>
-                                            <span className="text-xl font-black text-slate-900 tracking-tighter">
-                                                {o.cena > 0 ? `${o.cena} zł/t` : 'Negocjacja'}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Ilość</span>
-                                            <span className="text-sm font-black text-blue-600 flex items-center h-5">
-                                                {o.waga > 0 ? (
-                                                    `${o.waga} t`
-                                                ) : (
-                                                    <span className="text-2xl -mb-2 translate-y-[1px]">∞</span>
-                                                )}
-                                            </span>
+                                        <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-4">
+                                            <div>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase">Cena ok.</span>
+                                                <div className="text-xl font-black text-slate-900 tracking-tighter">
+                                                    {o.cena > 0 ? `${o.cena} zł/t` : 'Negocjacja'}
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase">Ilość</span>
+                                                <div className="text-sm font-black text-blue-600">
+                                                    {o.waga > 0 ? `${o.waga} t` : '∞'}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <div className="w-24 h-24 bg-slate-100 rounded-[40px] flex items-center justify-center text-slate-300 mb-6">
-                            <Search size={48} />
+                                </Link>
+                            ))}
                         </div>
-                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">Brak wyników</h2>
-                        <p className="text-slate-500 font-medium">Spróbuj zmienić filtry lub wyszukiwaną frazę.</p>
-                        <button
-                            onClick={() => { setAktywnyFiltr("Wszystko"); setSzukanaFraza(""); setTypFiltr('wszystkie'); }}
-                            className="mt-6 text-blue-600 font-black uppercase text-xs tracking-widest hover:underline"
-                        >
-                            Wyczyść wszystkie filtry
-                        </button>
+
+                        {/* PRZYCISK POKAŻ WIĘCEJ */}
+                        {filtrowaneOferty.length > visibleCount && (
+                            <div className="mt-12 flex justify-center">
+                                <button
+                                    onClick={() => setVisibleCount(prev => prev + 12)}
+                                    className="flex items-center gap-2 bg-white border-2 border-slate-200 px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest hover:border-blue-600 hover:text-blue-600 transition-all active:scale-95"
+                                >
+                                    Pokaż więcej ogłoszeń <ChevronDown size={16} />
+                                </button>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="py-20 text-center">
+                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
+                            <Search size={40} />
+                        </div>
+                        <h2 className="text-xl font-black text-slate-900 uppercase">Brak wyników</h2>
+                        <button onClick={() => { setAktywnyFiltr("Wszystko"); setSzukanaFraza(""); }} className="mt-4 text-blue-600 font-bold text-xs uppercase hover:underline">Wyczyść filtry</button>
                     </div>
                 )}
             </div>
-            <footer className="py-12 border-t border-slate-100">
-                <div className="max-w-7xl mx-auto px-4 text-center">
-                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">
-                        &copy; 2024 Recyklat.pl - System Obrotu Surowcami Wtórnymi
-                    </p>
-                </div>
+            {/* FOOTER */}
+            <footer className="py-12 border-t border-slate-100 text-center">
+                <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">
+                    &copy; 2024 Recyklat.pl - System Obrotu Surowcami Wtórnymi
+                </p>
             </footer>
         </div>
     );
