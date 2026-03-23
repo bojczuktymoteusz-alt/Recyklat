@@ -255,6 +255,30 @@ export default function SzczegolyOferty() {
                                 </div>
                             </div>
                         </div>
+                        {/* --- SEKCJA: DODATKOWY OPIS I TAGI --- */}
+                        {(oferta.opis || oferta.tags) && (
+                            <div className="bg-white p-8 rounded-[40px] border shadow-sm border-l-8 border-l-emerald-500 mt-6">
+                                <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
+                                    <FileText size={16} className="text-emerald-500" /> Dodatkowe informacje
+                                </h3>
+
+                                {oferta.opis && (
+                                    <div className="text-slate-700 font-medium leading-relaxed mb-6 whitespace-pre-line">
+                                        {oferta.opis}
+                                    </div>
+                                )}
+
+                                {oferta.tags && (
+                                    <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
+                                        {(typeof oferta.tags === 'string' ? oferta.tags.split(',') : oferta.tags).map((tag: string, index: number) => (
+                                            <span key={index} className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-tight">
+                                                #{tag.trim()}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
