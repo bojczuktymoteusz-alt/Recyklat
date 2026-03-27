@@ -46,43 +46,58 @@ export default function MojeOgłoszenia() {
         setLoading(false);
     }
 
-    // INTEGRACJA: Poprawiona funkcja oznaczania statusu
+    const getToken = (id: number): string | null => {
+        try {
+            const tokenMap = JSON.parse(localStorage.getItem('oferty_tokeny') || '{}');
+            return tokenMap[id] || null;
+        } catch { return null; }
+    };
+
     async function oznaczJakoSprzedane(id: number) {
-        const potwierdź = confirm("Czy na pewno chcesz oznaczyć ten towar jako SPRZEDANY? Oferta nie zniknie, ale zyska czerwony baner na giełdzie.");
-        if (!potwierdź) return;
+        const token = getToken(id);
+        if (!token) {
+            alert("Brak tokenu — zarządzanie możliwe tylko z urządzenia, na którym dodano ofertę.");
+            return;
+        }
+        if (!confirm("Czy na pewno chcesz oznaczyć ten towar jako SPRZEDANY?")) return;
 
-        const { error } = await supabase
-            .from('oferty')
-            .update({ status: 'sprzedane' }) // Kluczowy UPDATE w bazie
-            .eq('id', id);
+        const { data, error } = await supabase.rpc('update_oferta_status_with_token', {
+            oferta_id: id,
+            token,
+            new_status: 'sprzedane'
+        });
 
-        if (error) {
-            alert("Błąd bazy danych: " + error.message);
+        if (error || !data) {
+            alert("Błąd lub nieprawidłowy token.");
         } else {
-            // Aktualizacja lokalnego stanu, aby UI zareagowało natychmiast
             setMojeOferty(prev => prev.map(o => o.id === id ? { ...o, status: 'sprzedane' } : o));
-            router.refresh();
         }
     }
 
     async function usunOgłoszenie(id: number) {
-        const potwierdź = confirm("Czy na pewno chcesz trwale usunąć to ogłoszenie z giełdy?");
-        if (!potwierdź) return;
+        const token = getToken(id);
+        if (!token) {
+            alert("Brak tokenu — zarządzanie możliwe tylko z urządzenia, na którym dodano ofertę.");
+            return;
+        }
+        if (!confirm("Czy na pewno chcesz trwale usunąć to ogłoszenie z giełdy?")) return;
 
-        const { error } = await supabase
-            .from('oferty')
-            .delete()
-            .eq('id', id);
+        const { data, error } = await supabase.rpc('delete_oferta_with_token', {
+            oferta_id: id,
+            token
+        });
 
-        if (error) {
-            alert("Błąd podczas usuwania: " + error.message);
+        if (error || !data) {
+            alert("Błąd lub nieprawidłowy token.");
         } else {
-            setMojeOferty(mojeOferty.filter(o => o.id !== id));
-            const zapisaneIds = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
-            const nowaLista = zapisaneIds.filter((oldId: number) => oldId !== id);
-            localStorage.setItem('moje_oferty', JSON.stringify(nowaLista));
-            alert("Ogłoszenie zostało usunięte.");
-            router.refresh();
+            setMojeOferty(prev => prev.filter(o => o.id !== id));
+            try {
+                const tokenMap = JSON.parse(localStorage.getItem('oferty_tokeny') || '{}');
+                delete tokenMap[id];
+                localStorage.setItem('oferty_tokeny', JSON.stringify(tokenMap));
+                const ids = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
+                localStorage.setItem('moje_oferty', JSON.stringify(ids.filter((x: number) => x !== id)));
+            } catch {}
         }
     }
 

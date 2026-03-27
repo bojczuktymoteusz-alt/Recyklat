@@ -74,30 +74,56 @@ export default function SzczegolyOferty() {
         return v + "%";
     };
 
+    const getToken = (id: number): string | null => {
+        try {
+            const tokenMap = JSON.parse(localStorage.getItem('oferty_tokeny') || '{}');
+            return tokenMap[id] || null;
+        } catch { return null; }
+    };
+
     const usunOferte = async () => {
-        const potwierdzenie = confirm("Czy na pewno chcesz TRWALE usunąć tę ofertę?");
-        if (!potwierdzenie) return;
+        const token = getToken(Number(id));
+        if (!token) {
+            alert("Brak tokenu — zarządzanie możliwe tylko z urządzenia, na którym dodano ofertę.");
+            return;
+        }
+        if (!confirm("Czy na pewno chcesz TRWALE usunąć tę ofertę?")) return;
 
-        const { error } = await supabase.from('oferty').delete().eq('id', id);
+        const { data, error } = await supabase.rpc('delete_oferta_with_token', {
+            oferta_id: Number(id),
+            token
+        });
 
-        if (error) {
-            alert("Błąd: " + error.message);
+        if (error || !data) {
+            alert("Błąd lub nieprawidłowy token.");
         } else {
-            const mojeIds = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
-            const noweIds = mojeIds.filter((oldId: number) => oldId !== Number(id));
-            localStorage.setItem('moje_oferty', JSON.stringify(noweIds));
+            try {
+                const tokenMap = JSON.parse(localStorage.getItem('oferty_tokeny') || '{}');
+                delete tokenMap[Number(id)];
+                localStorage.setItem('oferty_tokeny', JSON.stringify(tokenMap));
+                const ids = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
+                localStorage.setItem('moje_oferty', JSON.stringify(ids.filter((x: number) => x !== Number(id))));
+            } catch {}
             router.push('/rynek');
         }
     };
 
     const oznaczJakoZakonczone = async () => {
-        const potwierdzenie = confirm("Oznaczyć jako sprzedane?");
-        if (!potwierdzenie) return;
+        const token = getToken(Number(id));
+        if (!token) {
+            alert("Brak tokenu — zarządzanie możliwe tylko z urządzenia, na którym dodano ofertę.");
+            return;
+        }
+        if (!confirm("Oznaczyć jako sprzedane?")) return;
 
-        const { error } = await supabase.from('oferty').update({ status: 'sprzedane' }).eq('id', id);
+        const { data, error } = await supabase.rpc('update_oferta_status_with_token', {
+            oferta_id: Number(id),
+            token,
+            new_status: 'sprzedane'
+        });
 
-        if (error) {
-            alert("Błąd: " + error.message);
+        if (error || !data) {
+            alert("Błąd lub nieprawidłowy token.");
         } else {
             setOferta({ ...oferta, status: 'sprzedane' });
         }

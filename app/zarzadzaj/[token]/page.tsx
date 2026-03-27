@@ -47,17 +47,16 @@ export default function ZarzadzajOferta() {
         const potwierdz = confirm("Czy na pewno chcesz oznaczyć ten towar jako ZAKOŃCZONY/SPRZEDANY? Otrzyma czerwoną etykietę na giełdzie.");
         if (!potwierdz) return;
 
-        const { error } = await supabase
-            .from('oferty')
-            .update({ status: 'sprzedane' })
-            .eq('manage_token', token);
+        const { data, error } = await supabase.rpc('update_oferta_status_with_token', {
+            oferta_id: oferta.id,
+            token,
+            new_status: 'sprzedane'
+        });
 
-        if (error) {
-            alert("Błąd bazy danych: " + error.message);
+        if (error || !data) {
+            alert("Błąd lub nieprawidłowy token.");
         } else {
             setOferta({ ...oferta, status: 'sprzedane' });
-            alert("Ogłoszenie zaktualizowane!");
-            router.refresh();
         }
     }
 
@@ -65,15 +64,14 @@ export default function ZarzadzajOferta() {
         const potwierdz = confirm("UWAGA! Czy na pewno chcesz trwale usunąć to ogłoszenie z bazy? Tej akcji nie można cofnąć.");
         if (!potwierdz) return;
 
-        const { error } = await supabase
-            .from('oferty')
-            .delete()
-            .eq('manage_token', token);
+        const { data, error } = await supabase.rpc('delete_oferta_with_token', {
+            oferta_id: oferta.id,
+            token
+        });
 
-        if (error) {
-            alert("Błąd podczas usuwania: " + error.message);
+        if (error || !data) {
+            alert("Błąd lub nieprawidłowy token.");
         } else {
-            alert("Ogłoszenie zostało usunięte. Przekierowuję na giełdę...");
             router.push('/rynek');
         }
     }

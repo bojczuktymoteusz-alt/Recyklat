@@ -148,10 +148,16 @@ export default function ParametryDetailsPage() {
                     zapisaneOferty.push(noweId);
                     localStorage.setItem('moje_oferty', JSON.stringify(zapisaneOferty));
                 }
+                // Zapisujemy token powiązany z id oferty
+                try {
+                    const tokenMap = JSON.parse(localStorage.getItem('oferty_tokeny') || '{}');
+                    tokenMap[noweId] = wygenerowanyToken;
+                    localStorage.setItem('oferty_tokeny', JSON.stringify(tokenMap));
+                } catch {}
             }
             localStorage.removeItem("temp_offer");
 
-            // 👇 PRZEKAZUJEMY TOKEN DO EKRANU SUKCESU
+            // Przekazujemy token do ekranu sukcesu
             localStorage.setItem("ostatni_token", wygenerowanyToken);
 
             router.push("/dodano");
