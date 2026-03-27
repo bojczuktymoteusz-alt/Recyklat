@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
     ArrowLeft, MapPin, Phone, Info, Truck, Building2,
-    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck, Map, FileText, AlertCircle, ShoppingBag, ArrowDownToLine, PackageSearch, ImageOff
+    Clock, Trash2, Mail, CheckCircle, Scale, Award, ShieldCheck, Map, FileText, AlertCircle, ShoppingBag, ArrowDownToLine, PackageSearch, ImageOff, Eye
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,29 +14,41 @@ export default function SzczegolyOferty() {
     const [oferta, setOferta] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [czyToMoje, setCzyToMoje] = useState(false);
-    // --- MIEJSCE 1: LOGIKA LICZNIKA ---
+
+    // --- POPRAWIONA LOGIKA LICZNIKA ---
     useEffect(() => {
         const handleViews = async () => {
             if (!id) return;
-            const isOwner = localStorage.getItem('pomin_moje_odslony') === 'true';
-            if (isOwner) return;
+
+            // Sprawdzamy czy to nie właściciel (opcjonalnie możesz odkomentować poniższe 2 linie)
+            // const isOwner = localStorage.getItem('pomin_moje_odslony') === 'true';
+            // if (isOwner) return;
 
             const sessionKey = `viewed_${id}`;
             if (!sessionStorage.getItem(sessionKey)) {
                 try {
-                    await supabase.rpc('increment_views', { row_id: id });
-                    sessionStorage.setItem(sessionKey, 'true');
-                } catch (e) { console.error(e); }
+                    const { error } = await supabase.rpc('increment_views', {
+                        row_id: Number(id)
+                    });
+                    if (!error) {
+                        sessionStorage.setItem(sessionKey, 'true');
+                        console.log("Widok zarejestrowany");
+                    } else {
+                        console.error("Błąd RPC:", error.message);
+                    }
+                } catch (e) {
+                    console.error("Błąd krytyczny licznika:", e);
+                }
             }
         };
-        if (!loading && oferta) handleViews();
-    }, [id, loading, oferta]);
+
+        handleViews();
+    }, [id]);
 
     useEffect(() => {
         async function fetchOferta() {
             if (!id) return;
 
-            // POBIERAMY WSZYSTKO (*), aby uniknąć brakujących danych
             const { data, error } = await supabase
                 .from('oferty')
                 .select('*')
@@ -48,8 +60,6 @@ export default function SzczegolyOferty() {
                 router.push('/rynek');
             } else if (data) {
                 setOferta(data);
-
-                // Sprawdzanie czy oferta należy do użytkownika (localStorage)
                 const mojeIds = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
                 if (mojeIds.includes(Number(id))) {
                     setCzyToMoje(true);
@@ -61,7 +71,6 @@ export default function SzczegolyOferty() {
         fetchOferta();
     }, [id, router]);
 
-    // Funkcja pomocnicza do etykiet zanieczyszczeń
     const getImpurityLabel = (val: any) => {
         if (val === null || val === undefined) return "Brak danych";
         const v = Number(val);
@@ -103,7 +112,7 @@ export default function SzczegolyOferty() {
                 localStorage.setItem('oferty_tokeny', JSON.stringify(tokenMap));
                 const ids = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
                 localStorage.setItem('moje_oferty', JSON.stringify(ids.filter((x: number) => x !== Number(id))));
-            } catch {}
+            } catch { }
             router.push('/rynek');
         }
     };
@@ -143,7 +152,6 @@ export default function SzczegolyOferty() {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col relative">
-            {/* Header */}
             <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
                     <Link href="/rynek" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-bold uppercase text-xs tracking-widest">
@@ -163,14 +171,22 @@ export default function SzczegolyOferty() {
                                 </button>
                             </>
                         )}
-                        <span className="text-[10px] text-gray-400 font-black bg-gray-100 px-2 py-1 rounded uppercase">ID: #{oferta.id}</span>
+
+                        {/* LICZNIK I ID - WIDOCZNE DLA CIEBIE */}
+                        <div className="flex items-center gap-2 bg-gray-100 px-2 py-1 rounded">
+                            <span className="text-[10px] text-gray-400 font-black uppercase">ID: #{oferta.id}</span>
+                            {czyToMoje && (
+                                <span className="text-[10px] text-blue-600 font-black flex items-center gap-1 border-l pl-2 border-gray-200 uppercase">
+                                    <Eye size={12} /> {oferta.wyswietlenia || 0}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div className="max-w-4xl mx-auto px-4 py-8 w-full pb-32">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* LEWA KOLUMNA */}
                     <div className="space-y-6">
                         <div className="aspect-square bg-white rounded-[40px] overflow-hidden border shadow-sm relative">
                             {oferta.zdjecie_url ? (
@@ -183,7 +199,6 @@ export default function SzczegolyOferty() {
                             )}
                         </div>
 
-                        {/* WYSTAWCA */}
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm border-l-8 border-l-blue-600">
                             <h3 className="font-black text-gray-900 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
                                 <Building2 size={16} className="text-blue-600" /> Wystawca
@@ -203,7 +218,6 @@ export default function SzczegolyOferty() {
                             </div>
                         </div>
 
-                        {/* TYTUŁ I CENA */}
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm space-y-6">
                             <h1 className="text-2xl md:text-3xl font-black tracking-tighter uppercase text-slate-900 leading-none">
                                 {wyswietlanyTytul}
@@ -213,7 +227,6 @@ export default function SzczegolyOferty() {
                                     {oferta.cena > 0 ? `${oferta.cena} zł / t` : 'Cena do negocjacji'}
                                 </span>
                             </div>
-                            {/* LOKALIZACJA - NAPRAWIONE */}
                             <div className="flex items-center gap-3 pt-4 border-t">
                                 <MapPin size={24} className="text-blue-500" />
                                 <div className="flex flex-col">
@@ -228,38 +241,32 @@ export default function SzczegolyOferty() {
                         </div>
                     </div>
 
-                    {/* PRAWA KOLUMNA */}
                     <div className="space-y-6">
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                             <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
                                 <Info size={16} /> Szczegóły techniczne
                             </h3>
-                            {/* RODZAJ MATERIAŁU - NAPRAWIONE */}
                             <div className="mb-4 p-5 bg-blue-50 rounded-[24px] border border-blue-100">
                                 <p className="text-[10px] uppercase font-black text-blue-500 mb-1">Rodzaj materiału</p>
                                 <p className="font-black text-blue-700 text-lg uppercase">{oferta.material || "Nieokreślony"}</p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                {/* BDO - NAPRAWIONE */}
                                 <div className="p-5 bg-slate-50 rounded-[24px]">
                                     <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Kod BDO</p>
                                     <p className="font-black text-slate-700 text-lg">{oferta.bdo_code || '---'}</p>
                                 </div>
-                                {/* ZANIECZYSZCZENIE - NAPRAWIONE */}
                                 <div className="p-5 bg-slate-50 rounded-[24px]">
                                     <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Zanieczyszczenie</p>
                                     <p className="font-black text-slate-700 text-lg">{getImpurityLabel(oferta.impurity)}</p>
                                 </div>
                             </div>
-                            {/* POSTAĆ - NAPRAWIONE */}
                             <div className="mt-4 p-5 bg-slate-50 rounded-[24px]">
                                 <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Postać surowca</p>
                                 <p className="font-black text-slate-700 text-lg uppercase">{oferta.form || 'Do ustalenia'}</p>
                             </div>
                         </div>
 
-                        {/* LOGISTYKA - NAPRAWIONE */}
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                             <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
                                 <Truck size={16} /> Logistyka
@@ -281,19 +288,16 @@ export default function SzczegolyOferty() {
                                 </div>
                             </div>
                         </div>
-                        {/* --- SEKCJA: DODATKOWY OPIS I TAGI --- */}
                         {(oferta.opis || oferta.tags) && (
                             <div className="bg-white p-8 rounded-[40px] border shadow-sm border-l-8 border-l-emerald-500 mt-6">
                                 <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
                                     <FileText size={16} className="text-emerald-500" /> Dodatkowe informacje
                                 </h3>
-
                                 {oferta.opis && (
                                     <div className="text-slate-700 font-medium leading-relaxed mb-6 whitespace-pre-line">
                                         {oferta.opis}
                                     </div>
                                 )}
-
                                 {oferta.tags && (
                                     <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
                                         {(typeof oferta.tags === 'string' ? oferta.tags.split(',') : oferta.tags).map((tag: string, index: number) => (
@@ -309,7 +313,6 @@ export default function SzczegolyOferty() {
                 </div>
             </div>
 
-            {/* DOLNY PASEK KONTAKTOWY */}
             <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 p-4 z-50">
                 <div className="max-w-4xl mx-auto">
                     {jestSprzedane ? (
