@@ -47,21 +47,20 @@ const MIASTA_WOJEWODZTWA: Record<string, string> = {
     gniezno: "wielkopolskie", ostrowiec: "świętokrzyskie", siemianowice: "śląskie", stargard: "zachodniopomorskie",
     głogów: "dolnośląskie", pabianice: "łódzkie", wodzisław: "śląskie", zgierz: "łódzkie",
     mielec: "podkarpackie", ełk: "warmińsko-mazurskie", żory: "śląskie", tarnowskie: "śląskie",
-    // Dodatkowe miasta
     kutno: "łódzkie", łęczyca: "łódzkie", skierniewice: "łódzkie", sieradz: "łódzkie",
     zduńska: "łódzkie", bełchatów: "łódzkie", tomaszów: "łódzkie", radomsko: "łódzkie",
     włoszczowa: "świętokrzyskie", jędrziejów: "świętokrzyskie", starachowice: "świętokrzyskie",
     chełm: "lubelskie", zamość: "lubelskie", biała: "podlaskie",
-    nowy: "małopolskie", gorlice: "małopolskie", oświęcim: "małopolskie",
+    gorlice: "małopolskie", oświęcim: "małopolskie",
     przemyśl: "podkarpackie", krośno: "podkarpackie", stalowa: "podkarpackie",
-    elbląg: "warmińsko-mazurskie", giżycko: "warmińsko-mazurskie",
+    giżycko: "warmińsko-mazurskie",
     kościerzyna: "pomorskie", starogard: "pomorskie", tczew: "pomorskie",
-    leszno: "wielkopolskie", piła: "wielkopolskie", ostrów: "wielkopolskie",
+    leszno: "wielkopolskie", piła: "wielkopolskie",
     zgorzelec: "dolnośląskie", bolestławiec: "dolnośląskie", jelenia: "dolnośląskie",
     szczecinek: "zachodniopomorskie", kołobrzeg: "zachodniopomorskie",
     międzyrzecz: "lubuskie", nowa: "lubuskie",
     nysa: "opolskie", krapkowice: "opolskie",
-    grudziądz: "kujawsko-pomorskie", włocławek: "kujawsko-pomorskie", świę: "kujawsko-pomorskie",
+    świę: "kujawsko-pomorskie",
 };
 
 // Słownik słów kluczowych -> kategoria
