@@ -51,12 +51,15 @@ export default function SzczegolyOferty() {
 
             const { data, error } = await supabase
                 .from('oferty')
-                .select('*')
+                .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, telefon, email, zdjecie_url, created_at, status, typ_oferty, bdo_code, impurity, form, certificates, logistics, pickup_hours, opis, extra_photo_docs, firma, wyswietlenia, category, material_type, color, param_mfi')
                 .eq('id', id)
                 .single();
 
             if (error) {
-                console.error('Błąd pobierania:', error);
+                console.error('Błąd pobierania - kod:', error.code);
+                console.error('Błąd pobierania - treść:', error.message);
+                console.error('Błąd pobierania - szczegóły:', error.details);
+                console.error('Szukane ID:', id, typeof id);
                 router.push('/rynek');
             } else if (data) {
                 setOferta(data);
@@ -265,6 +268,36 @@ export default function SzczegolyOferty() {
                                 <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Postać surowca</p>
                                 <p className="font-black text-slate-700 text-lg uppercase">{oferta.form || 'Do ustalenia'}</p>
                             </div>
+
+                            {/* DODATKOWE PARAMETRY TECHNICZNE */}
+                            {(oferta.param_mfi || oferta.color || oferta.material_type || oferta.category) && (
+                                <div className="mt-4 grid grid-cols-2 gap-4">
+                                    {oferta.param_mfi && (
+                                        <div className="p-5 bg-emerald-50 rounded-[24px] border border-emerald-100">
+                                            <p className="text-[10px] uppercase font-black text-emerald-500 mb-1">MFI (g/10min)</p>
+                                            <p className="font-black text-emerald-700 text-lg">{oferta.param_mfi}</p>
+                                        </div>
+                                    )}
+                                    {oferta.color && (
+                                        <div className="p-5 bg-slate-50 rounded-[24px]">
+                                            <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Kolor</p>
+                                            <p className="font-black text-slate-700 text-lg uppercase">{oferta.color}</p>
+                                        </div>
+                                    )}
+                                    {oferta.material_type && (
+                                        <div className="p-5 bg-slate-50 rounded-[24px]">
+                                            <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Typ materiału</p>
+                                            <p className="font-black text-slate-700 text-lg uppercase">{oferta.material_type}</p>
+                                        </div>
+                                    )}
+                                    {oferta.category && (
+                                        <div className="p-5 bg-slate-50 rounded-[24px]">
+                                            <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Kategoria</p>
+                                            <p className="font-black text-slate-700 text-lg uppercase">{oferta.category}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm">

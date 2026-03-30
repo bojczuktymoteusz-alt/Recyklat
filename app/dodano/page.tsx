@@ -6,18 +6,21 @@ import { CheckCircle2, ArrowRight, Search, PlusCircle, Copy, ShieldAlert } from 
 export default function UdaloSie() {
     const [token, setToken] = useState('');
     const [skopiowano, setSkopiowano] = useState(false);
+    const [skopiowanoSlug, setSkopiowanoSlug] = useState(false);
     const [baseUrl, setBaseUrl] = useState('');
+    const [slug, setSlug] = useState('');
 
     useEffect(() => {
-        // Pobieramy domenę (np. localhost:3000 lub recyklat.pl)
         if (typeof window !== 'undefined') {
             setBaseUrl(window.location.origin);
         }
-
-        // Pobieramy wygenerowany token z poprzedniego kroku
         const savedToken = localStorage.getItem('ostatni_token');
-        if (savedToken) {
-            setToken(savedToken);
+        if (savedToken) setToken(savedToken);
+
+        const savedSlug = localStorage.getItem('magic_slug');
+        if (savedSlug) {
+            setSlug(savedSlug);
+            localStorage.removeItem('magic_slug');
         }
     }, []);
 
@@ -69,6 +72,30 @@ export default function UdaloSie() {
                             >
                                 {skopiowano ? <CheckCircle2 size={16} /> : <Copy size={16} />}
                                 <span className="hidden sm:inline">{skopiowano ? 'Skopiowano' : 'Kopiuj'}</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* SLUG — pokazujemy jeśli był używany Magic Box */}
+                {slug && (
+                    <div className="w-full bg-slate-900 rounded-[24px] p-5 mb-6 text-left">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Przyjazny URL ogłoszenia (SEO)</p>
+                        <div className="flex items-center gap-3">
+                            <code className="text-emerald-400 text-xs font-bold flex-1 truncate">
+                                recyklat.pl/oferta/{slug}
+                            </code>
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(`${baseUrl}/oferta/${slug}`);
+                                    setSkopiowanoSlug(true);
+                                    setTimeout(() => setSkopiowanoSlug(false), 2000);
+                                }}
+                                className={`shrink-0 px-3 py-2 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all active:scale-95 ${
+                                    skopiowanoSlug ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                }`}
+                            >
+                                {skopiowanoSlug ? '✓ OK' : 'Kopiuj'}
                             </button>
                         </div>
                     </div>

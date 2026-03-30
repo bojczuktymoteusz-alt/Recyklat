@@ -65,6 +65,18 @@ export default function ParametryDetailsPage() {
             if (parsedData.bdo_code) {
                 setFormData(prev => ({ ...prev, bdo: parsedData.bdo_code || "" }));
             }
+            // Odbierz cenę z Magic Box
+            const magicCena = localStorage.getItem('magic_cena');
+            if (magicCena) {
+                setFormData(prev => ({ ...prev, cena: magicCena }));
+                localStorage.removeItem('magic_cena');
+            }
+            // Odbierz opis SEO z Magic Box
+            const magicOpis = localStorage.getItem('magic_opis');
+            if (magicOpis) {
+                setFormData(prev => ({ ...prev, description: magicOpis }));
+                localStorage.removeItem('magic_opis');
+            }
         } catch (e) {
             router.push("/dodaj");
         }
