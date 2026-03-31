@@ -12,15 +12,18 @@ export default function UdaloSie() {
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
+            // Wszystko, co dotyczy przeglądarki (window, localStorage), 
+            // ląduje bezpiecznie tutaj:
             setBaseUrl(window.location.origin);
-        }
-        const savedToken = localStorage.getItem('ostatni_token');
-        if (savedToken) setToken(savedToken);
 
-        const savedSlug = localStorage.getItem('magic_slug');
-        if (savedSlug) {
-            setSlug(savedSlug);
-            localStorage.removeItem('magic_slug');
+            const savedToken = localStorage.getItem('ostatni_token');
+            if (savedToken) setToken(savedToken);
+
+            const savedSlug = localStorage.getItem('magic_slug');
+            if (savedSlug) {
+                setSlug(savedSlug);
+                localStorage.removeItem('magic_slug');
+            }
         }
     }, []);
 
@@ -91,9 +94,8 @@ export default function UdaloSie() {
                                     setSkopiowanoSlug(true);
                                     setTimeout(() => setSkopiowanoSlug(false), 2000);
                                 }}
-                                className={`shrink-0 px-3 py-2 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all active:scale-95 ${
-                                    skopiowanoSlug ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                                }`}
+                                className={`shrink-0 px-3 py-2 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all active:scale-95 ${skopiowanoSlug ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                    }`}
                             >
                                 {skopiowanoSlug ? '✓ OK' : 'Kopiuj'}
                             </button>
