@@ -144,7 +144,9 @@ function generateSEODescription(data: {
     if (miejsce) linie.push(`• Lokalizacja: ${miejsce}`);
     if (data.telefon) linie.push(`• Kontakt: ${data.telefon}`);
     linie.push('');
-    linie.push(`Zapraszamy do zapoznania się z ofertą na surowiec ${surowiec}. Zapewniamy profesjonalną obsługę i wysoką jakość towaru. Oferujemy surowce wtórne w atrakcyjnych cenach netto. Działamy w branży recyklingu i gospodarki odpadami.`);
+    // Jeśli kategoria to 'Inne', użyj tytułu zamiast nazwy kategorii
+    const nazwaDoOpisu = (data.material === 'Inne' || !data.material) ? (data.title || 'surowiec wtórny') : surowiec;
+    linie.push(`Zapraszamy do zapoznania się z ofertą na ${nazwaDoOpisu}. Zapewniamy profesjonalną obsługę i wysoką jakość towaru. Oferujemy surowce wtórne w atrakcyjnych cenach netto. Działamy w branży recyklingu i gospodarki odpadami.`);
     linie.push('');
     linie.push('Slowa kluczowe: recykling, surowce wtórne, odpady, cena netto, ' + surowiec.toLowerCase());
 
@@ -262,6 +264,8 @@ export default function DodajOferteKrok1() {
     const [seoOpis, setSeoOpis] = useState('');
     const [seoSlug, setSeoSlug] = useState('');
     const [seoWygenerowane, setSeoWygenerowane] = useState(false);
+    const [tooltipVisible, setTooltipVisible] = useState<string | null>(null);
+    const zdjęcieRef = React.useRef<HTMLDivElement>(null);
 
     useEffect(() => { setIsCheckingAuth(false); }, []);
 
@@ -372,7 +376,8 @@ export default function DodajOferteKrok1() {
                 wojewodztwo: sanitizeText(wojewodztwo),
                 telefon: sanitizeText(telefon),
                 zdjecie_url: uploadedImageUrl,
-                bdo_code: autoBdo
+                bdo_code: autoBdo,
+                magic_box_used: seoWygenerowane, // true jeśli użytkownik kliknął "Analizuj"
             };
             localStorage.setItem('temp_offer', JSON.stringify(step1Data));
             router.push('/dodaj/parametry');
@@ -423,14 +428,19 @@ export default function DodajOferteKrok1() {
                                     <Sparkles size={16} />
                                     <span className="font-black text-xs uppercase tracking-widest">Magic Box — Wklej tekst ogłoszenia</span>
                                 </div>
-                                <button type="button" onClick={() => setMagicOtwarte(false)} className="text-blue-200 hover:text-white transition-colors">
+                                <button type="button" onClick={() => {
+                                    setMagicOtwarte(false);
+                                    setTimeout(() => {
+                                        zdjęcieRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }, 100);
+                                }} className="text-blue-200 hover:text-white transition-colors">
                                     <X size={18} />
                                 </button>
                             </div>
                             <div className="p-4 bg-white">
                                 <textarea
                                     className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-[20px] font-medium text-slate-700 min-h-[120px] resize-none outline-none focus:border-blue-400 transition-colors text-sm placeholder:text-slate-400"
-                                    placeholder={"Wklej tutaj tekst z Facebooka, WhatsApp lub maila...\n\nNp: Sprzedam folię LDPE, ok. 5 ton, cena 800 zł/t, odbiór własny. Tel: 600 123 456. Lokalizacja: Radom."}
+                                    placeholder={"Wklej tutaj tekst z Facebooka, WhatsApp lub maila - my uzupełnimy go za Ciebie. Lub wypełnij formularz poniżej.\n\nnp: Sprzedam folię LDPE, ok. 5 ton, cena 800 zł/t, odbiór własny. Tel: 600 100 300. Lokalizacja: Radom"}
                                     value={magicTekst}
                                     onChange={(e) => setMagicTekst(e.target.value)}
                                 />
@@ -485,7 +495,14 @@ export default function DodajOferteKrok1() {
                     <div>
                         <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
                             Tytuł ogłoszenia <span className="text-red-500">*</span>
-                            {podswietlone.has('title') && <span className="flex items-center gap-1 text-yellow-600 text-[9px]"><Lightbulb size={11} />Uzupełnij, aby zwiększyć zasięg</span>}
+                            {podswietlone.has('title') && (
+                                <span className="relative flex items-center">
+                                    <button type="button" onMouseEnter={() => setTooltipVisible('title')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'title' ? null : 'title')} className="text-yellow-500 hover:text-yellow-600">
+                                        <Lightbulb size={14} />
+                                    </button>
+                                    {tooltipVisible === 'title' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
+                                </span>
+                            )}
                         </label>
                         <input required type="text" placeholder="np. Regranulat LDPE jasny"
                             className={`w-full p-5 border-2 rounded-[24px] font-bold focus:border-blue-500 outline-none transition-colors ${getFieldClass('title')}`}
@@ -497,7 +514,14 @@ export default function DodajOferteKrok1() {
                     <div>
                         <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
                             Kategoria surowca <span className="text-red-500">*</span>
-                            {podswietlone.has('material') && <span className="flex items-center gap-1 text-yellow-600 text-[9px]"><Lightbulb size={11} />Uzupełnij, aby zwiększyć zasięg</span>}
+                            {podswietlone.has('material') && (
+                                <span className="relative flex items-center">
+                                    <button type="button" onMouseEnter={() => setTooltipVisible('material')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'material' ? null : 'material')} className="text-yellow-500 hover:text-yellow-600">
+                                        <Lightbulb size={14} />
+                                    </button>
+                                    {tooltipVisible === 'material' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
+                                </span>
+                            )}
                         </label>
                         <select required
                             className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('material')}`}
@@ -518,7 +542,14 @@ export default function DodajOferteKrok1() {
                         <div>
                             <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
                                 Waga (tony)
-                                {podswietlone.has('waga') && <span className="flex items-center gap-1 text-yellow-600 text-[9px]"><Lightbulb size={11} />Uzupełnij</span>}
+                                {podswietlone.has('waga') && (
+                                    <span className="relative flex items-center">
+                                        <button type="button" onMouseEnter={() => setTooltipVisible('waga')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'waga' ? null : 'waga')} className="text-yellow-500 hover:text-yellow-600">
+                                            <Lightbulb size={14} />
+                                        </button>
+                                        {tooltipVisible === 'waga' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
+                                    </span>
+                                )}
                             </label>
                             <input type="number" placeholder="np. 24"
                                 className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('waga')}`}
@@ -529,7 +560,14 @@ export default function DodajOferteKrok1() {
                         <div>
                             <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
                                 Telefon <span className="text-red-500">*</span>
-                                {podswietlone.has('telefon') && <span className="flex items-center gap-1 text-yellow-600 text-[9px]"><Lightbulb size={11} />Uzupełnij</span>}
+                                {podswietlone.has('telefon') && (
+                                    <span className="relative flex items-center">
+                                        <button type="button" onMouseEnter={() => setTooltipVisible('telefon')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'telefon' ? null : 'telefon')} className="text-yellow-500 hover:text-yellow-600">
+                                            <Lightbulb size={14} />
+                                        </button>
+                                        {tooltipVisible === 'telefon' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
+                                    </span>
+                                )}
                             </label>
                             <input required type="tel" placeholder="000 000 000"
                                 className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('telefon')}`}
@@ -544,7 +582,14 @@ export default function DodajOferteKrok1() {
                         <div>
                             <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
                                 Województwo <span className="text-red-500">*</span>
-                                {podswietlone.has('wojewodztwo') && <span className="flex items-center gap-1 text-yellow-600 text-[9px]"><Lightbulb size={11} />Uzupełnij</span>}
+                                {podswietlone.has('wojewodztwo') && (
+                                    <span className="relative flex items-center">
+                                        <button type="button" onMouseEnter={() => setTooltipVisible('woj')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'woj' ? null : 'woj')} className="text-yellow-500 hover:text-yellow-600">
+                                            <Lightbulb size={14} />
+                                        </button>
+                                        {tooltipVisible === 'woj' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
+                                    </span>
+                                )}
                             </label>
                             <select required
                                 className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('wojewodztwo')}`}
@@ -557,7 +602,14 @@ export default function DodajOferteKrok1() {
                         <div>
                             <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
                                 Miejscowość
-                                {podswietlone.has('lokalizacja') && <span className="flex items-center gap-1 text-yellow-600 text-[9px]"><Lightbulb size={11} />Uzupełnij</span>}
+                                {podswietlone.has('lokalizacja') && (
+                                    <span className="relative flex items-center">
+                                        <button type="button" onMouseEnter={() => setTooltipVisible('lok')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'lok' ? null : 'lok')} className="text-yellow-500 hover:text-yellow-600">
+                                            <Lightbulb size={14} />
+                                        </button>
+                                        {tooltipVisible === 'lok' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
+                                    </span>
+                                )}
                             </label>
                             <input type="text" placeholder="np. Warszawa"
                                 className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('lokalizacja')}`}
@@ -568,7 +620,7 @@ export default function DodajOferteKrok1() {
                     </div>
 
                     {/* ZDJĘCIE */}
-                    <div onClick={() => document.getElementById('fileInput')?.click()}
+                    <div ref={zdjęcieRef} onClick={() => document.getElementById('fileInput')?.click()}
                         className="border-4 border-dashed rounded-[40px] p-10 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors mt-4">
                         <input type="file" id="fileInput" className="hidden" accept="image/*" onChange={(e) => {
                             const f = e.target.files?.[0];

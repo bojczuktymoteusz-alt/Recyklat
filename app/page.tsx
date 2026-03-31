@@ -155,22 +155,23 @@ export default function Home() {
       </section>
 
       {/* Reszta stopki i wartości... */}
-      <footer className="py-12 border-t border-slate-50">
-        <div className="max-w-5xl mx-auto px-6 flex justify-between items-center">
-          <span className="font-black uppercase text-xl">Recyklat</span>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">© 2026 Recyklat B2B System</p>
-          {/* FOOTER */}
-          <footer className="py-8 border-t border-slate-100 bg-white mt-auto">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                © {new Date().getFullYear()} Recyklat.pl - W 100% polska platforma
-              </div>
-              <div className="flex items-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <Link href="/regulamin" className="hover:text-slate-900 transition-colors">Regulamin</Link>
-                <Link href="/polityka-prywatnosci" className="hover:text-slate-900 transition-colors">Polityka Prywatności</Link>
-              </div>
-            </div>
-          </footer>
+      <footer className="py-10 border-t border-slate-100">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="font-black uppercase text-lg tracking-tighter">Recyklat</span>
+            <span className="text-slate-300 text-[10px] font-black uppercase tracking-widest">© 2026 Recyklat B2B System</span>
+          </div>
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest hidden md:block">
+            © 2026 Recyklat.pl — W 100% polska platforma
+          </p>
+          <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-widest">
+            <Link href="/regulamin" className="text-slate-400 hover:text-slate-900 transition-colors">Regulamin</Link>
+            <Link href="/polityka-prywatnosci" className="text-slate-400 hover:text-slate-900 transition-colors">Polityka Prywatności</Link>
+            <Link href="/admin-dashboard" className="text-slate-300 hover:text-blue-600 transition-colors flex items-center gap-1" title="Panel admina">
+              <BarChart3 size={12} />
+              <span className="text-slate-200">Admin</span>
+            </Link>
+          </div>
         </div>
       </footer>
     </main>

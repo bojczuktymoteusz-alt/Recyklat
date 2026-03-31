@@ -30,7 +30,7 @@ interface FormData {
     description: string;
     firma: string;
     hasExtraDocs: boolean;
-
+    magic_box_used: boolean;
 }
 
 export default function ParametryDetailsPage() {
@@ -50,6 +50,7 @@ export default function ParametryDetailsPage() {
         description: "",
         firma: "",
         hasExtraDocs: false,
+        magic_box_used: false,
     });
 
     useEffect(() => {
@@ -71,11 +72,15 @@ export default function ParametryDetailsPage() {
                 setFormData(prev => ({ ...prev, cena: magicCena }));
                 localStorage.removeItem('magic_cena');
             }
-            // Odbierz opis SEO z Magic Box
+            // Odbierz opis SEO z Magic Box + ustaw tracking
             const magicOpis = localStorage.getItem('magic_opis');
             if (magicOpis) {
-                setFormData(prev => ({ ...prev, description: magicOpis }));
+                setFormData(prev => ({ ...prev, description: magicOpis, magic_box_used: true }));
                 localStorage.removeItem('magic_opis');
+            }
+            // Tracking przez krok 1 (jeśli magic box użyty bez opisu)
+            if (parsedData.magic_box_used) {
+                setFormData(prev => ({ ...prev, magic_box_used: true }));
             }
         } catch (e) {
             router.push("/dodaj");
@@ -107,16 +112,11 @@ export default function ParametryDetailsPage() {
 
     const handleFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.cena || !formData.impurity || !formData.form) {
-            alert("Uzupełnij obowiązkowe pola!");
-            return;
-        }
-
         if (!step1Data) return;
         setLoading(true);
 
         const safePrice = parseFloat(formData.cena.replace(',', '.')) || 0;
-        const safeImpurity = parseFloat(formData.impurity) || 0;
+        const safeImpurity = formData.impurity ? parseFloat(formData.impurity) : null;
         const safeWeight = parseFloat(String(step1Data.waga).replace(',', '.')) || 0;
 
         // 👇 NOWE: GENERUJEMY UNIKALNY TOKEN DLA TEGO OGŁOSZENIA
@@ -131,18 +131,19 @@ export default function ParametryDetailsPage() {
             wojewodztwo: sanitizeText(step1Data.wojewodztwo),
             telefon: sanitizeText(step1Data.telefon).replace(/\s/g, ''),
             zdjecie_url: step1Data.zdjecie_url,
-            cena: safePrice,
+            cena: safePrice || 0,
             email: sanitizeText(formData.email) || null,
-            bdo_code: sanitizeText(formData.bdo).replace(/\s/g, ''),
+            bdo_code: sanitizeText(formData.bdo).replace(/\s/g, '') || null,
             impurity: safeImpurity,
-            form: sanitizeText(formData.form),
-            certificates: formData.certs.join(", "),
-            logistics: formData.logistics.join(", "),
-            pickup_hours: sanitizeText(formData.pickupHours),
-            opis: sanitizeText(formData.description),
-            firma: sanitizeText(formData.firma),
+            form: sanitizeText(formData.form) || null,
+            certificates: formData.certs.join(", ") || null,
+            logistics: formData.logistics.join(", ") || null,
+            pickup_hours: sanitizeText(formData.pickupHours) || null,
+            opis: sanitizeText(formData.description) || null,
+            firma: sanitizeText(formData.firma) || null,
             status: 'aktywna',
-            manage_token: wygenerowanyToken, // 👇 ZAPISUJEMY TOKEN DO BAZY SUPABASE
+            manage_token: wygenerowanyToken,
+            magic_box_used: formData.magic_box_used,
             created_at: new Date().toISOString(),
         };
 
@@ -165,7 +166,7 @@ export default function ParametryDetailsPage() {
                     const tokenMap = JSON.parse(localStorage.getItem('oferty_tokeny') || '{}');
                     tokenMap[noweId] = wygenerowanyToken;
                     localStorage.setItem('oferty_tokeny', JSON.stringify(tokenMap));
-                } catch {}
+                } catch { }
             }
             localStorage.removeItem("temp_offer");
 
@@ -215,11 +216,12 @@ export default function ParametryDetailsPage() {
                         </div>
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                {jestKupno ? "Budżet (zł/t)" : "Cena (zł/t)"} <span className="text-blue-600 text-lg">*</span>
+                                {jestKupno ? "Budżet (zł/t)" : "Cena (zł/t)"}
+                                <span className="ml-1 text-slate-400 text-[10px] font-bold normal-case">(opcjonalne)</span>
                             </label>
                             <div className="relative">
                                 <input
-                                    required type="number" placeholder="0"
+                                    type="number" placeholder="0 = negocjacje"
                                     value={formData.cena} onChange={(e) => handleChange('cena', e.target.value)}
                                     className="w-full p-5 pr-14 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg shadow-sm transition-all"
                                 />
@@ -231,11 +233,12 @@ export default function ParametryDetailsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                {jestKupno ? "Akcept. zabrudzenie" : "Zanieczyszczenie"} <span className="text-blue-600 text-lg">*</span>
+                                {jestKupno ? "Akcept. zabrudzenie" : "Zanieczyszczenie"}
+                                <span className="ml-1 text-slate-400 text-[10px] font-bold normal-case">(opcjonalne)</span>
                             </label>
                             <div className="relative">
                                 <select
-                                    required value={formData.impurity} onChange={(e) => handleChange('impurity', e.target.value)}
+                                    value={formData.impurity} onChange={(e) => handleChange('impurity', e.target.value)}
                                     className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-base appearance-none cursor-pointer shadow-sm transition-all"
                                 >
                                     <option value="" disabled>Wybierz...</option>
@@ -261,11 +264,12 @@ export default function ParametryDetailsPage() {
 
                     <div className="space-y-2">
                         <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                            Postać surowca <span className="text-blue-600 text-lg">*</span>
+                            Postać surowca
+                            <span className="ml-1 text-slate-400 text-[10px] font-bold normal-case">(opcjonalne)</span>
                         </label>
                         <div className="relative">
                             <select
-                                required value={formData.form} onChange={(e) => handleChange('form', e.target.value)}
+                                value={formData.form} onChange={(e) => handleChange('form', e.target.value)}
                                 className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg appearance-none cursor-pointer shadow-sm transition-all"
                             >
                                 <option value="" disabled>Wybierz formę...</option>

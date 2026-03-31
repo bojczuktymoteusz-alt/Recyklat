@@ -123,9 +123,19 @@ export default function UdaloSie() {
                     </Link>
                 </div>
 
+                {/* SUGESTIA FB */}
+                {localStorage && localStorage.getItem('magic_opis') === null && (
+                    <div className="mt-8 w-full bg-blue-50 border-2 border-blue-200 rounded-[24px] p-5 text-left">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2">Tip: Zwiększ zasięg 🚀</p>
+                        <p className="text-sm font-bold text-blue-800 leading-relaxed">
+                            Wklej wygenerowany opis również na ogłoszeniu na <strong>Facebooku</strong> lub w grupach branżowych — dotrze do większej liczby kupujących!
+                        </p>
+                    </div>
+                )}
+
                 <Link
                     href="/moje"
-                    className="mt-12 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-slate-900 transition-colors"
+                    className="mt-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-slate-900 transition-colors"
                 >
                     Zarządzaj swoimi ofertami
                 </Link>

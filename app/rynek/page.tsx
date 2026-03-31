@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import {
-    Recycle, MapPin, Search, ImageOff, PackageSearch, Package, ChevronDown
+    Recycle, MapPin, Search, ImageOff, PackageSearch, Package, ChevronDown, TrendingUp, Clock
 } from 'lucide-react';
 
 // --- TYPY ---
@@ -19,7 +19,7 @@ interface Oferta {
     created_at: string;
     status?: string;
     typ_oferty?: string;
-    // 'opis' celowo pominięty dla szybkości listingu
+    wyswietlenia?: number;
 }
 
 const KATEGORIE = [
@@ -52,6 +52,7 @@ export default function Rynek() {
     const [typFiltr, setTypFiltr] = useState<'wszystkie' | 'sprzedam' | 'kupie'>('wszystkie');
     const [loading, setLoading] = useState(true);
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+    const [sortowanie, setSortowanie] = useState<'popularne' | 'najnowsze'>('popularne');
 
     // OPTYMALIZACJA: Pobieramy tylko niezbędne pola (bez ciężkiego opisu)
     const fetchOferty = async (query = "") => {
@@ -64,7 +65,8 @@ export default function Rynek() {
             } else {
                 result = await supabase
                     .from('oferty')
-                    .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty')
+                    .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia')
+                    .order('wyswietlenia', { ascending: false, nullsFirst: false })
                     .order('created_at', { ascending: false });
             }
 
@@ -81,7 +83,7 @@ export default function Rynek() {
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             fetchOferty(szukanaFraza);
-            setVisibleCount(ITEMS_PER_PAGE); // Resetujemy licznik przy nowym szukaniu
+            setVisibleCount(ITEMS_PER_PAGE);
         }, 300);
         return () => clearTimeout(delayDebounceFn);
     }, [szukanaFraza]);
@@ -101,16 +103,35 @@ export default function Rynek() {
             });
         }
 
+        // Filtrowanie po frazie gdy nie użyto RPC (szukana fraza jest pusta)
+        if (szukanaFraza.trim() !== "") {
+            const fraza = szukanaFraza.toLowerCase().trim();
+            wynik = wynik.filter(o =>
+                (o.material && o.material.toLowerCase().includes(fraza)) ||
+                (o.title && o.title.toLowerCase().includes(fraza)) ||
+                (o.lokalizacja && o.lokalizacja.toLowerCase().includes(fraza)) ||
+                (o.wojewodztwo && o.wojewodztwo.toLowerCase().includes(fraza))
+            );
+        }
+
         wynik.sort((a, b) => {
+            // Zakończone zawsze na dole
             const aSprzedane = a.status === 'sprzedane';
             const bSprzedane = b.status === 'sprzedane';
             if (aSprzedane && !bSprzedane) return 1;
             if (!aSprzedane && bSprzedane) return -1;
+
+            if (sortowanie === 'popularne') {
+                const aViews = a.wyswietlenia ?? 0;
+                const bViews = b.wyswietlenia ?? 0;
+                if (bViews !== aViews) return bViews - aViews;
+            }
+            // Fallback: najnowsze (też domyślny dla trybu 'najnowsze')
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
 
         setFiltrowaneOferty(wynik);
-    }, [aktywnyFiltr, typFiltr, wszystkieOferty]);
+    }, [aktywnyFiltr, typFiltr, wszystkieOferty, sortowanie]);
 
     // Dane do wyświetlenia (tylko tyle, ile pozwala visibleCount)
     const wyswietlaneOferty = filtrowaneOferty.slice(0, visibleCount);
@@ -191,6 +212,32 @@ export default function Rynek() {
 
             {/* LISTING */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+                {/* PRZEŁĄCZNIK SORTOWANIA */}
+                <div className="flex items-center justify-between mb-8">
+                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">
+                        {filtrowaneOferty.length} ofert
+                    </p>
+                    <div className="bg-white border border-slate-200 p-1 rounded-2xl flex gap-1 shadow-sm">
+                        <button
+                            onClick={() => { setSortowanie('popularne'); setVisibleCount(ITEMS_PER_PAGE); }}
+                            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                                sortowanie === 'popularne' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-700'
+                            }`}
+                        >
+                            <TrendingUp size={13} /> Popularne
+                        </button>
+                        <button
+                            onClick={() => { setSortowanie('najnowsze'); setVisibleCount(ITEMS_PER_PAGE); }}
+                            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                                sortowanie === 'najnowsze' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-700'
+                            }`}
+                        >
+                            <Clock size={13} /> Najnowsze
+                        </button>
+                    </div>
+                </div>
+
                 {loading && wszystkieOferty.length === 0 ? (
                     <div className="flex flex-col items-center py-20 animate-pulse">
                         <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
