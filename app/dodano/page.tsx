@@ -9,6 +9,7 @@ export default function UdaloSie() {
     const [skopiowanoSlug, setSkopiowanoSlug] = useState(false);
     const [baseUrl, setBaseUrl] = useState('');
     const [slug, setSlug] = useState('');
+    const [pokazFbTip, setPokazFbTip] = useState(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -24,6 +25,9 @@ export default function UdaloSie() {
                 setSlug(savedSlug);
                 localStorage.removeItem('magic_slug');
             }
+
+            // Tip FB — pokazujemy zawsze po dodaniu ogłoszenia
+            setPokazFbTip(true);
         }
     }, []);
 
@@ -125,8 +129,8 @@ export default function UdaloSie() {
                     </Link>
                 </div>
 
-                {/* SUGESTIA FB */}
-                {localStorage && localStorage.getItem('magic_opis') === null && (
+                {/* SUGESTIA FB — stan ustawiany w useEffect, bezpieczne dla SSR */}
+                {pokazFbTip && (
                     <div className="mt-8 w-full bg-blue-50 border-2 border-blue-200 rounded-[24px] p-5 text-left">
                         <p className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2">Tip: Zwiększ zasięg 🚀</p>
                         <p className="text-sm font-bold text-blue-800 leading-relaxed">
