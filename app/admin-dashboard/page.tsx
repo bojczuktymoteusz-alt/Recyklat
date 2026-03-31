@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
-    BarChart3, TrendingUp, Eye, Shield, LogOut,
+    BarChart3, TrendingUp, Eye, EyeOff, Shield, LogOut,
     RefreshCw, MapPin, Sparkles, ArrowUpRight, ArrowDownRight, Minus, Home
 } from 'lucide-react';
 
@@ -32,19 +32,30 @@ const SESSION_KEY = 'admin_auth_recyklat';
 
 export default function AdminDashboard() {
     const [haslo, setHaslo] = useState('');
+    const [pokazHaslo, setPokazHaslo] = useState(false);
     const [zalogowany, setZalogowany] = useState(false);
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(false);
     const [blad, setBlad] = useState('');
     const [ostatnieOdswiezenie, setOstatnieOdswiezenie] = useState<Date | null>(null);
+    const [zapisaneHaslo, setZapisaneHaslo] = useState('');
 
-    // Sprawdź sesję przy załadowaniu
+    // Sprawdź sesję przy załadowaniu — jeśli sesja istnieje, pobierz dane
     useEffect(() => {
         const sesja = sessionStorage.getItem(SESSION_KEY);
-        if (sesja === 'true') {
+        const pwd = sessionStorage.getItem(SESSION_KEY + '_pwd');
+        if (sesja === 'true' && pwd) {
             setZalogowany(true);
+            setZapisaneHaslo(pwd);
         }
     }, []);
+
+    // Pobierz dane automatycznie gdy zalogowany i mamy hasło
+    useEffect(() => {
+        if (zalogowany && zapisaneHaslo && !stats) {
+            pobierzStatystyki(zapisaneHaslo);
+        }
+    }, [zalogowany, zapisaneHaslo]);
 
     const pobierzStatystyki = useCallback(async (pwd?: string) => {
         setLoading(true);
@@ -79,7 +90,9 @@ export default function AdminDashboard() {
         const ok = await pobierzStatystyki(haslo);
         if (ok) {
             setZalogowany(true);
+            setZapisaneHaslo(haslo);
             sessionStorage.setItem(SESSION_KEY, 'true');
+            sessionStorage.setItem(SESSION_KEY + '_pwd', haslo);
         }
     };
 
@@ -87,7 +100,9 @@ export default function AdminDashboard() {
         setZalogowany(false);
         setStats(null);
         setHaslo('');
+        setZapisaneHaslo('');
         sessionStorage.removeItem(SESSION_KEY);
+        sessionStorage.removeItem(SESSION_KEY + '_pwd');
     };
 
     const trend = (dzisiaj: number, wczoraj: number) => {
@@ -114,15 +129,30 @@ export default function AdminDashboard() {
                     </div>
 
                     <form onSubmit={handleLogin} className="space-y-4">
-                        <input
-                            type="password"
-                            placeholder="Hasło administratora"
-                            value={haslo}
-                            onChange={e => setHaslo(e.target.value)}
-                            className="w-full bg-slate-800 border-2 border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-colors font-bold placeholder:text-slate-500"
-                            autoFocus
-                        />
-                        {blad && <p className="text-red-400 text-xs font-bold text-center">{blad}</p>}
+                        <div className="relative">
+                            <input
+                                type={pokazHaslo ? 'text' : 'password'}
+                                placeholder="Hasło administratora"
+                                value={haslo}
+                                onChange={e => { setHaslo(e.target.value); setBlad(''); }}
+                                className="w-full bg-slate-800 border-2 border-slate-700 text-white p-4 pr-12 rounded-2xl outline-none focus:border-blue-500 transition-colors font-bold placeholder:text-slate-500"
+                                autoFocus
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setPokazHaslo(p => !p)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                                tabIndex={-1}
+                            >
+                                {pokazHaslo ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
+                        {blad && (
+                            <div className="bg-red-900/30 border border-red-700 rounded-xl p-3 text-center">
+                                <p className="text-red-400 text-xs font-bold">{blad}</p>
+                                <p className="text-red-600 text-[10px] mt-1">Sprawdź czy hasło jest ustawione w zmiennych środowiskowych Vercel</p>
+                            </div>
+                        )}
                         <button
                             type="submit"
                             disabled={loading || !haslo}
