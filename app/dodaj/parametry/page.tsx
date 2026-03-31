@@ -16,6 +16,7 @@ interface Step1Data {
     telefon: string;
     zdjecie_url: string;
     bdo_code?: string;
+    magic_box_used?: boolean;
 }
 
 interface FormData {
