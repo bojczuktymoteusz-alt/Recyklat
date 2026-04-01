@@ -153,6 +153,33 @@ export default function SzczegolyOferty() {
     const wyswietlanyTytul = oferta.title || oferta.material;
     const jestZapotrzebowanie = oferta.typ_oferty === 'kupie';
 
+    // --- SMART DEDUP: wyciągamy BDO z nazwy materiału jeśli pole bdo_code jest puste ---
+    const extractBdoFromMaterial = (mat: string): string | null => {
+        // Szukamy 6 cyfr w formacie XX XX XX lub XXXXXX (np. "19 12 09" lub "191209")
+        const match = mat.match(/\b(\d{2}\s?\d{2}\s?\d{2})\b/);
+        return match ? match[1].trim() : null;
+    };
+
+    const materialBez = (mat: string): string => {
+        // Usuwamy kod BDO i nawiasy z nazwy materiału do wyświetlenia
+        return mat.replace(/\s*\(\d{2}\s?\d{2}\s?\d{2}\)\s*/g, '').trim();
+    };
+
+    const wyswietlaneBdo = oferta.bdo_code || extractBdoFromMaterial(oferta.material || '');
+    const czystyMaterial = materialBez(oferta.material || '');
+
+    // Czy form/category dubluje material lub jest 'Inne'?
+    const normaliz = (s: string) => (s || '').toLowerCase().trim();
+    const pokazForm = oferta.form &&
+        oferta.form !== 'Inne' &&
+        normaliz(oferta.form) !== normaliz(czystyMaterial) &&
+        normaliz(oferta.form) !== normaliz(oferta.material);
+    const pokazCategory = oferta.category &&
+        oferta.category !== 'Inne' &&
+        normaliz(oferta.category) !== normaliz(czystyMaterial) &&
+        normaliz(oferta.category) !== normaliz(oferta.material) &&
+        normaliz(oferta.category) !== normaliz(oferta.form);
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col relative">
             <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
@@ -249,28 +276,39 @@ export default function SzczegolyOferty() {
                             <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest opacity-40">
                                 <Info size={16} /> Szczegóły techniczne
                             </h3>
+
+                            {/* GŁÓWNY BOKS: materiał bez kodu BDO w nazwie */}
                             <div className="mb-4 p-5 bg-blue-50 rounded-[24px] border border-blue-100">
                                 <p className="text-[10px] uppercase font-black text-blue-500 mb-1">Rodzaj materiału</p>
-                                <p className="font-black text-blue-700 text-lg uppercase">{oferta.material || "Nieokreślony"}</p>
+                                <p className="font-black text-blue-700 text-lg uppercase">
+                                    {czystyMaterial || oferta.material || 'Nieokreślony'}
+                                </p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
+                                {/* KOD BDO — z bazy lub wyciągnięty z nazwy materiału */}
                                 <div className="p-5 bg-slate-50 rounded-[24px]">
                                     <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Kod BDO</p>
-                                    <p className="font-black text-slate-700 text-lg">{oferta.bdo_code || '---'}</p>
+                                    <p className="font-black text-slate-700 text-lg tracking-widest">
+                                        {wyswietlaneBdo || '---'}
+                                    </p>
                                 </div>
                                 <div className="p-5 bg-slate-50 rounded-[24px]">
                                     <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Zanieczyszczenie</p>
                                     <p className="font-black text-slate-700 text-lg">{getImpurityLabel(oferta.impurity)}</p>
                                 </div>
                             </div>
-                            <div className="mt-4 p-5 bg-slate-50 rounded-[24px]">
-                                <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Postać surowca</p>
-                                <p className="font-black text-slate-700 text-lg uppercase">{oferta.form || 'Do ustalenia'}</p>
-                            </div>
 
-                            {/* DODATKOWE PARAMETRY TECHNICZNE */}
-                            {(oferta.param_mfi || oferta.color || oferta.material_type || oferta.category) && (
+                            {/* POSTAĆ — tylko jeśli nie dubluje materiału i nie jest 'Inne' */}
+                            {pokazForm && (
+                                <div className="mt-4 p-5 bg-slate-50 rounded-[24px]">
+                                    <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Postać surowca</p>
+                                    <p className="font-black text-slate-700 text-lg uppercase">{oferta.form}</p>
+                                </div>
+                            )}
+
+                            {/* DODATKOWE PARAMETRY — MFI, kolor, typ, kategoria (bez dubli) */}
+                            {(oferta.param_mfi || oferta.color || oferta.material_type || pokazCategory) && (
                                 <div className="mt-4 grid grid-cols-2 gap-4">
                                     {oferta.param_mfi && (
                                         <div className="p-5 bg-emerald-50 rounded-[24px] border border-emerald-100">
@@ -290,7 +328,7 @@ export default function SzczegolyOferty() {
                                             <p className="font-black text-slate-700 text-lg uppercase">{oferta.material_type}</p>
                                         </div>
                                     )}
-                                    {oferta.category && (
+                                    {pokazCategory && (
                                         <div className="p-5 bg-slate-50 rounded-[24px]">
                                             <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Kategoria</p>
                                             <p className="font-black text-slate-700 text-lg uppercase">{oferta.category}</p>
