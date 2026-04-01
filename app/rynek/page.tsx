@@ -197,16 +197,32 @@ export default function Rynek() {
 
             {/* KATEGORIE */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
-                <div className="bg-white p-2 rounded-3xl shadow-xl border border-gray-100 flex gap-2 overflow-x-auto no-scrollbar">
-                    {KATEGORIE.map((kat) => (
-                        <button
-                            key={kat.nazwa}
-                            onClick={() => setAktywnyFiltr(kat.nazwa)}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-                        >
-                            <span>{kat.ikona}</span>{kat.nazwa}
-                        </button>
-                    ))}
+                {/* Wrapper z efektem zanikania po prawej na mobile */}
+                <div className="relative">
+                    <div className="bg-white p-2 rounded-3xl shadow-xl border border-gray-100 flex gap-2 overflow-x-auto no-scrollbar">
+                        {KATEGORIE.map((kat) => (
+                            <button
+                                key={kat.nazwa}
+                                onClick={() => setAktywnyFiltr(kat.nazwa)}
+                                className={`flex-shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                <span>{kat.ikona}</span>{kat.nazwa}
+                            </button>
+                        ))}
+                        {/* Spacer żeby ostatni element nie przyklejał się do krawędzi */}
+                        <div className="flex-shrink-0 w-8" />
+                    </div>
+                    {/* Gradient fade + strzałka — widoczne tylko na mobile (sm:hidden) */}
+                    <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white via-white/80 to-transparent rounded-r-3xl flex items-center justify-end pr-2 sm:hidden">
+                        <div className="flex items-center gap-0.5 text-slate-400">
+                            <div className="w-1 h-1 rounded-full bg-slate-300"></div>
+                            <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                            <div className="w-2 h-2 rounded-full bg-slate-500"></div>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600 ml-0.5">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
             </div>
 
