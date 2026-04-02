@@ -212,15 +212,19 @@ export default function Rynek() {
                         ))}
                         <div className="flex-shrink-0 w-8" />
                     </div>
-                    <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white via-white/80 to-transparent rounded-r-3xl flex items-center justify-end pr-2 sm:hidden pointer-events-none">
-                        <div className="flex items-center gap-0.5 text-slate-400">
-                            <div className="w-1 h-1 rounded-full bg-slate-300"></div>
-                            <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600 ml-0.5">
-                                <polyline points="9 18 15 12 9 6"></polyline>
-                            </svg>
-                        </div>
-                    </div>
+                    <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white via-white/80 to-transparent rounded-r-3xl sm:hidden" />
+                    <button
+                        onClick={() => kategorieRef.current?.scrollBy({ left: 200, behavior: 'smooth' })}
+                        aria-label="Przewiń kategorie"
+                        className="sm:hidden absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-slate-400 active:scale-90 transition-transform z-10 p-2"
+                    >
+                        <div className="w-1 h-1 rounded-full bg-slate-300"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                        <div className="w-2 h-2 rounded-full bg-slate-500"></div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600 ml-0.5">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
                 </div>
             </div>
 
