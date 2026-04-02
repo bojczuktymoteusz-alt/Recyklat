@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import {
-    Recycle, MapPin, Search, ImageOff, PackageSearch, Package, ChevronDown, TrendingUp, Clock
+    Recycle, MapPin, Search, Package, ChevronDown, TrendingUp, Clock
 } from 'lucide-react';
 
 // --- TYPY ---
@@ -42,7 +42,12 @@ const getIcon = (material: string) => {
     return '📦';
 };
 
-const ITEMS_PER_PAGE = 12; // Ile ofert na start
+const getPlaceholder = (typ_oferty?: string) =>
+    typ_oferty === 'kupie'
+        ? '/placeholder-kupie.jpg'
+        : '/placeholder-sprzedam.jpg';
+
+const ITEMS_PER_PAGE = 12;
 
 export default function Rynek() {
     const [wszystkieOferty, setWszystkieOferty] = useState<Oferta[]>([]);
@@ -55,7 +60,6 @@ export default function Rynek() {
     const [sortowanie, setSortowanie] = useState<'popularne' | 'najnowsze'>('popularne');
     const kategorieRef = React.useRef<HTMLDivElement>(null);
 
-    // OPTYMALIZACJA: Pobieramy tylko niezbędne pola (bez ciężkiego opisu)
     const fetchOferty = async (query = "") => {
         try {
             setLoading(true);
@@ -104,7 +108,6 @@ export default function Rynek() {
             });
         }
 
-        // Filtrowanie po frazie gdy nie użyto RPC (szukana fraza jest pusta)
         if (szukanaFraza.trim() !== "") {
             const fraza = szukanaFraza.toLowerCase().trim();
             wynik = wynik.filter(o =>
@@ -116,7 +119,6 @@ export default function Rynek() {
         }
 
         wynik.sort((a, b) => {
-            // Zakończone zawsze na dole
             const aSprzedane = a.status === 'sprzedane';
             const bSprzedane = b.status === 'sprzedane';
             if (aSprzedane && !bSprzedane) return 1;
@@ -127,19 +129,17 @@ export default function Rynek() {
                 const bViews = b.wyswietlenia ?? 0;
                 if (bViews !== aViews) return bViews - aViews;
             }
-            // Fallback: najnowsze (też domyślny dla trybu 'najnowsze')
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
 
         setFiltrowaneOferty(wynik);
     }, [aktywnyFiltr, typFiltr, wszystkieOferty, sortowanie]);
 
-    // Dane do wyświetlenia (tylko tyle, ile pozwala visibleCount)
     const wyswietlaneOferty = filtrowaneOferty.slice(0, visibleCount);
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-20">
-            {/* NAVBAR & SEARCH - Zostawiamy jak u Ciebie, bo wyglądają świetnie */}
+            {/* NAVBAR */}
             <div className="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-20">
@@ -163,6 +163,7 @@ export default function Rynek() {
                 </div>
             </div>
 
+            {/* NAGŁÓWEK I WYSZUKIWARKA */}
             <div className="bg-slate-900 py-12 px-4 shadow-xl">
                 <div className="max-w-4xl mx-auto text-center">
                     <h1 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight">
@@ -198,7 +199,6 @@ export default function Rynek() {
 
             {/* KATEGORIE */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
-                {/* Wrapper z efektem zanikania po prawej na mobile */}
                 <div className="relative">
                     <div ref={kategorieRef} className="bg-white p-2 rounded-3xl shadow-xl border border-gray-100 flex gap-2 overflow-x-auto no-scrollbar">
                         {KATEGORIE.map((kat) => (
@@ -210,31 +210,22 @@ export default function Rynek() {
                                 <span>{kat.ikona}</span>{kat.nazwa}
                             </button>
                         ))}
-                        {/* Spacer żeby ostatni element nie przyklejał się do krawędzi */}
                         <div className="flex-shrink-0 w-8" />
                     </div>
-                    {/* Gradient fade + strzałka klikalna — widoczne tylko na mobile */}
-                    <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white via-white/80 to-transparent rounded-r-3xl flex items-center justify-end pr-2 sm:hidden">
-                        <button
-                            onClick={() => kategorieRef.current?.scrollBy({ left: 200, behavior: 'smooth' })}
-                            className="flex items-center gap-0.5 text-slate-400 active:scale-90 transition-transform"
-                            aria-label="Przewiń kategorie"
-                        >
+                    <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white via-white/80 to-transparent rounded-r-3xl flex items-center justify-end pr-2 sm:hidden pointer-events-none">
+                        <div className="flex items-center gap-0.5 text-slate-400">
                             <div className="w-1 h-1 rounded-full bg-slate-300"></div>
                             <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                            <div className="w-2 h-2 rounded-full bg-slate-500"></div>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600 ml-0.5">
                                 <polyline points="9 18 15 12 9 6"></polyline>
                             </svg>
-                        </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* LISTING */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-
-                {/* PRZEŁĄCZNIK SORTOWANIA */}
                 <div className="flex items-center justify-between mb-8">
                     <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">
                         {filtrowaneOferty.length} ofert
@@ -242,17 +233,13 @@ export default function Rynek() {
                     <div className="bg-white border border-slate-200 p-1 rounded-2xl flex gap-1 shadow-sm">
                         <button
                             onClick={() => { setSortowanie('popularne'); setVisibleCount(ITEMS_PER_PAGE); }}
-                            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-                                sortowanie === 'popularne' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-700'
-                            }`}
+                            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${sortowanie === 'popularne' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-700'}`}
                         >
                             <TrendingUp size={13} /> Popularne
                         </button>
                         <button
                             onClick={() => { setSortowanie('najnowsze'); setVisibleCount(ITEMS_PER_PAGE); }}
-                            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-                                sortowanie === 'najnowsze' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-700'
-                            }`}
+                            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${sortowanie === 'najnowsze' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-700'}`}
                         >
                             <Clock size={13} /> Najnowsze
                         </button>
@@ -271,22 +258,21 @@ export default function Rynek() {
                                 <Link
                                     href={`/rynek/${o.id}`}
                                     key={o.id}
-                                    className="group bg-white rounded-[32px] border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-300 flex flex-col overflow-hidden"
+                                    className="group bg-white rounded-[32px] ring-1 ring-slate-100 shadow-sm hover:shadow-2xl hover:ring-blue-100 transition-all duration-300 flex flex-col overflow-hidden isolate active:scale-[0.98]"
                                 >
-                                    <div className="aspect-[4/3] relative overflow-hidden bg-slate-100">
-                                        {o.zdjecie_url ? (
-                                            <img
-                                                src={o.zdjecie_url}
-                                                alt={o.title || o.material}
-                                                loading="lazy" // OPTYMALIZACJA: Leniwe ładowanie
-                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                                {o.typ_oferty === 'kupie' ? <PackageSearch size={48} /> : <ImageOff size={48} />}
-                                            </div>
-                                        )}
-                                        {/* Status & Ikona */}
+                                    <div className="aspect-[4/3] relative overflow-hidden bg-slate-50 isolate">
+                                        <img
+                                            src={o.zdjecie_url || getPlaceholder(o.typ_oferty)}
+                                            alt={o.title || o.material}
+                                            loading="lazy"
+                                            onError={(e) => {
+                                                const img = e.currentTarget;
+                                                if (!img.src.includes('/placeholder-')) {
+                                                    img.src = getPlaceholder(o.typ_oferty);
+                                                }
+                                            }}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                                        />
                                         <div className="absolute top-4 left-4 right-4 flex justify-between">
                                             <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
                                                 {o.typ_oferty === 'kupie' ? 'Kupię' : 'Sprzedam'}
@@ -296,7 +282,7 @@ export default function Rynek() {
                                             </div>
                                         </div>
                                         {o.status === 'sprzedane' && (
-                                            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                                            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center isolate">
                                                 <span className="bg-red-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase -rotate-12 border-2 border-white">Zakończone</span>
                                             </div>
                                         )}
@@ -329,7 +315,6 @@ export default function Rynek() {
                             ))}
                         </div>
 
-                        {/* PRZYCISK POKAŻ WIĘCEJ */}
                         {filtrowaneOferty.length > visibleCount && (
                             <div className="mt-12 flex justify-center">
                                 <button
@@ -351,10 +336,10 @@ export default function Rynek() {
                     </div>
                 )}
             </div>
-            {/* FOOTER */}
+
             <footer className="py-12 border-t border-slate-100 text-center">
                 <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">
-                    &copy; 2024 Recyklat.pl - System Obrotu Surowcami Wtórnymi
+                    &copy; 2026 Recyklat.pl - System Obrotu Surowcami Wtórnymi
                 </p>
             </footer>
         </div>

@@ -63,21 +63,130 @@ const MIASTA_WOJEWODZTWA: Record<string, string> = {
     świę: "kujawsko-pomorskie",
 };
 
-// Słownik słów kluczowych -> kategoria
+// ============================================================
+// SŁOWNIK SŁÓW KLUCZOWYCH -> KATEGORIA
+// Kolejność ma znaczenie — bardziej szczegółowe reguły najpierw
+// ============================================================
 const SLOWA_KLUCZE: { slowa: string[], kategoria: string }[] = [
-    { slowa: ["ldpe", "lldpe", "folia bezbarwna", "folia czysta"], kategoria: "Folia bezbarwna (LDPE / LLDPE)" },
-    { slowa: ["folia kolorowa", "folia rolnicza", "folia czarna", "folia zielona", "agrofolia"], kategoria: "Folia kolorowa / rolnicza" },
-    { slowa: ["pet", "butelka", "butelki", "płatka", "płatki pet"], kategoria: "Opakowania PET" },
-    { slowa: ["hdpe", "pp", "pe ", "tworzywa twarde", "kanister", "skrzynka"], kategoria: "Tworzywa twarde (PP, PE, HDPE)" },
-    { slowa: ["abs", "pc ", "ps ", "pa ", "tworzywa techniczne", "polipropyl"], kategoria: "Tworzywa techniczne (ABS, PC, PS, PA)" },
-    { slowa: ["kabel", "elektroodpad", "weee", "elektronika", "złom elektroniczny"], kategoria: "Elektroodpady (WEEE) / Kable" },
-    { slowa: ["karton", "tektura", "makulatura", "opakowania papier"], kategoria: "Makulatura (Karton / Tektura)" },
-    { slowa: ["gazeta", "papier mix", "makulatura mix"], kategoria: "Makulatura (Gazety / Mix)" },
-    { slowa: ["złom stalowy", "żeliwo", "stal", "żeliwny", "złom czarny"], kategoria: "Złom stalowy i żeliwny" },
-    { slowa: ["miedź", "aluminium", "złom kolorowy", "al ", "cu ", "mosiądz", "cynk"], kategoria: "Złom kolorowy (Al, Cu, inne)" },
-    { slowa: ["drewno", "paleta", "palety", "europaleta"], kategoria: "Drewno i Palety" },
-    { slowa: ["wapno", "kreda", "nawóz", "nawozowe", "regranulat"], kategoria: "Inne" },
+
+    // --- FOLIE (przed ogólnym LDPE żeby nie wpaść w tworzywa) ---
+    { slowa: [
+        "folia stretch", "stretch", "strecz",
+        "termokurczka", "folia termokurczliwa",
+        "siana", "biała siana", "agrofolia",
+        "pryzma", "tunelówka", "rękaw foliowy", "półrękaw",
+        "folia bezbarwna", "folia czysta", "folia ldpe", "lldpe",
+        "ldpe",
+    ], kategoria: "Folia bezbarwna (LDPE / LLDPE)" },
+
+    { slowa: [
+        "folia kolorowa", "folia rolnicza", "folia czarna",
+        "folia zielona", "folia niebieska", "folia mieszana",
+    ], kategoria: "Folia kolorowa / rolnicza" },
+
+    // --- OPAKOWANIA PET ---
+    { slowa: [
+        "opakowania pet", "butelka pet", "butelki pet",
+        "płatka pet", "płatki pet", "płatek pet",
+        "flake pet", "recyklat pet",
+        "pet ", "butelka", "butelki",
+    ], kategoria: "Opakowania PET" },
+
+    // --- TWORZYWA TECHNICZNE (ABS, PC, PS, PA) ---
+    { slowa: [
+        "abs", "polistyren",
+        "pc ", "poliwęglan",
+        "pa ", "poliamid", "nylon",
+        "pom", "delrin",
+        "tworzywa techniczne", "tworzywo techniczne",
+    ], kategoria: "Tworzywa techniczne (ABS, PC, PS, PA)" },
+
+    // --- TWORZYWA TWARDE + OPAKOWANIA + SLANG ---
+    { slowa: [
+        // skróty materiałowe
+        "hdpe", "pe-hd", "polietylen",
+        "pp ", "polipropylen", "polipropyl",
+        "pvc", "ps ",
+        // opakowania
+        "kanister", "kanistr",
+        "skrzynki", "skrzynka",
+        "bigbag", "big bag", "big-bag",
+        "ibc", "mauzer", "mauser",
+        "kisteny", "skrzyniopalety",
+        "beczki", "beczka",
+        "worki pp",
+        // slang branżowy
+        "płyn",
+        "chemia",
+        // tworzywa ogólnie
+        "regranulat", "regranu",
+        "przemiał",
+        "aglo", "aglomerat",
+        "agregat",
+        "recyklat",
+        "zrzutki",
+        "zlepiency", "zlepieńce",
+        "żury", "żur",
+        "ażury",
+        "wlewek", "wlewki",
+        "płatki", "płatek",
+        "kruszywo tworzyw",
+        "compound",
+        "słomka",
+        "tworzywa twarde", "tworzywo twarde",
+    ], kategoria: "Tworzywa twarde (PP, PE, HDPE)" },
+
+    // --- ELEKTROODPADY ---
+    { slowa: [
+        "kabel", "kable", "przewody",
+        "elektroodpad", "weee",
+        "złom elektroniczny", "elektronika",
+    ], kategoria: "Elektroodpady (WEEE) / Kable" },
+
+    // --- MAKULATURA ---
+    { slowa: [
+        "karton", "kartony", "tektura",
+        "makulatura", "opakowania papier", "papier kartonowy",
+    ], kategoria: "Makulatura (Karton / Tektura)" },
+
+    { slowa: [
+        "gazeta", "gazety", "papier mix",
+        "makulatura mix", "papier gazetowy",
+    ], kategoria: "Makulatura (Gazety / Mix)" },
+
+    // --- METALE ---
+    { slowa: [
+        "złom stalowy", "złom czarny", "żeliwo", "żeliwny",
+        "stal ", "stalowy", "nierdzewka", "inox",
+        "stal nierdzewna",
+    ], kategoria: "Złom stalowy i żeliwny" },
+
+    { slowa: [
+        "miedź", "cu ", "copper",
+        "aluminium", "alu ", "puszki", "puszka",
+        "złom kolorowy", "mosiądz",
+        "cynk", "ołów",
+    ], kategoria: "Złom kolorowy (Al, Cu, inne)" },
+
+    // --- DREWNO ---
+    { slowa: [
+        "drewno", "paleta", "palety",
+        "europaleta", "europalety", "epal",
+    ], kategoria: "Drewno i Palety" },
+
+    // --- AGRO / NAWOZY ---
+    { slowa: [
+        "wapno", "wapno nawozowe",
+        "kreda", "kreda nawozowa",
+        "nawozowe", "nawozy", "nawóz",
+        "agro", "pożniwne", "pod uprawę",
+        "saletra", "mocznik",
+    ], kategoria: "Inne" },
 ];
+
+// Słowa określające typ oferty (kupię / sprzedam)
+const SLOWA_SPRZEDAM = ["sprzedam", "oferuję", "oferuje", "oddam", "dostępne", "dostepne", "sprzedaż", "sprzedaz", "do sprzedania", "skupię"];
+const SLOWA_KUPIE = ["kupię", "kupie", "szukam", "potrzebuję", "potrzebuje", "przyjmę", "przyjme", "skupiamy", "skupiam", "zapraszam do sprzedaży"];
 
 const formatujTelefon = (value: string) => {
     const tylkoCyfry = value.replace(/\D/g, '').substring(0, 9);
@@ -165,6 +274,7 @@ interface ParsedData {
     material?: string;
     autoBdo?: string;
     title?: string;
+    typOferty?: 'sprzedam' | 'kupie';
 }
 
 function parsujTekst(tekst: string): ParsedData {
@@ -232,6 +342,14 @@ function parsujTekst(tekst: string): ParsedData {
             if (found && !wynik.autoBdo) wynik.autoBdo = found.bdo;
             break;
         }
+    }
+
+    // --- TYP OFERTY: kupie / sprzedam ---
+    // Kupie ma wyższy priorytet (sprawdzamy pierwsze)
+    if (SLOWA_KUPIE.some(s => t.includes(s))) {
+        wynik.typOferty = 'kupie';
+    } else if (SLOWA_SPRZEDAM.some(s => t.includes(s))) {
+        wynik.typOferty = 'sprzedam';
     }
 
     // --- TYTUŁ: pierwsza linia tekstu (max 60 znaków) ---
@@ -305,6 +423,11 @@ export default function DodajOferteKrok1() {
 
         if (parsed.title) zastap('Tytuł', parsed.title, title, setTitle);
         else nowePodswietlone.add('title');
+
+        // --- TYP OFERTY: ustaw przełącznik automatycznie ---
+        if (parsed.typOferty) {
+            setTypOferty(parsed.typOferty);
+        }
 
         setPodswietlone(nowePodswietlone);
 

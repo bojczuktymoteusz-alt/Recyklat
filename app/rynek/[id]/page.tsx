@@ -219,14 +219,17 @@ export default function SzczegolyOferty() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-6">
                         <div className="aspect-square bg-white rounded-[40px] overflow-hidden border shadow-sm relative">
-                            {oferta.zdjecie_url ? (
-                                <img src={oferta.zdjecie_url} className={`w-full h-full object-cover ${jestSprzedane ? 'grayscale opacity-50' : ''}`} alt="Foto" />
-                            ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50">
-                                    <ImageOff size={80} className="text-slate-300" />
-                                    <p className="font-black uppercase text-xs mt-6 opacity-60">Brak zdjęcia</p>
-                                </div>
-                            )}
+                            <img
+                                src={oferta.zdjecie_url || (oferta.typ_oferty === 'kupie' ? '/placeholder-kupie.jpg' : '/placeholder-sprzedam.jpg')}
+                                alt={oferta.title || oferta.material || 'Oferta'}
+                                onError={(e) => {
+                                    const img = e.currentTarget;
+                                    if (!img.src.includes('/placeholder-')) {
+                                        img.src = oferta.typ_oferty === 'kupie' ? '/placeholder-kupie.jpg' : '/placeholder-sprzedam.jpg';
+                                    }
+                                }}
+                                className={`w-full h-full object-contain p-8 ${jestSprzedane ? 'grayscale opacity-40' : ''}`}
+                            />
                         </div>
 
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm border-l-8 border-l-blue-600">
