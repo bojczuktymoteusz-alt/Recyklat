@@ -367,6 +367,7 @@ export default function DodajOferteKrok1() {
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
     const [lokalizacja, setLokalizacja] = useState('');
+    const [calyKraj, setCalyKraj] = useState(false);
     const [wojewodztwo, setWojewodztwo] = useState('');
     const [telefon, setTelefon] = useState('');
     const [autoBdo, setAutoBdo] = useState('');
@@ -735,10 +736,29 @@ export default function DodajOferteKrok1() {
                                 )}
                             </label>
                             <input type="text" placeholder="np. Warszawa"
-                                className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('lokalizacja')}`}
-                                value={lokalizacja}
+                                disabled={calyKraj}
+                                className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${calyKraj ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : getFieldClass('lokalizacja')}`}
+                                value={calyKraj ? 'Polska' : lokalizacja}
                                 onChange={(e) => { setLokalizacja(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('lokalizacja'); return n; }); }}
                             />
+                            {/* CHECKBOX CAŁY KRAJ */}
+                            <label className="flex items-center gap-2 mt-2 ml-2 cursor-pointer group">
+                                <div className="relative shrink-0">
+                                    <input type="checkbox" checked={calyKraj} onChange={e => {
+                                        setCalyKraj(e.target.checked);
+                                        if (e.target.checked) setLokalizacja('Polska');
+                                        else setLokalizacja('');
+                                    }} className="sr-only" />
+                                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                                        calyKraj ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300 group-hover:border-blue-400'
+                                    }`}>
+                                        {calyKraj && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                    </div>
+                                </div>
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                    🌐 Działam na terenie całego kraju
+                                </span>
+                            </label>
                         </div>
                     </div>
 

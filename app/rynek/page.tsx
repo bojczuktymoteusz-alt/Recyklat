@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import {
-    Recycle, MapPin, Search, Package, ChevronDown, TrendingUp, Clock
+    Recycle, MapPin, Search, Package, ChevronDown, TrendingUp, Clock, Globe
 } from 'lucide-react';
 
 // --- TYPY ---
@@ -42,6 +42,13 @@ const getIcon = (material: string) => {
     return '📦';
 };
 
+const WSZYSTKIE_WOJEWODZTWA = [
+    "dolnośląskie", "kujawsko-pomorskie", "lubelskie", "lubuskie",
+    "łódzkie", "małopolskie", "mazowieckie", "opolskie",
+    "podkarpackie", "podlaskie", "pomorskie", "śląskie",
+    "świętokrzyskie", "warmińsko-mazurskie", "wielkopolskie", "zachodniopomorskie"
+];
+
 const getPlaceholder = (typ_oferty?: string) =>
     typ_oferty === 'kupie'
         ? '/placeholder-kupie.jpg'
@@ -59,25 +66,51 @@ export default function Rynek() {
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
     const [sortowanie, setSortowanie] = useState<'popularne' | 'najnowsze'>('popularne');
     const kategorieRef = React.useRef<HTMLDivElement>(null);
+    // Filtr województw (multi-select)
+    const [wybrane, setWybrane] = useState<string[]>([]);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-    const fetchOferty = async (query = "") => {
+    // Zamknij dropdown po kliknięciu poza nim
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const fetchOferty = async (query = "", wojFilter: string[] = wybrane) => {
         try {
             setLoading(true);
-            let result;
+            let q = supabase
+                .from('oferty')
+                .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia');
 
             if (query.trim() !== "") {
-                result = await supabase.rpc('szukaj_ogloszen', { search_query: query });
-            } else {
-                result = await supabase
-                    .from('oferty')
-                    .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia')
-                    .order('wyswietlenia', { ascending: false, nullsFirst: false })
-                    .order('created_at', { ascending: false });
+                // Pełnotekstowe szukanie przez RPC
+                const rpcResult = await supabase.rpc('szukaj_ogloszen', { search_query: query });
+                if (rpcResult.error) throw rpcResult.error;
+                if (rpcResult.data) setWszystkieOferty(rpcResult.data);
+                setLoading(false);
+                return;
             }
+
+            // Filtr województw: pokazuj oferty z wybranych województw ORAZ ogólnopolskie ('Polska')
+            if (wojFilter.length > 0) {
+                // Budujemy warunek OR: woj1 OR woj2 OR ... OR 'polska'
+                const warunki = [...wojFilter.map(w => `wojewodztwo.ilike.%${w}%`), 'lokalizacja.ilike.%Polska%'].join(',');
+                q = q.or(warunki);
+            }
+
+            const result = await q
+                .order('wyswietlenia', { ascending: false, nullsFirst: false })
+                .order('created_at', { ascending: false });
 
             if (result.error) throw result.error;
             if (result.data) setWszystkieOferty(result.data);
-
         } catch (error: any) {
             console.error("Błąd pobierania:", error.message);
         } finally {
@@ -87,11 +120,11 @@ export default function Rynek() {
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
-            fetchOferty(szukanaFraza);
+            fetchOferty(szukanaFraza, wybrane);
             setVisibleCount(ITEMS_PER_PAGE);
         }, 300);
         return () => clearTimeout(delayDebounceFn);
-    }, [szukanaFraza]);
+    }, [szukanaFraza, wybrane]);
 
     useEffect(() => {
         let wynik = [...wszystkieOferty];
@@ -184,15 +217,79 @@ export default function Rynek() {
                         </div>
                     </div>
 
-                    <div className="relative max-w-2xl mx-auto group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Wyszukaj materiał lub lokalizację..."
-                            value={szukanaFraza}
-                            onChange={(e) => setSzukanaFraza(e.target.value)}
-                            className="w-full pl-12 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 outline-none text-lg"
-                        />
+                    <div className="relative max-w-2xl mx-auto flex gap-2">
+                        {/* POLE TEKSTOWE */}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Wyszukaj materiał..."
+                                value={szukanaFraza}
+                                onChange={(e) => setSzukanaFraza(e.target.value)}
+                                className="w-full pl-11 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 outline-none"
+                            />
+                        </div>
+                        {/* DROPDOWN WOJEWÓDZTW */}
+                        <div ref={dropdownRef} className="relative shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setDropdownOpen(o => !o)}
+                                className={`h-full flex items-center gap-2 px-4 py-4 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
+                                    wybrane.length > 0
+                                        ? 'bg-blue-600 border-blue-500 text-white'
+                                        : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-blue-500'
+                                }`}
+                            >
+                                <Globe size={15} />
+                                <span className="hidden sm:inline">
+                                    {wybrane.length === 0 ? 'Cała Polska' : wybrane.length === 1 ? wybrane[0] : `${wybrane.length} woj.`}
+                                </span>
+                                <ChevronDown size={13} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {dropdownOpen && (
+                                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+                                    <div className="p-2">
+                                        {/* Cała Polska */}
+                                        <button
+                                            onClick={() => { setWybrane([]); setDropdownOpen(false); }}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-xs uppercase tracking-widest transition-all ${
+                                                wybrane.length === 0 ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <Globe size={14} /> Cała Polska
+                                        </button>
+                                        <div className="border-t border-slate-100 my-2" />
+                                        {/* Lista województw */}
+                                        {WSZYSTKIE_WOJEWODZTWA.map(woj => {
+                                            const zaznaczone = wybrane.includes(woj);
+                                            return (
+                                                <button
+                                                    key={woj}
+                                                    onClick={() => {
+                                                        setWybrane(prev =>
+                                                            zaznaczone
+                                                                ? prev.filter(w => w !== woj)
+                                                                : [...prev, woj]
+                                                        );
+                                                    }}
+                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-bold text-xs capitalize transition-all ${
+                                                        zaznaczone ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
+                                                    }`}
+                                                >
+                                                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
+                                                        zaznaczone ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
+                                                    }`}>
+                                                        {zaznaczone && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                                    </div>
+                                                    {woj}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -297,8 +394,13 @@ export default function Rynek() {
                                             {o.title || o.material}
                                         </h3>
                                         <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase mb-4">
-                                            <MapPin size={12} className="text-blue-500" />
-                                            {o.lokalizacja} {o.wojewodztwo ? `| ${o.wojewodztwo}` : ''}
+                                            {o.lokalizacja?.toLowerCase().includes('polska') ? (
+                                                <><Globe size={12} className="text-blue-500" />
+                                                <span className="text-blue-500 font-black">Cały Kraj</span></>
+                                            ) : (
+                                                <><MapPin size={12} className="text-blue-500" />
+                                                {o.lokalizacja} {o.wojewodztwo ? `| ${o.wojewodztwo}` : ''}</>
+                                            )}
                                         </div>
                                         <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-4">
                                             <div>
