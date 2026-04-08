@@ -106,6 +106,15 @@ export default function ZarzadzajOferta() {
             })
             .eq('manage_token', token);
 
+        // Zapisz do tabeli weryfikacje
+        await supabase.from('weryfikacje').insert([{
+            oferta_id: oferta.id,
+            firma: nazwaFirmy.trim(),
+            nip: nip.trim(),
+            telefon: telefonWer.trim() || oferta.telefon,
+            wants_co2: chceCO2,
+        }]);
+
         setWysylanie(false);
         if (error) {
             setBladWeryfikacji('Błąd zapisu. Spróbuj ponownie.');
@@ -252,7 +261,7 @@ export default function ZarzadzajOferta() {
                             className={`flex-1 flex items-center justify-center gap-3 p-4 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 border-2 text-sm ${!jestSprzedane
                                 ? 'bg-white border-red-200 text-red-600 hover:bg-red-50'
                                 : 'bg-red-500 border-red-500 text-white hover:bg-red-600'
-                            }`}
+                                }`}
                         >
                             <Trash2 size={20} /> Usuń Ofertę Trwale
                         </button>
@@ -327,11 +336,10 @@ export default function ZarzadzajOferta() {
                                         onChange={e => setChceCO2(e.target.checked)}
                                         className="sr-only"
                                     />
-                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                                        chceCO2
-                                            ? 'bg-amber-400 border-amber-400'
-                                            : 'bg-white border-amber-300 group-hover:border-amber-400'
-                                    }`}>
+                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${chceCO2
+                                        ? 'bg-amber-400 border-amber-400'
+                                        : 'bg-white border-amber-300 group-hover:border-amber-400'
+                                        }`}>
                                         {chceCO2 && (
                                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                                                 <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
