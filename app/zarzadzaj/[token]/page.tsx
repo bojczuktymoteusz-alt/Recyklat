@@ -87,6 +87,12 @@ export default function ZarzadzajOferta() {
         else router.push('/rynek');
     }
 
+    const formatujTelWer = (value: string) => {
+        const cyfry = value.replace(/\D/g, '').substring(0, 9);
+        const grupy = cyfry.match(/(\d{0,3})(\d{0,3})(\d{0,3})/);
+        return !grupy ? '' : [grupy[1], grupy[2], grupy[3]].filter(Boolean).join(' ').trim();
+    };
+
     async function wyslijWeryfikacje(e: React.FormEvent) {
         e.preventDefault();
         if (!nip.trim() || !nazwaFirmy.trim()) {
@@ -96,27 +102,27 @@ export default function ZarzadzajOferta() {
         setWysylanie(true);
         setBladWeryfikacji('');
 
-        const { error } = await supabase
-            .from('oferty')
-            .update({
-                nip: nip.trim(),
-                firma: nazwaFirmy.trim(),
-                telefon: telefonWer.trim() || oferta.telefon,
-                wants_co2_report: chceCO2,
-            })
-            .eq('manage_token', token);
+        const telefonDoZapisu = telefonWer.trim() || oferta.telefon;
 
-        // Zapisz do tabeli weryfikacje
-        await supabase.from('weryfikacje').insert([{
+        // 1. Zapisz do tabeli weryfikacje (główna tabela zgłoszeń)
+        const { error: errWer } = await supabase.from('weryfikacje').insert([{
             oferta_id: oferta.id,
             firma: nazwaFirmy.trim(),
             nip: nip.trim(),
-            telefon: telefonWer.trim() || oferta.telefon,
+            telefon: telefonDoZapisu,
             wants_co2: chceCO2,
         }]);
 
+        // 2. Opcjonalnie zaktualizuj ofertę (ignorujemy błąd jeśli kolumna nie istnieje)
+        await supabase
+            .from('oferty')
+            .update({ nip: nip.trim(), firma: nazwaFirmy.trim() })
+            .eq('manage_token', token);
+
         setWysylanie(false);
-        if (error) {
+
+        if (errWer) {
+            console.error('Błąd weryfikacji:', errWer.message);
             setBladWeryfikacji('Błąd zapisu. Spróbuj ponownie.');
         } else {
             setWyslanoPomyslnie(true);
@@ -319,8 +325,8 @@ export default function ZarzadzajOferta() {
                                     type="tel"
                                     placeholder="np. 600 123 456"
                                     value={telefonWer}
-                                    onChange={e => setTelefonWer(e.target.value)}
-                                    className="w-full p-4 bg-white border-2 border-amber-100 focus:border-amber-400 rounded-2xl outline-none font-bold text-slate-900 transition-colors"
+                                    onChange={e => setTelefonWer(formatujTelWer(e.target.value))}
+                                    className="w-full p-4 bg-white border-2 border-amber-100 focus:border-amber-400 rounded-2xl outline-none font-bold text-slate-900 transition-colors tracking-widest"
                                 />
                             </div>
                             {bladWeryfikacji && (
