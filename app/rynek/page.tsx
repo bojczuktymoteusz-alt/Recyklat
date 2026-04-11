@@ -238,10 +238,14 @@ export default function Rynek() {
                                 <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
                                     <div className="p-2">
                                         <button onClick={() => { setWybrane([]); setDropdownOpen(false); }}
-                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-xs uppercase tracking-widest transition-all ${wybrane.length === 0 ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
-                                            <Globe size={14} /> Cała Polska
+                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-xs uppercase tracking-widest transition-all ${wybrane.length === 0 ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
+                                        <Globe size={14} /> Cała Polska
                                         </button>
-                                        <div className="border-t border-slate-100 my-2" />
+                                        <button onClick={() => { setWybrane(['Europa / Zagranica']); setDropdownOpen(false); }}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-xs uppercase tracking-widest transition-all ${wybrane.includes('Europa / Zagranica') ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
+                                        <Plane size={14} /> Europa / Zagranica
+                                    </button>
+                                    <div className="border-t border-slate-100 my-2" />
                                         {WSZYSTKIE_WOJEWODZTWA.map(woj => {
                                             const zaznaczone = wybrane.includes(woj);
                                             return (

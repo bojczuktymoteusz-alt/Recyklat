@@ -101,18 +101,24 @@ function parsujTekst(tekst: string): ParsedData {
     if (t.includes('cała polska') || t.includes('caly kraj') || t.includes('ogólnopolski') || t.includes('cały kraj')) {
         wynik.lokalizacja = 'Cała Polska';
         wynik.wojewodztwo = '';
-    } else if (t.includes('europa') || t.includes('zagranica') || t.includes('eksport')) {
-        wynik.lokalizacja = 'Europa / Zagranica';
-        wynik.wojewodztwo = '';
     } else {
+        // 1. NAJPIERW szukaj polskich województw — mają NAJWYżSZY priorytet
         for (const woj of WOJEWODZTWA) {
             if (t.includes(woj)) { wynik.wojewodztwo = woj; break; }
         }
+        // 2. Szukaj miast polskich
         for (const [miasto, woj] of Object.entries(MIASTA_WOJEWODZTWA)) {
             if (t.includes(miasto)) {
                 wynik.lokalizacja = miasto.charAt(0).toUpperCase() + miasto.slice(1);
                 if (!wynik.wojewodztwo) wynik.wojewodztwo = woj;
                 break;
+            }
+        }
+        // 3. Zagranicy szukamy TYLKO jeśli nie znaleziono żadnego polskiego województwa/miasta
+        if (!wynik.wojewodztwo && !wynik.lokalizacja) {
+            if (t.includes('europa') || t.includes('zagranica') || t.includes('eksport')) {
+                wynik.lokalizacja = 'Europa / Zagranica';
+                wynik.wojewodztwo = '';
             }
         }
     }
