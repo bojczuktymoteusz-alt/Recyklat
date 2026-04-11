@@ -1,10 +1,10 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
-import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X } from 'lucide-react';
+import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, ChevronDown } from 'lucide-react';
 import { sanitizeText } from '@/lib/security';
 
 const KATEGORIE_Z_BDO = [
@@ -29,164 +29,36 @@ const WOJEWODZTWA = [
     "świętokrzyskie", "warmińsko-mazurskie", "wielkopolskie", "zachodniopomorskie"
 ];
 
-// Baza miast -> województwo
 const MIASTA_WOJEWODZTWA: Record<string, string> = {
     warszawa: "mazowieckie", kraków: "małopolskie", łódź: "łódzkie", wrocław: "dolnośląskie",
     poznań: "wielkopolskie", gdańsk: "pomorskie", szczecin: "zachodniopomorskie", bydgoszcz: "kujawsko-pomorskie",
     lublin: "lubelskie", katowice: "śląskie", białystok: "podlaskie", gdynia: "pomorskie",
     częstochowa: "śląskie", radom: "mazowieckie", sosnowiec: "śląskie", toruń: "kujawsko-pomorskie",
     kielce: "świętokrzyskie", rzeszów: "podkarpackie", gliwice: "śląskie", zabrze: "śląskie",
-    olsztyn: "warmińsko-mazurskie", bielsko: "śląskie", bytom: "śląskie", zielona: "lubuskie",
-    rybnik: "śląskie", ruda: "śląskie", opole: "opolskie", tychy: "śląskie",
-    gorzów: "lubuskie", dąbrowa: "śląskie", płock: "mazowieckie", elbląg: "warmińsko-mazurskie",
-    wałbrzych: "dolnośląskie", włocławek: "kujawsko-pomorskie", tarnów: "małopolskie", chorzów: "śląskie",
-    koszalin: "zachodniopomorskie", kalisz: "wielkopolskie", legnica: "dolnośląskie", grudziądz: "kujawsko-pomorskie",
-    słupsk: "pomorskie", jaworzno: "śląskie", jastrzębie: "śląskie", nowy: "małopolskie",
-    siedlce: "mazowieckie", mysłowice: "śląskie", konin: "wielkopolskie", piotrków: "łódzkie",
-    inowrocław: "kujawsko-pomorskie", lubin: "dolnośląskie", ostrów: "wielkopolskie", suwałki: "podlaskie",
-    gniezno: "wielkopolskie", ostrowiec: "świętokrzyskie", siemianowice: "śląskie", stargard: "zachodniopomorskie",
-    głogów: "dolnośląskie", pabianice: "łódzkie", wodzisław: "śląskie", zgierz: "łódzkie",
-    mielec: "podkarpackie", ełk: "warmińsko-mazurskie", żory: "śląskie", tarnowskie: "śląskie",
-    kutno: "łódzkie", łęczyca: "łódzkie", skierniewice: "łódzkie", sieradz: "łódzkie",
-    zduńska: "łódzkie", bełchatów: "łódzkie", tomaszów: "łódzkie", radomsko: "łódzkie",
-    włoszczowa: "świętokrzyskie", jędrziejów: "świętokrzyskie", starachowice: "świętokrzyskie",
-    chełm: "lubelskie", zamość: "lubelskie", biała: "podlaskie",
-    gorlice: "małopolskie", oświęcim: "małopolskie",
-    przemyśl: "podkarpackie", krośno: "podkarpackie", stalowa: "podkarpackie",
-    giżycko: "warmińsko-mazurskie",
-    kościerzyna: "pomorskie", starogard: "pomorskie", tczew: "pomorskie",
-    leszno: "wielkopolskie", piła: "wielkopolskie",
-    zgorzelec: "dolnośląskie", bolestławiec: "dolnośląskie", jelenia: "dolnośląskie",
-    szczecinek: "zachodniopomorskie", kołobrzeg: "zachodniopomorskie",
-    międzyrzecz: "lubuskie", nowa: "lubuskie",
-    nysa: "opolskie", krapkowice: "opolskie",
-    świę: "kujawsko-pomorskie",
+    olsztyn: "warmińsko-mazurskie", rybnik: "śląskie", opole: "opolskie", tychy: "śląskie",
+    gorzów: "lubuskie", płock: "mazowieckie", elbląg: "warmińsko-mazurskie", wałbrzych: "dolnośląskie",
+    włocławek: "kujawsko-pomorskie", tarnów: "małopolskie", koszalin: "zachodniopomorskie",
+    kalisz: "wielkopolskie", legnica: "dolnośląskie", grudziądz: "kujawsko-pomorskie",
+    słupsk: "pomorskie", inowrocław: "kujawsko-pomorskie", lubin: "dolnośląskie", suwałki: "podlaskie",
+    gniezno: "wielkopolskie", mielec: "podkarpackie", ełk: "warmińsko-mazurskie",
 };
 
-// ============================================================
-// SŁOWNIK SŁÓW KLUCZOWYCH -> KATEGORIA
-// Kolejność ma znaczenie — bardziej szczegółowe reguły najpierw
-// ============================================================
 const SLOWA_KLUCZE: { slowa: string[], kategoria: string }[] = [
-
-    // --- FOLIE (przed ogólnym LDPE żeby nie wpaść w tworzywa) ---
-    { slowa: [
-        "folia stretch", "stretch", "strecz",
-        "termokurczka", "folia termokurczliwa",
-        "siana", "biała siana", "agrofolia",
-        "pryzma", "tunelówka", "rękaw foliowy", "półrękaw",
-        "folia bezbarwna", "folia czysta", "folia ldpe", "lldpe",
-        "ldpe",
-    ], kategoria: "Folia bezbarwna (LDPE / LLDPE)" },
-
-    { slowa: [
-        "folia kolorowa", "folia rolnicza", "folia czarna",
-        "folia zielona", "folia niebieska", "folia mieszana",
-    ], kategoria: "Folia kolorowa / rolnicza" },
-
-    // --- OPAKOWANIA PET ---
-    { slowa: [
-        "opakowania pet", "butelka pet", "butelki pet",
-        "płatka pet", "płatki pet", "płatek pet",
-        "flake pet", "recyklat pet",
-        "pet ", "butelka", "butelki",
-    ], kategoria: "Opakowania PET" },
-
-    // --- TWORZYWA TECHNICZNE (ABS, PC, PS, PA) ---
-    { slowa: [
-        "abs", "polistyren",
-        "pc ", "poliwęglan",
-        "pa ", "poliamid", "nylon",
-        "pom", "delrin",
-        "tworzywa techniczne", "tworzywo techniczne",
-    ], kategoria: "Tworzywa techniczne (ABS, PC, PS, PA)" },
-
-    // --- TWORZYWA TWARDE + OPAKOWANIA + SLANG ---
-    { slowa: [
-        // skróty materiałowe
-        "hdpe", "pe-hd", "polietylen",
-        "pp ", "polipropylen", "polipropyl",
-        "pvc", "ps ",
-        // opakowania
-        "kanister", "kanistr",
-        "skrzynki", "skrzynka",
-        "bigbag", "big bag", "big-bag",
-        "ibc", "mauzer", "mauser",
-        "kisteny", "skrzyniopalety",
-        "beczki", "beczka",
-        "worki pp",
-        // slang branżowy
-        "płyn",
-        "chemia",
-        // tworzywa ogólnie
-        "regranulat", "regranu",
-        "przemiał",
-        "aglo", "aglomerat",
-        "agregat",
-        "recyklat",
-        "zrzutki",
-        "zlepiency", "zlepieńce",
-        "żury", "żur",
-        "ażury",
-        "wlewek", "wlewki",
-        "płatki", "płatek",
-        "kruszywo tworzyw",
-        "compound",
-        "słomka",
-        "tworzywa twarde", "tworzywo twarde",
-    ], kategoria: "Tworzywa twarde (PP, PE, HDPE)" },
-
-    // --- ELEKTROODPADY ---
-    { slowa: [
-        "kabel", "kable", "przewody",
-        "elektroodpad", "weee",
-        "złom elektroniczny", "elektronika",
-    ], kategoria: "Elektroodpady (WEEE) / Kable" },
-
-    // --- MAKULATURA ---
-    { slowa: [
-        "karton", "kartony", "tektura",
-        "makulatura", "opakowania papier", "papier kartonowy",
-    ], kategoria: "Makulatura (Karton / Tektura)" },
-
-    { slowa: [
-        "gazeta", "gazety", "papier mix",
-        "makulatura mix", "papier gazetowy",
-    ], kategoria: "Makulatura (Gazety / Mix)" },
-
-    // --- METALE ---
-    { slowa: [
-        "złom stalowy", "złom czarny", "żeliwo", "żeliwny",
-        "stal ", "stalowy", "nierdzewka", "inox",
-        "stal nierdzewna",
-    ], kategoria: "Złom stalowy i żeliwny" },
-
-    { slowa: [
-        "miedź", "cu ", "copper",
-        "aluminium", "alu ", "puszki", "puszka",
-        "złom kolorowy", "mosiądz",
-        "cynk", "ołów",
-    ], kategoria: "Złom kolorowy (Al, Cu, inne)" },
-
-    // --- DREWNO ---
-    { slowa: [
-        "drewno", "paleta", "palety",
-        "europaleta", "europalety", "epal",
-    ], kategoria: "Drewno i Palety" },
-
-    // --- AGRO / NAWOZY ---
-    { slowa: [
-        "wapno", "wapno nawozowe",
-        "kreda", "kreda nawozowa",
-        "nawozowe", "nawozy", "nawóz",
-        "agro", "pożniwne", "pod uprawę",
-        "saletra", "mocznik",
-    ], kategoria: "Inne" },
+    { slowa: ["folia stretch", "stretch", "agrofolia", "folia bezbarwna", "folia ldpe", "ldpe"], kategoria: "Folia bezbarwna (LDPE / LLDPE)" },
+    { slowa: ["folia kolorowa", "folia rolnicza", "folia czarna"], kategoria: "Folia kolorowa / rolnicza" },
+    { slowa: ["opakowania pet", "butelka pet", "butelki pet", "płatki pet", "pet "], kategoria: "Opakowania PET" },
+    { slowa: ["abs", "polistyren", "poliwęglan", "poliamid", "tworzywa techniczne"], kategoria: "Tworzywa techniczne (ABS, PC, PS, PA)" },
+    { slowa: ["hdpe", "polietylen", "pp ", "polipropylen", "kanister", "bigbag", "regranulat", "przemiał", "aglomerat", "recyklat", "tworzywa twarde"], kategoria: "Tworzywa twarde (PP, PE, HDPE)" },
+    { slowa: ["kabel", "kable", "elektroodpad", "weee", "elektronika"], kategoria: "Elektroodpady (WEEE) / Kable" },
+    { slowa: ["karton", "kartony", "tektura", "makulatura"], kategoria: "Makulatura (Karton / Tektura)" },
+    { slowa: ["gazeta", "gazety", "papier mix"], kategoria: "Makulatura (Gazety / Mix)" },
+    { slowa: ["złom stalowy", "złom czarny", "żeliwo", "stal "], kategoria: "Złom stalowy i żeliwny" },
+    { slowa: ["miedź", "aluminium", "alu ", "puszki", "złom kolorowy", "mosiądz"], kategoria: "Złom kolorowy (Al, Cu, inne)" },
+    { slowa: ["drewno", "paleta", "palety", "europaleta"], kategoria: "Drewno i Palety" },
 ];
 
-// Słowa określające typ oferty (kupię / sprzedam)
-const SLOWA_SPRZEDAM = ["sprzedam", "oferuję", "oferuje", "oddam", "dostępne", "dostepne", "sprzedaż", "sprzedaz", "do sprzedania", "skupię"];
-const SLOWA_KUPIE = ["kupię", "kupie", "szukam", "potrzebuję", "potrzebuje", "przyjmę", "przyjme", "skupiamy", "skupiam", "zapraszam do sprzedaży"];
+const SLOWA_SPRZEDAM = ["sprzedam", "oferuję", "oferuje", "oddam", "dostępne", "sprzedaż"];
+const SLOWA_KUPIE = ["kupię", "kupie", "szukam", "potrzebuję", "przyjmę", "skupiamy"];
 
 const formatujTelefon = (value: string) => {
     const tylkoCyfry = value.replace(/\D/g, '').substring(0, 9);
@@ -194,147 +66,57 @@ const formatujTelefon = (value: string) => {
     return !grupy ? "" : [grupy[1], grupy[2], grupy[3]].filter(Boolean).join(' ').trim();
 };
 
-// ============================================================
-// SEO GENERATOR
-// ============================================================
-
 function slugify(text: string): string {
-    // Mapa WSZYSTKICH polskich znaków (wielkie i małe) -> odpowiedniki ASCII
     const mapa: Record<string, string> = {
-        // Małe
         'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
-        // Wielkie (zamieniane przed toLowerCase, więc obsługujemy również wejścia z wielkich liter)
         'Ą': 'a', 'Ć': 'c', 'Ę': 'e', 'Ł': 'l', 'Ń': 'n', 'Ó': 'o', 'Ś': 's', 'Ź': 'z', 'Ż': 'z',
     };
-    return text
-        // 1. Podmień polskie znaki PRZED toLowerCase (inaczej wielkie gubią się)
-        .split('')
-        .map(c => mapa[c] ?? c)
-        .join('')
-        // 2. Zamień na małe litery
-        .toLowerCase()
-        // 3. Zamień &, /, \, (, ), +, % i inne znaki specjalne na spacje
-        .replace(/[&\/\\#,+()$~%.'";:*?<>{}@!^|`=\[\]]/g, ' ')
-        // 4. Zostaw tylko a-z, 0-9, spacje i myślniki
-        .replace(/[^a-z0-9\s-]/g, '')
-        // 5. Przytnij białe znaki z brzegów
-        .trim()
-        // 6. Zamień spacje na myślniki
-        .replace(/\s+/g, '-')
-        // 7. Usuń podwojone myślniki
-        .replace(/-+/g, '-')
-        // 8. Usuń myślniki na początku i końcu
-        .replace(/^-+|-+$/g, '')
-        // 9. Ogranicz długość
-        .substring(0, 80);
+    return text.split('').map(c => mapa[c] ?? c).join('').toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-').substring(0, 80);
 }
 
-function generateSEODescription(data: {
-    typOferty: string;
-    title?: string;
-    material?: string;
-    waga?: string;
-    lokalizacja?: string;
-    wojewodztwo?: string;
-    telefon?: string;
-    cena?: string;
-}): string {
-    const typ = data.typOferty === 'kupie' ? 'Kupię' : 'Sprzedam';
-    const surowiec = data.material || data.title || 'surowiec wtórny';
-    const miejsce = [data.lokalizacja, data.wojewodztwo ? `woj. ${data.wojewodztwo}` : ''].filter(Boolean).join(', ');
-
-    const linie: string[] = [];
-
-    linie.push(`${typ}: ${data.title || surowiec}${miejsce ? ` — ${miejsce}` : ''}`);
-    linie.push('');
-    linie.push('Parametry oferty:');
-    if (data.waga) linie.push(`• Dostępna ilość: ${data.waga} ton`);
-    if (data.cena) linie.push(`• Cena: ${data.cena} zł/t netto`);
-    if (miejsce) linie.push(`• Lokalizacja: ${miejsce}`);
-    if (data.telefon) linie.push(`• Kontakt: ${data.telefon}`);
-    linie.push('');
-    // Jeśli kategoria to 'Inne', użyj tytułu zamiast nazwy kategorii
-    const nazwaDoOpisu = (data.material === 'Inne' || !data.material) ? (data.title || 'surowiec wtórny') : surowiec;
-    linie.push(`Zapraszamy do zapoznania się z ofertą na ${nazwaDoOpisu}. Zapewniamy profesjonalną obsługę i wysoką jakość towaru. Oferujemy surowce wtórne w atrakcyjnych cenach netto. Działamy w branży recyklingu i gospodarki odpadami.`);
-    linie.push('');
-    linie.push('Slowa kluczowe: recykling, surowce wtórne, odpady, cena netto, ' + surowiec.toLowerCase());
-
-    return linie.join('\n');
-}
-
-// ============================================================
-// PARSER MAGIC BOX
-// ============================================================
 interface ParsedData {
-    telefon?: string;
-    waga?: string;
-    cena?: string;
-    lokalizacja?: string;
-    wojewodztwo?: string;
-    material?: string;
-    autoBdo?: string;
-    title?: string;
-    typOferty?: 'sprzedam' | 'kupie';
+    telefon?: string; waga?: string; cena?: string;
+    lokalizacja?: string; wojewodztwo?: string; material?: string;
+    autoBdo?: string; title?: string; typOferty?: 'sprzedam' | 'kupie';
 }
 
 function parsujTekst(tekst: string): ParsedData {
     const wynik: ParsedData = {};
     const t = tekst.toLowerCase();
-
-    // --- TELEFON: 9 cyfr, opcjonalnie z odstępami/myślnikami ---
     const telMatch = tekst.match(/(\+48\s?)?(\d[\s\-]?){8}\d/);
     if (telMatch) {
         const cyfry = telMatch[0].replace(/\D/g, '').slice(-9);
-        if (cyfry.length === 9) {
-            wynik.telefon = cyfry.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
-        }
+        if (cyfry.length === 9) wynik.telefon = cyfry.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
     }
-
-    // --- WAGA: liczba + jednostka t/ton/kg ---
     const wagaMatch = tekst.match(/(\d+[\.,]?\d*)\s*(t\b|ton\b|tony\b|kg\b)/i);
     if (wagaMatch) {
         let val = parseFloat(wagaMatch[1].replace(',', '.'));
         if (wagaMatch[2].toLowerCase() === 'kg') val = val / 1000;
         wynik.waga = val.toString();
     }
-
-    // --- CENA: liczba + zł ---
     const cenaMatch = tekst.match(/(\d+[\.,]?\d*)\s*(zł|pln|zl)/i);
-    if (cenaMatch) {
-        wynik['cena' as keyof ParsedData] = parseFloat(cenaMatch[1].replace(',', '.')) as any;
-    }
+    if (cenaMatch) wynik['cena' as keyof ParsedData] = parseFloat(cenaMatch[1].replace(',', '.')) as any;
 
-    // --- KOD BDO: 6 cyfr ---
-    const bdoMatch = tekst.match(/\b(15|16|17|18|19|20)\s?\d{2}\s?\d{2}\b/);
-    if (bdoMatch) {
-        wynik.autoBdo = bdoMatch[0].replace(/\s/g, ' ').trim();
-    }
-
-    // --- WOJEWÓDZTWO wprost z tekstu ("woj. łódzkie", "województwo śląskie", "okolice X") ---
-    const LISTA_WOJEW = [
-        "dolnośląskie", "kujawsko-pomorskie", "lubelskie", "lubuskie",
-        "łódzkie", "małopolskie", "mazowieckie", "opolskie",
-        "podkarpackie", "podlaskie", "pomorskie", "śląskie",
-        "świętokrzyskie", "warmińsko-mazurskie", "wielkopolskie", "zachodniopomorskie"
-    ];
-    for (const woj of LISTA_WOJEW) {
-        if (t.includes(woj)) {
-            wynik.wojewodztwo = woj;
-            break;
+    if (t.includes('cała polska') || t.includes('caly kraj') || t.includes('ogólnopolski') || t.includes('cały kraj')) {
+        wynik.lokalizacja = 'Cała Polska';
+        wynik.wojewodztwo = '';
+    } else if (t.includes('europa') || t.includes('zagranica') || t.includes('eksport')) {
+        wynik.lokalizacja = 'Europa / Zagranica';
+        wynik.wojewodztwo = '';
+    } else {
+        for (const woj of WOJEWODZTWA) {
+            if (t.includes(woj)) { wynik.wojewodztwo = woj; break; }
+        }
+        for (const [miasto, woj] of Object.entries(MIASTA_WOJEWODZTWA)) {
+            if (t.includes(miasto)) {
+                wynik.lokalizacja = miasto.charAt(0).toUpperCase() + miasto.slice(1);
+                if (!wynik.wojewodztwo) wynik.wojewodztwo = woj;
+                break;
+            }
         }
     }
 
-    // --- MIASTO ---
-    for (const [miasto, woj] of Object.entries(MIASTA_WOJEWODZTWA)) {
-        if (t.includes(miasto)) {
-            wynik.lokalizacja = miasto.charAt(0).toUpperCase() + miasto.slice(1);
-            // Ustaw województwo tylko jeśli nie wykryto go wcześniej bezpośrednio z tekstu
-            if (!wynik.wojewodztwo) wynik.wojewodztwo = woj;
-            break;
-        }
-    }
-
-    // --- KATEGORIA ---
     for (const { slowa, kategoria } of SLOWA_KLUCZE) {
         if (slowa.some(s => t.includes(s))) {
             wynik.material = kategoria;
@@ -343,20 +125,26 @@ function parsujTekst(tekst: string): ParsedData {
             break;
         }
     }
-
-    // --- TYP OFERTY: kupie / sprzedam ---
-    // Kupie ma wyższy priorytet (sprawdzamy pierwsze)
-    if (SLOWA_KUPIE.some(s => t.includes(s))) {
-        wynik.typOferty = 'kupie';
-    } else if (SLOWA_SPRZEDAM.some(s => t.includes(s))) {
-        wynik.typOferty = 'sprzedam';
-    }
-
-    // --- TYTUŁ: pierwsza linia tekstu (max 60 znaków) ---
+    if (SLOWA_KUPIE.some(s => t.includes(s))) wynik.typOferty = 'kupie';
+    else if (SLOWA_SPRZEDAM.some(s => t.includes(s))) wynik.typOferty = 'sprzedam';
     const pierwszaLinia = tekst.split('\n')[0].trim().substring(0, 60);
     if (pierwszaLinia.length > 5) wynik.title = pierwszaLinia;
-
     return wynik;
+}
+
+// Specjalne opcje zasięgu (nie-województwa)
+const SPECIAL_OPTIONS = [
+    { value: 'Cała Polska', label: '🌐 Cała Polska' },
+    { value: 'Europa / Zagranica', label: '✈️ Europa / Zagranica' },
+];
+
+// Oblicz etykietę przycisku dropdownu
+function getLokalizacjaLabel(lokalizacja: string, wybrane: string[]): string {
+    if (lokalizacja === 'Cała Polska') return '🌐 Cała Polska';
+    if (lokalizacja === 'Europa / Zagranica') return '✈️ Europa / Zagranica';
+    if (wybrane.length === 1) return wybrane[0];
+    if (wybrane.length > 1) return `${wybrane.length} województw`;
+    return 'Wybierz lokalizację...';
 }
 
 export default function DodajOferteKrok1() {
@@ -367,121 +155,121 @@ export default function DodajOferteKrok1() {
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
     const [lokalizacja, setLokalizacja] = useState('');
-    const [calyKraj, setCalyKraj] = useState(false);
-    const [wojewodztwo, setWojewodztwo] = useState('');
+    // wybrane = lista zaznaczonych województw (może być wiele)
+    const [wybrane, setWybrane] = useState<string[]>([]);
     const [telefon, setTelefon] = useState('');
     const [autoBdo, setAutoBdo] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [hp, setHp] = useState("");
-
-    // Magic Box
     const [magicTekst, setMagicTekst] = useState('');
     const [magicOtwarte, setMagicOtwarte] = useState(false);
     const [podswietlone, setPodswietlone] = useState<Set<string>>(new Set());
     const [seoOpis, setSeoOpis] = useState('');
-    const [seoSlug, setSeoSlug] = useState('');
     const [seoWygenerowane, setSeoWygenerowane] = useState(false);
     const [tooltipVisible, setTooltipVisible] = useState<string | null>(null);
-    const zdjęcieRef = React.useRef<HTMLDivElement>(null);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const zdjęcieRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => { setIsCheckingAuth(false); }, []);
 
+    // Zamknij dropdown po kliknięciu poza
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    // Oblicz efektywną lokalizację do zapisu
+    const getEfektywnaLokalizacja = () => {
+        if (lokalizacja === 'Cała Polska' || lokalizacja === 'Europa / Zagranica') return lokalizacja;
+        return wybrane.length > 0 ? wybrane[0] : '';
+    };
+
+    const getEfektywneWojewodztwo = () => {
+        if (lokalizacja === 'Cała Polska' || lokalizacja === 'Europa / Zagranica') return '';
+        return wybrane.join(', ');
+    };
+
+    const handleSpecjalny = (val: string) => {
+        setLokalizacja(val);
+        setWybrane([]);
+        setDropdownOpen(false);
+    };
+
+    const handleToggleWojewodztwo = (woj: string) => {
+        setLokalizacja('');
+        setWybrane(prev =>
+            prev.includes(woj) ? prev.filter(w => w !== woj) : [...prev, woj]
+        );
+    };
+
     const handleAnalizuj = () => {
         if (!magicTekst.trim()) return;
-
         const parsed = parsujTekst(magicTekst);
         const nowePodswietlone = new Set<string>();
 
         const zastap = (pole: string, nowaWartosc: string, obecnaWartosc: string, setter: (v: string) => void) => {
             if (!nowaWartosc) return;
             if (obecnaWartosc && obecnaWartosc !== nowaWartosc) {
-                if (!confirm(`Pole "${pole}" zawiera już wartość "${obecnaWartosc}". Zastąpić wartością z tekstu: "${nowaWartosc}"?`)) return;
+                if (!confirm(`Pole "${pole}" zawiera już wartość "${obecnaWartosc}". Zastąpić?`)) return;
             }
             setter(nowaWartosc);
         };
 
         if (parsed.telefon) zastap('Telefon', parsed.telefon, telefon, setTelefon);
         else nowePodswietlone.add('telefon');
-
         if (parsed.waga) zastap('Waga', parsed.waga, waga, setWaga);
         else nowePodswietlone.add('waga');
 
-        if (parsed.lokalizacja) zastap('Miejscowość', parsed.lokalizacja, lokalizacja, setLokalizacja);
-        else nowePodswietlone.add('lokalizacja');
-
-        if (parsed.wojewodztwo) zastap('Województwo', parsed.wojewodztwo, wojewodztwo, setWojewodztwo);
-        else nowePodswietlone.add('wojewodztwo');
+        if (parsed.lokalizacja === 'Cała Polska' || parsed.lokalizacja === 'Europa / Zagranica') {
+            setLokalizacja(parsed.lokalizacja);
+            setWybrane([]);
+        } else {
+            if (parsed.wojewodztwo) {
+                setWybrane([parsed.wojewodztwo]);
+                setLokalizacja('');
+            } else nowePodswietlone.add('lokalizacja');
+        }
 
         if (parsed.material) {
             zastap('Kategoria', parsed.material, material, setMaterial);
             const found = KATEGORIE_Z_BDO.find(k => k.nazwa === parsed.material);
             if (found) setAutoBdo(found.bdo);
-        } else {
-            nowePodswietlone.add('material');
-        }
-
+        } else nowePodswietlone.add('material');
         if (parsed.title) zastap('Tytuł', parsed.title, title, setTitle);
         else nowePodswietlone.add('title');
-
-        // --- TYP OFERTY: ustaw przełącznik automatycznie ---
-        if (parsed.typOferty) {
-            setTypOferty(parsed.typOferty);
-        }
-
+        if (parsed.typOferty) setTypOferty(parsed.typOferty);
+        if (parsed.cena) localStorage.setItem('magic_cena', String(parsed.cena));
         setPodswietlone(nowePodswietlone);
 
-        // Zapisz cenę do localStorage żeby parametry.tsx mogły ją odebrać
-        if (parsed.cena) {
-            localStorage.setItem('magic_cena', String(parsed.cena));
-        }
-
-        // --- GENERUJ SEO ---
         const nowyTytul = parsed.title || title;
         const nowyMaterial = parsed.material || material;
-        const nowaLokalizacja = parsed.lokalizacja || lokalizacja;
-        const noweWojewodztwo = parsed.wojewodztwo || wojewodztwo;
-
-        const opis = generateSEODescription({
-            typOferty,
-            title: nowyTytul,
-            material: nowyMaterial,
-            waga: parsed.waga || waga,
-            lokalizacja: nowaLokalizacja,
-            wojewodztwo: noweWojewodztwo,
-            telefon: parsed.telefon || telefon,
-            cena: parsed.cena,
-        });
+        const nowaLok = parsed.lokalizacja || getEfektywnaLokalizacja();
+        const opis = `${typOferty === 'kupie' ? 'Kupię' : 'Sprzedam'}: ${nowyTytul || nowyMaterial}${nowaLok ? ` — ${nowaLok}` : ''}\n\nKategoria: ${nowyMaterial}\nWaga: ${parsed.waga || waga} ton\nLokalizacja: ${nowaLok}`;
         setSeoOpis(opis);
         localStorage.setItem('magic_opis', opis);
-
-        const slugBase = [nowyTytul || nowyMaterial, nowaLokalizacja].filter(Boolean).join(' ');
-        if (slugBase) {
-            const wygenerowanySlug = slugify(slugBase);
-            setSeoSlug(wygenerowanySlug);
-            localStorage.setItem('magic_slug', wygenerowanySlug);
-        }
-
+        const slugBase = [nowyTytul || nowyMaterial, nowaLok].filter(Boolean).join(' ');
+        if (slugBase) localStorage.setItem('magic_slug', slugify(slugBase));
         setSeoWygenerowane(true);
     };
 
-    const getFieldClass = (pole: string, base = '') => {
-        if (podswietlone.has(pole)) {
-            return `${base} border-yellow-400 bg-yellow-50`;
-        }
-        return `${base} bg-slate-50 border-slate-200`;
-    };
+    const getFieldClass = (pole: string, base = '') =>
+        podswietlone.has(pole) ? `${base} border-yellow-400 bg-yellow-50` : `${base} bg-slate-50 border-slate-200`;
 
     const uploadImage = async (fileToUpload: File) => {
         const options = { maxSizeMB: 1, maxWidthOrHeight: 1080, useWebWorker: true };
-        try {
-            const compressedFile = await imageCompression(fileToUpload, options);
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.png`;
-            await supabase.storage.from('oferty-zdjecia').upload(fileName, compressedFile);
-            const { data } = supabase.storage.from('oferty-zdjecia').getPublicUrl(fileName);
-            return data.publicUrl;
-        } catch (error) { throw error; }
+        const compressedFile = await imageCompression(fileToUpload, options);
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.png`;
+        await supabase.storage.from('oferty-zdjecia').upload(fileName, compressedFile);
+        const { data } = supabase.storage.from('oferty-zdjecia').getPublicUrl(fileName);
+        return data.publicUrl;
     };
 
     const handleDalej = async (e: React.FormEvent) => {
@@ -496,12 +284,12 @@ export default function DodajOferteKrok1() {
                 title: sanitizeText(title),
                 material: sanitizeText(material),
                 waga: parseFloat(waga) || 0,
-                lokalizacja: sanitizeText(lokalizacja),
-                wojewodztwo: sanitizeText(wojewodztwo),
+                lokalizacja: sanitizeText(getEfektywnaLokalizacja()),
+                wojewodztwo: sanitizeText(getEfektywneWojewodztwo()),
                 telefon: sanitizeText(telefon),
                 zdjecie_url: uploadedImageUrl,
                 bdo_code: autoBdo,
-                magic_box_used: seoWygenerowane, // true jeśli użytkownik kliknął "Analizuj"
+                magic_box_used: seoWygenerowane,
             };
             localStorage.setItem('temp_offer', JSON.stringify(step1Data));
             router.push('/dodaj/parametry');
@@ -513,16 +301,17 @@ export default function DodajOferteKrok1() {
 
     if (isCheckingAuth) return null;
 
+    const lokalizacjaLabel = getLokalizacjaLabel(lokalizacja, wybrane);
+    const maWybor = lokalizacja !== '' || wybrane.length > 0;
+
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 sm:p-8 font-sans">
             <div className="max-w-xl w-full bg-white rounded-[40px] shadow-2xl p-8 md:p-12 border-4 border-white">
 
-                {/* Honeypot */}
                 <div style={{ opacity: 0, position: 'absolute', top: 0, left: 0, height: 0, width: 0, zIndex: -1 }}>
-                    <input type="text" value={hp} onChange={(e) => setHp(e.target.value)} tabIndex={-1} autoComplete="off" />
+                    <input type="text" value={hp} onChange={e => setHp(e.target.value)} tabIndex={-1} autoComplete="off" />
                 </div>
 
-                {/* NAGŁÓWEK */}
                 <div className="flex justify-between items-start mb-8">
                     <div>
                         <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">Dodaj Ofertę</h1>
@@ -534,14 +323,11 @@ export default function DodajOferteKrok1() {
                     <Link href="/rynek" className="bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 p-3 rounded-2xl transition-all font-black text-[10px] uppercase">Anuluj</Link>
                 </div>
 
-                {/* ===================== MAGIC BOX ===================== */}
+                {/* MAGIC BOX */}
                 <div className="mb-8">
                     {!magicOtwarte ? (
-                        <button
-                            type="button"
-                            onClick={() => setMagicOtwarte(true)}
-                            className="w-full flex items-center justify-center gap-3 border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-600 py-4 rounded-[24px] font-black text-sm uppercase tracking-widest transition-all group"
-                        >
+                        <button type="button" onClick={() => setMagicOtwarte(true)}
+                            className="w-full flex items-center justify-center gap-3 border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-600 py-4 rounded-[24px] font-black text-sm uppercase tracking-widest transition-all group">
                             <Sparkles size={18} className="group-hover:animate-spin" />
                             Wklej tekst z ogłoszenia — wypełnię pola automatycznie
                         </button>
@@ -550,57 +336,33 @@ export default function DodajOferteKrok1() {
                             <div className="bg-blue-600 px-5 py-3 flex items-center justify-between">
                                 <div className="flex items-center gap-2 text-white">
                                     <Sparkles size={16} />
-                                    <span className="font-black text-xs uppercase tracking-widest">Magic Box — Wklej tekst ogłoszenia</span>
+                                    <span className="font-black text-xs uppercase tracking-widest">Magic Box</span>
                                 </div>
-                                <button type="button" onClick={() => {
-                                    setMagicOtwarte(false);
-                                    setTimeout(() => {
-                                        zdjęcieRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                    }, 100);
-                                }} className="text-blue-200 hover:text-white transition-colors">
-                                    <X size={18} />
-                                </button>
+                                <button type="button" onClick={() => setMagicOtwarte(false)} className="text-blue-200 hover:text-white"><X size={18} /></button>
                             </div>
                             <div className="p-4 bg-white">
                                 <textarea
                                     className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-[20px] font-medium text-slate-700 min-h-[120px] resize-none outline-none focus:border-blue-400 transition-colors text-sm placeholder:text-slate-400"
-                                    placeholder={"Wklej tutaj tekst z Facebooka, WhatsApp lub maila - my uzupełnimy go za Ciebie. Lub wypełnij formularz poniżej.\n\nnp: Sprzedam folię LDPE, ok. 5 ton, cena 800 zł/t, odbiór własny. Tel: 600 100 300. Lokalizacja: Radom"}
-                                    value={magicTekst}
-                                    onChange={(e) => setMagicTekst(e.target.value)}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={handleAnalizuj}
-                                    disabled={!magicTekst.trim()}
-                                    className="mt-3 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white py-3 rounded-[18px] font-black text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95"
-                                >
+                                    placeholder="Wklej tutaj tekst z Facebooka, WhatsApp lub maila..."
+                                    value={magicTekst} onChange={e => setMagicTekst(e.target.value)} />
+                                <button type="button" onClick={handleAnalizuj} disabled={!magicTekst.trim()}
+                                    className="mt-3 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white py-3 rounded-[18px] font-black text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95">
                                     <Sparkles size={16} /> Analizuj i wypełnij pola
                                 </button>
-
-                                {/* WYNIKI SEO */}
                                 {seoWygenerowane && (
-                                    <div className="mt-4 space-y-3">
-                                        {/* OPIS SEO */}
-                                        <div className="border-2 border-emerald-400 rounded-[20px] overflow-hidden">
-                                            <div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-200">
-                                                <Sparkles size={14} className="text-emerald-600" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Wygenerowaliśmy opis zoptymalizowany pod Google</span>
-                                            </div>
-                                            <textarea
-                                                className="w-full p-4 bg-white text-slate-700 font-medium text-sm min-h-[180px] resize-none outline-none focus:bg-emerald-50 transition-colors"
-                                                value={seoOpis}
-                                                onChange={(e) => setSeoOpis(e.target.value)}
-                                            />
+                                    <div className="mt-4 border-2 border-emerald-400 rounded-[20px] overflow-hidden">
+                                        <div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-200">
+                                            <Sparkles size={14} className="text-emerald-600" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Opis SEO wygenerowany</span>
                                         </div>
-
-                                        {/* Slug zapisany w tle do localStorage — pokazujemy po dodaniu */}
+                                        <textarea className="w-full p-4 bg-white text-slate-700 font-medium text-sm min-h-[120px] resize-none outline-none"
+                                            value={seoOpis} onChange={e => setSeoOpis(e.target.value)} />
                                     </div>
                                 )}
                             </div>
                         </div>
                     )}
                 </div>
-                {/* =================== KONIEC MAGIC BOX =================== */}
 
                 <form onSubmit={handleDalej} className="space-y-6">
                     {/* TYP OFERTY */}
@@ -621,36 +383,25 @@ export default function DodajOferteKrok1() {
                             Tytuł ogłoszenia <span className="text-red-500">*</span>
                             {podswietlone.has('title') && (
                                 <span className="relative flex items-center">
-                                    <button type="button" onMouseEnter={() => setTooltipVisible('title')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'title' ? null : 'title')} className="text-yellow-500 hover:text-yellow-600">
-                                        <Lightbulb size={14} />
-                                    </button>
-                                    {tooltipVisible === 'title' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
+                                    <button type="button" onMouseEnter={() => setTooltipVisible('title')} onMouseLeave={() => setTooltipVisible(null)} className="text-yellow-500"><Lightbulb size={14} /></button>
+                                    {tooltipVisible === 'title' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl">Uzupełnij tytuł — ogłoszenia z tytułem mają 2x większą oglądalność!</span>}
                                 </span>
                             )}
                         </label>
                         <input required type="text" placeholder="np. Regranulat LDPE jasny"
                             className={`w-full p-5 border-2 rounded-[24px] font-bold focus:border-blue-500 outline-none transition-colors ${getFieldClass('title')}`}
-                            value={title} onChange={(e) => { setTitle(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('title'); return n; }); }}
-                        />
+                            value={title} onChange={e => { setTitle(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('title'); return n; }); }} />
                     </div>
 
                     {/* KATEGORIA */}
                     <div>
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">
                             Kategoria surowca <span className="text-red-500">*</span>
-                            {podswietlone.has('material') && (
-                                <span className="relative flex items-center">
-                                    <button type="button" onMouseEnter={() => setTooltipVisible('material')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'material' ? null : 'material')} className="text-yellow-500 hover:text-yellow-600">
-                                        <Lightbulb size={14} />
-                                    </button>
-                                    {tooltipVisible === 'material' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
-                                </span>
-                            )}
                         </label>
                         <select required
                             className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('material')}`}
                             value={material}
-                            onChange={(e) => {
+                            onChange={e => {
                                 setMaterial(e.target.value);
                                 const found = KATEGORIE_Z_BDO.find(k => k.nazwa === e.target.value);
                                 if (found) setAutoBdo(found.bdo);
@@ -664,108 +415,137 @@ export default function DodajOferteKrok1() {
                     {/* WAGA I TELEFON */}
                     <div className="grid grid-cols-2 gap-6">
                         <div>
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
-                                Waga (tony)
-                                {podswietlone.has('waga') && (
-                                    <span className="relative flex items-center">
-                                        <button type="button" onMouseEnter={() => setTooltipVisible('waga')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'waga' ? null : 'waga')} className="text-yellow-500 hover:text-yellow-600">
-                                            <Lightbulb size={14} />
-                                        </button>
-                                        {tooltipVisible === 'waga' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
-                                    </span>
-                                )}
-                            </label>
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">Waga (tony)</label>
                             <input type="number" placeholder="np. 24"
                                 className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('waga')}`}
-                                value={waga}
-                                onChange={(e) => { setWaga(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('waga'); return n; }); }}
-                            />
+                                value={waga} onChange={e => { setWaga(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('waga'); return n; }); }} />
                         </div>
                         <div>
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">
                                 Telefon <span className="text-red-500">*</span>
-                                {podswietlone.has('telefon') && (
-                                    <span className="relative flex items-center">
-                                        <button type="button" onMouseEnter={() => setTooltipVisible('telefon')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'telefon' ? null : 'telefon')} className="text-yellow-500 hover:text-yellow-600">
-                                            <Lightbulb size={14} />
-                                        </button>
-                                        {tooltipVisible === 'telefon' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
-                                    </span>
-                                )}
                             </label>
                             <input required type="tel" placeholder="000 000 000"
                                 className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('telefon')}`}
-                                value={telefon}
-                                onChange={(e) => { setTelefon(formatujTelefon(e.target.value)); setPodswietlone(p => { const n = new Set(p); n.delete('telefon'); return n; }); }}
-                            />
+                                value={telefon} onChange={e => { setTelefon(formatujTelefon(e.target.value)); setPodswietlone(p => { const n = new Set(p); n.delete('telefon'); return n; }); }} />
                         </div>
                     </div>
 
-                    {/* WOJEWÓDZTWO I LOKALIZACJA */}
-                    <div className="grid grid-cols-2 gap-6">
-                        <div>
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
-                                Województwo <span className="text-red-500">*</span>
-                                {podswietlone.has('wojewodztwo') && (
-                                    <span className="relative flex items-center">
-                                        <button type="button" onMouseEnter={() => setTooltipVisible('woj')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'woj' ? null : 'woj')} className="text-yellow-500 hover:text-yellow-600">
-                                            <Lightbulb size={14} />
+                    {/* ============ LOKALIZACJA — jedna wysuwajka ============ */}
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-2 block">
+                            Lokalizacja <span className="text-red-500">*</span>
+                        </label>
+
+                        <div ref={dropdownRef} className="relative">
+                            {/* Przycisk otwierający */}
+                            <button
+                                type="button"
+                                onClick={() => setDropdownOpen(o => !o)}
+                                className={`w-full flex items-center justify-between p-5 border-2 rounded-[24px] font-bold outline-none transition-colors text-left ${
+                                    maWybor
+                                        ? 'border-blue-500 bg-blue-50 text-slate-900'
+                                        : 'border-slate-200 bg-slate-50 text-slate-400'
+                                }`}
+                            >
+                                <span className="flex items-center gap-2">
+                                    <Globe size={18} className={maWybor ? 'text-blue-600' : 'text-slate-300'} />
+                                    {lokalizacjaLabel}
+                                </span>
+                                <ChevronDown size={18} className={`transition-transform text-slate-400 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Dropdown */}
+                            {dropdownOpen && (
+                                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-[24px] shadow-2xl border border-slate-100 z-50 overflow-hidden">
+                                    <div className="p-3 max-h-80 overflow-y-auto">
+
+                                        {/* Opcje specjalne */}
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 mb-2">Zasięg ogólny</p>
+                                        {SPECIAL_OPTIONS.map(opt => (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => handleSpecjalny(opt.value)}
+                                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-sm transition-all mb-1 ${
+                                                    lokalizacja === opt.value
+                                                        ? 'bg-slate-900 text-white'
+                                                        : 'text-slate-700 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+
+                                        <div className="border-t border-slate-100 my-3" />
+
+                                        {/* Województwa */}
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 mb-2">Województwa (możesz wybrać kilka)</p>
+                                        {WOJEWODZTWA.map(woj => {
+                                            const zaznaczone = wybrane.includes(woj);
+                                            return (
+                                                <button
+                                                    key={woj}
+                                                    type="button"
+                                                    onClick={() => handleToggleWojewodztwo(woj)}
+                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-bold text-sm capitalize transition-all ${
+                                                        zaznaczone ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
+                                                    }`}
+                                                >
+                                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                                                        zaznaczone ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
+                                                    }`}>
+                                                        {zaznaczone && (
+                                                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                                                <path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                    {woj}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Stopka dropdownu — zamknij */}
+                                    <div className="border-t border-slate-100 p-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDropdownOpen(false)}
+                                            className="w-full bg-slate-900 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all"
+                                        >
+                                            Zatwierdź
                                         </button>
-                                        {tooltipVisible === 'woj' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
-                                    </span>
-                                )}
-                            </label>
-                            <select required
-                                className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('wojewodztwo')}`}
-                                value={wojewodztwo}
-                                onChange={(e) => { setWojewodztwo(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('wojewodztwo'); return n; }); }}>
-                                <option value="">Wybierz...</option>
-                                {WOJEWODZTWA.map(w => <option key={w} value={w}>{w}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
-                                Miejscowość
-                                {podswietlone.has('lokalizacja') && (
-                                    <span className="relative flex items-center">
-                                        <button type="button" onMouseEnter={() => setTooltipVisible('lok')} onMouseLeave={() => setTooltipVisible(null)} onClick={() => setTooltipVisible(tooltipVisible === 'lok' ? null : 'lok')} className="text-yellow-500 hover:text-yellow-600">
-                                            <Lightbulb size={14} />
-                                        </button>
-                                        {tooltipVisible === 'lok' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl leading-relaxed">Uzupełnij to pole – ogłoszenia z kompletem danych mają 2x większą oglądalność!</span>}
-                                    </span>
-                                )}
-                            </label>
-                            <input type="text" placeholder="np. Warszawa"
-                                disabled={calyKraj}
-                                className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${calyKraj ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : getFieldClass('lokalizacja')}`}
-                                value={calyKraj ? 'Polska' : lokalizacja}
-                                onChange={(e) => { setLokalizacja(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('lokalizacja'); return n; }); }}
-                            />
-                            {/* CHECKBOX CAŁY KRAJ */}
-                            <label className="flex items-center gap-2 mt-2 ml-2 cursor-pointer group">
-                                <div className="relative shrink-0">
-                                    <input type="checkbox" checked={calyKraj} onChange={e => {
-                                        setCalyKraj(e.target.checked);
-                                        if (e.target.checked) setLokalizacja('Polska');
-                                        else setLokalizacja('');
-                                    }} className="sr-only" />
-                                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                                        calyKraj ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300 group-hover:border-blue-400'
-                                    }`}>
-                                        {calyKraj && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                                     </div>
                                 </div>
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                    🌐 Działam na terenie całego kraju
-                                </span>
-                            </label>
+                            )}
                         </div>
+
+                        {/* Tagi zaznaczonych województw */}
+                        {wybrane.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                                {wybrane.map(woj => (
+                                    <span
+                                        key={woj}
+                                        className="flex items-center gap-1.5 bg-blue-100 text-blue-700 text-xs font-black px-3 py-1.5 rounded-xl"
+                                    >
+                                        {woj}
+                                        <button
+                                            type="button"
+                                            onClick={() => setWybrane(prev => prev.filter(w => w !== woj))}
+                                            className="hover:text-red-500 transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* ZDJĘCIE */}
                     <div ref={zdjęcieRef} onClick={() => document.getElementById('fileInput')?.click()}
-                        className="border-4 border-dashed rounded-[40px] p-10 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors mt-4">
-                        <input type="file" id="fileInput" className="hidden" accept="image/*" onChange={(e) => {
+                        className="border-4 border-dashed rounded-[40px] p-10 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                        <input type="file" id="fileInput" className="hidden" accept="image/*" onChange={e => {
                             const f = e.target.files?.[0];
                             if (f) { setFile(f); setPreview(URL.createObjectURL(f)); }
                         }} />
@@ -782,7 +562,6 @@ export default function DodajOferteKrok1() {
                         )}
                     </div>
 
-                    {/* PRZYCISK */}
                     <button type="submit" disabled={loading}
                         className="w-full bg-slate-900 text-white py-8 rounded-[32px] font-black text-2xl uppercase flex items-center justify-center gap-4 hover:bg-blue-600 transition-all shadow-xl active:scale-95 disabled:opacity-50 mt-4">
                         {loading ? 'Przetwarzanie...' : 'Dalej do parametrów'}

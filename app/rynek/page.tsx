@@ -1,16 +1,17 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import {
-    Recycle, MapPin, Search, Package, ChevronDown, TrendingUp, Clock, Globe
+    Recycle, MapPin, Search, Package, ChevronDown, TrendingUp, Clock, Globe, Plane
 } from 'lucide-react';
+import { getFallbackTitle, formatCena } from '@/lib/ofertaUtils';
 
-// --- TYPY ---
 interface Oferta {
     id: number;
     title?: string;
     material: string;
+    form?: string;
     waga: number;
     cena: number;
     lokalizacja: string;
@@ -50,9 +51,19 @@ const WSZYSTKIE_WOJEWODZTWA = [
 ];
 
 const getPlaceholder = (typ_oferty?: string) =>
-    typ_oferty === 'kupie'
-        ? '/placeholder-kupie.jpg'
-        : '/placeholder-sprzedam.jpg';
+    typ_oferty === 'kupie' ? '/placeholder-kupie.jpg' : '/placeholder-sprzedam.jpg';
+
+const isOgolnopolska = (lok?: string) => {
+    if (!lok) return false;
+    const l = lok.toLowerCase();
+    return l.includes('polska') || l.includes('cała');
+};
+
+const isZagranica = (lok?: string) => {
+    if (!lok) return false;
+    const l = lok.toLowerCase();
+    return l.includes('europa') || l.includes('zagranica');
+};
 
 const ITEMS_PER_PAGE = 12;
 
@@ -66,17 +77,13 @@ export default function Rynek() {
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
     const [sortowanie, setSortowanie] = useState<'popularne' | 'najnowsze'>('popularne');
     const kategorieRef = React.useRef<HTMLDivElement>(null);
-    // Filtr województw (multi-select)
     const [wybrane, setWybrane] = useState<string[]>([]);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-    // Zamknij dropdown po kliknięciu poza nim
     useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-                setDropdownOpen(false);
-            }
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -85,23 +92,28 @@ export default function Rynek() {
     const fetchOferty = async (query = "", wojFilter: string[] = wybrane) => {
         try {
             setLoading(true);
-            let q = supabase
-                .from('oferty')
-                .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia');
 
             if (query.trim() !== "") {
-                // Pełnotekstowe szukanie przez RPC
                 const rpcResult = await supabase.rpc('szukaj_ogloszen', { search_query: query });
                 if (rpcResult.error) throw rpcResult.error;
-                if (rpcResult.data) setWszystkieOferty(rpcResult.data);
+                const aktywne = (rpcResult.data || []).filter((o: Oferta) => !o.status || o.status === 'aktywna');
+                setWszystkieOferty(aktywne);
                 setLoading(false);
                 return;
             }
 
-            // Filtr województw: pokazuj oferty z wybranych województw ORAZ ogólnopolskie ('Polska')
+            let q = supabase
+                .from('oferty')
+                .select('id, title, material, form, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia')
+                .eq('status', 'aktywna');
+
             if (wojFilter.length > 0) {
-                // Budujemy warunek OR: woj1 OR woj2 OR ... OR 'polska'
-                const warunki = [...wojFilter.map(w => `wojewodztwo.ilike.%${w}%`), 'lokalizacja.ilike.%Polska%'].join(',');
+                const warunki = [
+                    ...wojFilter.map(w => `wojewodztwo.ilike.%${w}%`),
+                    'lokalizacja.ilike.%Polska%',
+                    'lokalizacja.ilike.%Europa%',
+                    'lokalizacja.ilike.%Zagranica%',
+                ].join(',');
                 q = q.or(warunki);
             }
 
@@ -110,7 +122,7 @@ export default function Rynek() {
                 .order('created_at', { ascending: false });
 
             if (result.error) throw result.error;
-            if (result.data) setWszystkieOferty(result.data);
+            setWszystkieOferty(result.data || []);
         } catch (error: any) {
             console.error("Błąd pobierania:", error.message);
         } finally {
@@ -119,11 +131,11 @@ export default function Rynek() {
     };
 
     useEffect(() => {
-        const delayDebounceFn = setTimeout(() => {
+        const delay = setTimeout(() => {
             fetchOferty(szukanaFraza, wybrane);
             setVisibleCount(ITEMS_PER_PAGE);
         }, 300);
-        return () => clearTimeout(delayDebounceFn);
+        return () => clearTimeout(delay);
     }, [szukanaFraza, wybrane]);
 
     useEffect(() => {
@@ -152,21 +164,15 @@ export default function Rynek() {
         }
 
         wynik.sort((a, b) => {
-            const aSprzedane = a.status === 'sprzedane';
-            const bSprzedane = b.status === 'sprzedane';
-            if (aSprzedane && !bSprzedane) return 1;
-            if (!aSprzedane && bSprzedane) return -1;
-
             if (sortowanie === 'popularne') {
-                const aViews = a.wyswietlenia ?? 0;
-                const bViews = b.wyswietlenia ?? 0;
-                if (bViews !== aViews) return bViews - aViews;
+                const diff = (b.wyswietlenia ?? 0) - (a.wyswietlenia ?? 0);
+                if (diff !== 0) return diff;
             }
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
 
         setFiltrowaneOferty(wynik);
-    }, [aktywnyFiltr, typFiltr, wszystkieOferty, sortowanie]);
+    }, [aktywnyFiltr, typFiltr, wszystkieOferty, sortowanie, szukanaFraza]);
 
     const wyswietlaneOferty = filtrowaneOferty.slice(0, visibleCount);
 
@@ -196,91 +202,54 @@ export default function Rynek() {
                 </div>
             </div>
 
-            {/* NAGŁÓWEK I WYSZUKIWARKA */}
+            {/* NAGŁÓWEK */}
             <div className="bg-slate-900 py-12 px-4 shadow-xl">
                 <div className="max-w-4xl mx-auto text-center">
                     <h1 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight">
                         Rynek Odpadów <span className="text-blue-500">Recyklingowych</span>
                     </h1>
-
                     <div className="flex justify-center mb-8">
                         <div className="bg-slate-800 p-1 rounded-2xl flex gap-1">
-                            {(['wszystkie', 'sprzedam', 'kupie'] as const).map((t) => (
-                                <button
-                                    key={t}
-                                    onClick={() => setTypFiltr(t)}
-                                    className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${typFiltr === t ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                                >
+                            {(['wszystkie', 'sprzedam', 'kupie'] as const).map(t => (
+                                <button key={t} onClick={() => setTypFiltr(t)}
+                                    className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${typFiltr === t ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
                                     {t === 'wszystkie' ? 'Wszystkie' : t === 'sprzedam' ? 'Sprzedam' : 'Kupię'}
                                 </button>
                             ))}
                         </div>
                     </div>
-
                     <div className="relative max-w-2xl mx-auto flex gap-2">
-                        {/* POLE TEKSTOWE */}
                         <div className="relative flex-1">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Wyszukaj materiał..."
-                                value={szukanaFraza}
-                                onChange={(e) => setSzukanaFraza(e.target.value)}
-                                className="w-full pl-11 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 outline-none"
-                            />
+                            <input type="text" placeholder="Wyszukaj materiał..."
+                                value={szukanaFraza} onChange={e => setSzukanaFraza(e.target.value)}
+                                className="w-full pl-11 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 outline-none" />
                         </div>
-                        {/* DROPDOWN WOJEWÓDZTW */}
                         <div ref={dropdownRef} className="relative shrink-0">
-                            <button
-                                type="button"
-                                onClick={() => setDropdownOpen(o => !o)}
-                                className={`h-full flex items-center gap-2 px-4 py-4 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
-                                    wybrane.length > 0
-                                        ? 'bg-blue-600 border-blue-500 text-white'
-                                        : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-blue-500'
-                                }`}
-                            >
+                            <button type="button" onClick={() => setDropdownOpen(o => !o)}
+                                className={`h-full flex items-center gap-2 px-4 py-4 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${wybrane.length > 0 ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-blue-500'}`}>
                                 <Globe size={15} />
                                 <span className="hidden sm:inline">
                                     {wybrane.length === 0 ? 'Cała Polska' : wybrane.length === 1 ? wybrane[0] : `${wybrane.length} woj.`}
                                 </span>
                                 <ChevronDown size={13} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
-
                             {dropdownOpen && (
                                 <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
                                     <div className="p-2">
-                                        {/* Cała Polska */}
-                                        <button
-                                            onClick={() => { setWybrane([]); setDropdownOpen(false); }}
-                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-xs uppercase tracking-widest transition-all ${
-                                                wybrane.length === 0 ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                                            }`}
-                                        >
+                                        <button onClick={() => { setWybrane([]); setDropdownOpen(false); }}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-xs uppercase tracking-widest transition-all ${wybrane.length === 0 ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
                                             <Globe size={14} /> Cała Polska
                                         </button>
                                         <div className="border-t border-slate-100 my-2" />
-                                        {/* Lista województw */}
                                         {WSZYSTKIE_WOJEWODZTWA.map(woj => {
                                             const zaznaczone = wybrane.includes(woj);
                                             return (
-                                                <button
-                                                    key={woj}
-                                                    onClick={() => {
-                                                        setWybrane(prev =>
-                                                            zaznaczone
-                                                                ? prev.filter(w => w !== woj)
-                                                                : [...prev, woj]
-                                                        );
-                                                    }}
-                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-bold text-xs capitalize transition-all ${
-                                                        zaznaczone ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
-                                                    }`}
-                                                >
-                                                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
-                                                        zaznaczone ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
-                                                    }`}>
-                                                        {zaznaczone && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                                <button key={woj}
+                                                    onClick={() => setWybrane(prev => zaznaczone ? prev.filter(w => w !== woj) : [...prev, woj])}
+                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-bold text-xs capitalize transition-all ${zaznaczone ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}>
+                                                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${zaznaczone ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                                                        {zaznaczone && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                                     </div>
                                                     {woj}
                                                 </button>
@@ -298,30 +267,13 @@ export default function Rynek() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
                 <div className="relative">
                     <div ref={kategorieRef} className="bg-white p-2 rounded-3xl shadow-xl border border-gray-100 flex gap-2 overflow-x-auto no-scrollbar">
-                        {KATEGORIE.map((kat) => (
-                            <button
-                                key={kat.nazwa}
-                                onClick={() => setAktywnyFiltr(kat.nazwa)}
-                                className={`flex-shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-                            >
+                        {KATEGORIE.map(kat => (
+                            <button key={kat.nazwa} onClick={() => setAktywnyFiltr(kat.nazwa)}
+                                className={`flex-shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}>
                                 <span>{kat.ikona}</span>{kat.nazwa}
                             </button>
                         ))}
-                        <div className="flex-shrink-0 w-8" />
                     </div>
-                    <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white via-white/80 to-transparent rounded-r-3xl sm:hidden" />
-                    <button
-                        onClick={() => kategorieRef.current?.scrollBy({ left: 200, behavior: 'smooth' })}
-                        aria-label="Przewiń kategorie"
-                        className="sm:hidden absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-slate-400 active:scale-90 transition-transform z-10 p-2"
-                    >
-                        <div className="w-1 h-1 rounded-full bg-slate-300"></div>
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                        <div className="w-2 h-2 rounded-full bg-slate-500"></div>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600 ml-0.5">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </button>
                 </div>
             </div>
 
@@ -332,18 +284,12 @@ export default function Rynek() {
                         {filtrowaneOferty.length} ofert
                     </p>
                     <div className="bg-white border border-slate-200 p-1 rounded-2xl flex gap-1 shadow-sm">
-                        <button
-                            onClick={() => { setSortowanie('popularne'); setVisibleCount(ITEMS_PER_PAGE); }}
-                            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${sortowanie === 'popularne' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-700'}`}
-                        >
-                            <TrendingUp size={13} /> Popularne
-                        </button>
-                        <button
-                            onClick={() => { setSortowanie('najnowsze'); setVisibleCount(ITEMS_PER_PAGE); }}
-                            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${sortowanie === 'najnowsze' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-700'}`}
-                        >
-                            <Clock size={13} /> Najnowsze
-                        </button>
+                        {(['popularne', 'najnowsze'] as const).map(s => (
+                            <button key={s} onClick={() => { setSortowanie(s); setVisibleCount(ITEMS_PER_PAGE); }}
+                                className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${sortowanie === s ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-700'}`}>
+                                {s === 'popularne' ? <><TrendingUp size={13} /> Popularne</> : <><Clock size={13} /> Najnowsze</>}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -355,78 +301,72 @@ export default function Rynek() {
                 ) : wyswietlaneOferty.length > 0 ? (
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {wyswietlaneOferty.map((o) => (
-                                <Link
-                                    href={`/rynek/${o.id}`}
-                                    key={o.id}
-                                    className="group bg-white rounded-[32px] ring-1 ring-slate-100 shadow-sm hover:shadow-2xl hover:ring-blue-100 transition-all duration-300 flex flex-col overflow-hidden isolate active:scale-[0.98]"
-                                >
-                                    <div className="aspect-[4/3] relative overflow-hidden bg-slate-50 isolate">
-                                        <img
-                                            src={o.zdjecie_url || getPlaceholder(o.typ_oferty)}
-                                            alt={o.title || o.material}
-                                            loading="lazy"
-                                            onError={(e) => {
-                                                const img = e.currentTarget;
-                                                if (!img.src.includes('/placeholder-')) {
-                                                    img.src = getPlaceholder(o.typ_oferty);
-                                                }
-                                            }}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                                        />
-                                        <div className="absolute top-4 left-4 right-4 flex justify-between">
-                                            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
-                                                {o.typ_oferty === 'kupie' ? 'Kupię' : 'Sprzedam'}
-                                            </div>
-                                            <div className="bg-white/90 backdrop-blur px-2 py-1.5 rounded-xl text-lg shadow-md">
-                                                {getIcon(o.material)}
-                                            </div>
-                                        </div>
-                                        {o.status === 'sprzedane' && (
-                                            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center isolate">
-                                                <span className="bg-red-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase -rotate-12 border-2 border-white">Zakończone</span>
-                                            </div>
-                                        )}
-                                    </div>
+                            {wyswietlaneOferty.map(o => {
+                                const displayTitle = getFallbackTitle({ title: o.title, material: o.material, form: o.form, lokalizacja: o.lokalizacja });
+                                const ogolnopolska = isOgolnopolska(o.lokalizacja);
+                                const zagranica = isZagranica(o.lokalizacja);
 
-                                    <div className="p-6 flex flex-col flex-1">
-                                        <h3 className="text-lg font-black text-slate-900 line-clamp-2 uppercase mb-2 group-hover:text-blue-600 transition-colors">
-                                            {o.title || o.material}
-                                        </h3>
-                                        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase mb-4">
-                                            {o.lokalizacja?.toLowerCase().includes('polska') ? (
-                                                <><Globe size={12} className="text-blue-500" />
-                                                <span className="text-blue-500 font-black">Cały Kraj</span></>
-                                            ) : (
-                                                <><MapPin size={12} className="text-blue-500" />
-                                                {o.lokalizacja} {o.wojewodztwo ? `| ${o.wojewodztwo}` : ''}</>
-                                            )}
-                                        </div>
-                                        <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-4">
-                                            <div>
-                                                <span className="text-[10px] font-black text-slate-400 uppercase">Cena ok.</span>
-                                                <div className="text-xl font-black text-slate-900 tracking-tighter">
-                                                    {o.cena > 0 ? `${o.cena} zł/t` : 'Negocjacja'}
+                                return (
+                                    <Link href={`/rynek/${o.id}`} key={o.id}
+                                        className="group bg-white rounded-[32px] ring-1 ring-slate-100 shadow-sm hover:shadow-2xl hover:ring-blue-100 transition-all duration-300 flex flex-col overflow-hidden isolate active:scale-[0.98]">
+                                        <div className="aspect-[4/3] relative overflow-hidden bg-slate-50 isolate">
+                                            <img
+                                                src={o.zdjecie_url || getPlaceholder(o.typ_oferty)}
+                                                alt={displayTitle}
+                                                loading="lazy"
+                                                onError={e => {
+                                                    const img = e.currentTarget;
+                                                    if (!img.src.includes('/placeholder-')) img.src = getPlaceholder(o.typ_oferty);
+                                                }}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                                            />
+                                            <div className="absolute top-4 left-4 right-4 flex justify-between">
+                                                <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
+                                                    {o.typ_oferty === 'kupie' ? 'Kupię' : 'Sprzedam'}
                                                 </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase">Ilość</span>
-                                                <div className="text-sm font-black text-blue-600">
-                                                    {o.waga > 0 ? `${o.waga} t` : '∞'}
+                                                <div className="bg-white/90 backdrop-blur px-2 py-1.5 rounded-xl text-lg shadow-md">
+                                                    {getIcon(o.material)}
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </Link>
-                            ))}
+
+                                        <div className="p-6 flex flex-col flex-1">
+                                            <h3 className="text-lg font-black text-slate-900 line-clamp-2 uppercase mb-2 group-hover:text-blue-600 transition-colors">
+                                                {displayTitle}
+                                            </h3>
+                                            <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase mb-4">
+                                                {zagranica ? (
+                                                    <><Plane size={12} className="text-emerald-500" /><span className="text-emerald-500 font-black">Europa / Zagranica</span></>
+                                                ) : ogolnopolska ? (
+                                                    <><Globe size={12} className="text-blue-500" /><span className="text-blue-500 font-black">Cały Kraj</span></>
+                                                ) : (
+                                                    <><MapPin size={12} className="text-blue-500" />{o.lokalizacja} {o.wojewodztwo ? `| ${o.wojewodztwo}` : ''}</>
+                                                )}
+                                            </div>
+                                            <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-4">
+                                                <div>
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase">Cena ok.</span>
+                                                    <div className={`font-black tracking-tighter ${(o.cena <= 0 || o.cena === -1) ? 'text-slate-500 text-sm' : 'text-slate-900 text-xl'}`}>
+                                                        {formatCena(o.cena)}
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase">Ilość</span>
+                                                    <div className="text-sm font-black text-blue-600">
+                                                        {o.waga > 0 ? `${o.waga} t` : '∞'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
                         </div>
 
                         {filtrowaneOferty.length > visibleCount && (
                             <div className="mt-12 flex justify-center">
-                                <button
-                                    onClick={() => setVisibleCount(prev => prev + 12)}
-                                    className="flex items-center gap-2 bg-white border-2 border-slate-200 px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest hover:border-blue-600 hover:text-blue-600 transition-all active:scale-95"
-                                >
+                                <button onClick={() => setVisibleCount(prev => prev + 12)}
+                                    className="flex items-center gap-2 bg-white border-2 border-slate-200 px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest hover:border-blue-600 hover:text-blue-600 transition-all active:scale-95">
                                     Pokaż więcej ogłoszeń <ChevronDown size={16} />
                                 </button>
                             </div>
@@ -438,7 +378,8 @@ export default function Rynek() {
                             <Search size={40} />
                         </div>
                         <h2 className="text-xl font-black text-slate-900 uppercase">Brak wyników</h2>
-                        <button onClick={() => { setAktywnyFiltr("Wszystko"); setSzukanaFraza(""); }} className="mt-4 text-blue-600 font-bold text-xs uppercase hover:underline">Wyczyść filtry</button>
+                        <button onClick={() => { setAktywnyFiltr("Wszystko"); setSzukanaFraza(""); }}
+                            className="mt-4 text-blue-600 font-bold text-xs uppercase hover:underline">Wyczyść filtry</button>
                     </div>
                 )}
             </div>
