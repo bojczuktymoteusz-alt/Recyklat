@@ -24,10 +24,10 @@ export function getFallbackTitle(oferta: {
 
 /**
  * Formatuje cenę do wyświetlenia
- * -1 lub 0 → "Do negocjacji"
+ * -1, 0 lub 1 → "Do negocjacji"
  */
 export function formatCena(cena: number | null | undefined): string {
-    if (cena === null || cena === undefined || cena <= 0 || cena === -1) {
+    if (cena === null || cena === undefined || cena <= 1 || cena === -1) {
         return 'Do negocjacji';
     }
     return `${cena} zł/t`;

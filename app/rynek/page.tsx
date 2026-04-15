@@ -65,11 +65,12 @@ const isZagranica = (lok?: string) => {
     return l.includes('europa') || l.includes('zagranica');
 };
 
-// Znajdź DOKŁADNE dopasowanie do nazwy województwa
+const normalizuj = (s: string): string =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 const wykryjWojewodztwo = (fraza: string): string | null => {
-    const f = fraza.toLowerCase().trim();
-    // Szukaj dokładnego dopasowania — 'śląskie' NIE pasuje do 'dolnośląskie'
-    return WSZYSTKIE_WOJEWODZTWA.find(w => w === f) || null;
+    const f = normalizuj(fraza.trim());
+    return WSZYSTKIE_WOJEWODZTWA.find(w => normalizuj(w) === f) || null;
 };
 
 const ITEMS_PER_PAGE = 12;
@@ -96,7 +97,6 @@ export default function Rynek() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Pobierz WSZYSTKIE aktywne oferty jednorazowo — filtrowanie po stronie klienta
     const fetchOferty = async () => {
         try {
             setLoading(true);
@@ -116,23 +116,18 @@ export default function Rynek() {
         }
     };
 
-    useEffect(() => {
-        fetchOferty();
-    }, []);
+    useEffect(() => { fetchOferty(); }, []);
 
-    // Cały filtering po stronie klienta — szybki, spójny, bez race conditions
     useEffect(() => {
         let wynik = [...wszystkieOferty];
         const fraza = szukanaFraza.toLowerCase().trim();
 
-        // 1. Filtr typu (kupię / sprzedam)
         if (typFiltr !== 'wszystkie') {
             wynik = wynik.filter(o =>
                 o.typ_oferty === typFiltr || (!o.typ_oferty && typFiltr === 'sprzedam')
             );
         }
 
-        // 2. Filtr kategorii (folia, tworzywa itd.)
         if (aktywnyFiltr !== "Wszystko") {
             wynik = wynik.filter(o => {
                 const mat = (o.material || '').toLowerCase();
@@ -141,51 +136,43 @@ export default function Rynek() {
             });
         }
 
-        // 3. Filtr województw z dropdownu
         if (wybrane.length > 0) {
             wynik = wynik.filter(o => {
-                // Ogłoszenia ogólnopolskie/zagraniczne zawsze przechodzą przez filtr geograficzny
                 if (isOgolnopolska(o.lokalizacja) || isZagranica(o.lokalizacja)) return true;
-
                 const woj = (o.wojewodztwo || '').toLowerCase();
                 const lok = (o.lokalizacja || '').toLowerCase();
-
                 return wybrane.some(w => {
                     if (w === 'Europa / Zagranica') return isZagranica(o.lokalizacja);
                     const wLower = w.toLowerCase();
-                    // Dokładne porównanie województwa — 'śląskie' !== 'dolnośląskie'
-                    return woj === wLower || (woj.split(',').map(s => s.trim()).includes(wLower)) ||
+                    return woj === wLower ||
+                        woj.split(',').map(s => s.trim()).includes(wLower) ||
                         lok === wLower;
                 });
             });
         }
 
-        // 4. Wyszukiwanie tekstowe — tylko po materiale/tytule, NIE po województwie
-        //    (bo "mazowieckie" w polu tekstowym to szukanie surowca, nie lokalizacji)
         if (fraza) {
-            // Sprawdź czy fraza wygląda jak województwo — jeśli tak, filtruj geograficznie
+            const frazaNorm = normalizuj(fraza);
             const wykryteWoj = wykryjWojewodztwo(fraza);
 
             if (wykryteWoj) {
-                // Traktuj wpis jako filtr geograficzny
                 wynik = wynik.filter(o => {
                     if (isOgolnopolska(o.lokalizacja) || isZagranica(o.lokalizacja)) return true;
-                    const woj = (o.wojewodztwo || '').toLowerCase();
-                    const lok = (o.lokalizacja || '').toLowerCase();
-                    return woj.includes(wykryteWoj) || lok.includes(wykryteWoj);
+                    const woj = normalizuj(o.wojewodztwo || '');
+                    const lok = normalizuj(o.lokalizacja || '');
+                    const wykryteNorm = normalizuj(wykryteWoj);
+                    return woj === wykryteNorm || lok === wykryteNorm;
                 });
             } else {
-                // Szukaj po materiale / tytule / lokalizacji
                 wynik = wynik.filter(o =>
-                    (o.material && o.material.toLowerCase().includes(fraza)) ||
-                    (o.title && o.title.toLowerCase().includes(fraza)) ||
-                    (o.lokalizacja && o.lokalizacja.toLowerCase().includes(fraza)) ||
-                    (o.wojewodztwo && o.wojewodztwo.toLowerCase().includes(fraza))
+                    normalizuj(o.material || '').includes(frazaNorm) ||
+                    normalizuj(o.title || '').includes(frazaNorm) ||
+                    normalizuj(o.lokalizacja || '').includes(frazaNorm) ||
+                    normalizuj(o.wojewodztwo || '').includes(frazaNorm)
                 );
             }
         }
 
-        // 5. Sortowanie
         wynik.sort((a, b) => {
             if (sortowanie === 'popularne') {
                 const diff = (b.wyswietlenia ?? 0) - (a.wyswietlenia ?? 0);
@@ -202,7 +189,6 @@ export default function Rynek() {
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-20">
-            {/* NAVBAR */}
             <div className="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-20">
@@ -226,7 +212,6 @@ export default function Rynek() {
                 </div>
             </div>
 
-            {/* NAGŁÓWEK */}
             <div className="bg-slate-900 py-12 px-4 shadow-xl">
                 <div className="max-w-4xl mx-auto text-center">
                     <h1 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight">
@@ -253,8 +238,6 @@ export default function Rynek() {
                                 className="w-full pl-11 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 outline-none"
                             />
                         </div>
-
-                        {/* Dropdown województw */}
                         <div ref={dropdownRef} className="relative shrink-0">
                             <button
                                 type="button"
@@ -267,11 +250,7 @@ export default function Rynek() {
                             >
                                 <Globe size={15} />
                                 <span className="hidden sm:inline">
-                                    {wybrane.length === 0
-                                        ? 'Cała Polska'
-                                        : wybrane.length === 1
-                                            ? wybrane[0]
-                                            : `${wybrane.length} woj.`}
+                                    {wybrane.length === 0 ? 'Cała Polska' : wybrane.length === 1 ? wybrane[0] : `${wybrane.length} woj.`}
                                 </span>
                                 <ChevronDown size={13} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
@@ -279,7 +258,6 @@ export default function Rynek() {
                             {dropdownOpen && (
                                 <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
                                     <div className="p-2 max-h-96 overflow-y-auto">
-                                        {/* Cała Polska */}
                                         <button
                                             onClick={() => { setWybrane([]); setDropdownOpen(false); }}
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-xs uppercase tracking-widest transition-all ${
@@ -288,13 +266,11 @@ export default function Rynek() {
                                         >
                                             <Globe size={14} /> Cała Polska
                                         </button>
-
-                                        {/* Europa / Zagranica */}
                                         <button
                                             onClick={() => {
                                                 const val = 'Europa / Zagranica';
                                                 setWybrane(prev =>
-                                                    prev.includes(val) ? prev.filter(w => w !== val) : [...prev.filter(w => w !== val), val]
+                                                    prev.includes(val) ? prev.filter(w => w !== val) : [val]
                                                 );
                                             }}
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-xs uppercase tracking-widest transition-all ${
@@ -303,17 +279,15 @@ export default function Rynek() {
                                         >
                                             <Plane size={14} /> Europa / Zagranica
                                         </button>
-
                                         <div className="border-t border-slate-100 my-2" />
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-4 mb-1">Województwa</p>
-
                                         {WSZYSTKIE_WOJEWODZTWA.map(woj => {
                                             const zaznaczone = wybrane.includes(woj);
                                             return (
                                                 <button
                                                     key={woj}
                                                     onClick={() => setWybrane(prev =>
-                                                        zaznaczone ? prev.filter(w => w !== woj) : [...prev, woj]
+                                                        zaznaczone ? prev.filter(w => w !== woj) : [...prev.filter(w => w !== 'Europa / Zagranica'), woj]
                                                     )}
                                                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-bold text-xs capitalize transition-all ${
                                                         zaznaczone ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
@@ -329,7 +303,6 @@ export default function Rynek() {
                                             );
                                         })}
                                     </div>
-
                                     {wybrane.length > 0 && (
                                         <div className="border-t border-slate-100 p-2">
                                             <button
@@ -347,7 +320,6 @@ export default function Rynek() {
                 </div>
             </div>
 
-            {/* KATEGORIE */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
                 <div className="relative">
                     <div ref={kategorieRef} className="bg-white p-2 rounded-3xl shadow-xl border border-gray-100 flex gap-2 overflow-x-auto no-scrollbar">
@@ -361,7 +333,6 @@ export default function Rynek() {
                 </div>
             </div>
 
-            {/* LISTING */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="flex items-center justify-between mb-8">
                     <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">
@@ -430,7 +401,8 @@ export default function Rynek() {
                                             <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-4">
                                                 <div>
                                                     <span className="text-[10px] font-black text-slate-400 uppercase">Cena ok.</span>
-                                                    <div className={`font-black tracking-tighter ${(o.cena <= 0 || o.cena === -1) ? 'text-slate-500 text-sm' : 'text-slate-900 text-xl'}`}>
+                                                    {/* STAŁY STYL — identyczny niezależnie od wartości ceny */}
+                                                    <div className="text-xl font-black text-slate-900 tracking-tighter">
                                                         {formatCena(o.cena)}
                                                     </div>
                                                 </div>
