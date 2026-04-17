@@ -30,6 +30,7 @@ interface FormData {
     pickupHours: string;
     description: string;
     firma: string;
+    website_url: string;
     hasExtraDocs: boolean;
     magic_box_used: boolean;
 }
@@ -50,6 +51,7 @@ export default function ParametryDetailsPage() {
         pickupHours: "8-16",
         description: "",
         firma: "",
+        website_url: "",
         hasExtraDocs: false,
         magic_box_used: false,
     });
@@ -78,6 +80,11 @@ export default function ParametryDetailsPage() {
             if (magicOpis) {
                 setFormData(prev => ({ ...prev, description: magicOpis, magic_box_used: true }));
                 localStorage.removeItem('magic_opis');
+            }
+            const magicWebsite = localStorage.getItem('magic_website_url');
+            if (magicWebsite) {
+                setFormData(prev => ({ ...prev, website_url: magicWebsite }));
+                localStorage.removeItem('magic_website_url');
             }
             // Tracking przez krok 1 (jeśli magic box użyty bez opisu)
             if (parsedData.magic_box_used) {
@@ -142,6 +149,7 @@ export default function ParametryDetailsPage() {
             pickup_hours: sanitizeText(formData.pickupHours) || null,
             opis: sanitizeText(formData.description) || null,
             firma: sanitizeText(formData.firma) || null,
+            website_url: sanitizeText(formData.website_url) || null,
             status: 'aktywna',
             manage_token: wygenerowanyToken,
             magic_box_used: formData.magic_box_used,
@@ -342,11 +350,29 @@ export default function ParametryDetailsPage() {
                             <input
                                 type="text"
                                 placeholder="np. Adam Nowak"
-                                value={formData.firma} // ✅ To naprawi błąd "Cannot find name 'firma'"
-                                onChange={(e) => handleChange('firma', e.target.value)} // ✅ To naprawi błąd "setFirma"
+                                value={formData.firma}
+                                onChange={(e) => handleChange('firma', e.target.value)}
                                 className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 transition-all text-lg shadow-sm"
                             />
                         </div>
+                    </div>
+
+                    {/* STRONA WWW */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-black text-slate-900 uppercase ml-1">
+                            Strona WWW firmy
+                            <span className="ml-1 text-slate-400 text-[10px] font-bold normal-case">(opcjonalnie)</span>
+                        </label>
+                        <input
+                            type="url"
+                            placeholder="np. https://twojafirma.pl"
+                            value={formData.website_url}
+                            onChange={(e) => handleChange('website_url', e.target.value)}
+                            className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 transition-all text-lg shadow-sm"
+                        />
+                        <p className="text-slate-400 text-[11px] font-bold ml-2 leading-relaxed">
+                            Jeśli podasz adres, nazwa Twojej firmy stanie się klikalnym linkiem promującym Twoją markę.
+                        </p>
                     </div>
 
                     <div className="space-y-2">

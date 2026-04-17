@@ -68,9 +68,12 @@ const isZagranica = (lok?: string) => {
 const normalizuj = (s: string): string =>
     s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+// Wykryj województwo z częściowego wpisu (min. 3 znaki), obsługuje brak polskich znaków
+// "lod" → "łódzkie", "slask" → "śląskie", "mazow" → "mazowieckie"
 const wykryjWojewodztwo = (fraza: string): string | null => {
     const f = normalizuj(fraza.trim());
-    return WSZYSTKIE_WOJEWODZTWA.find(w => normalizuj(w) === f) || null;
+    if (f.length < 3) return null;
+    return WSZYSTKIE_WOJEWODZTWA.find(w => normalizuj(w).startsWith(f)) || null;
 };
 
 const ITEMS_PER_PAGE = 12;
@@ -122,12 +125,14 @@ export default function Rynek() {
         let wynik = [...wszystkieOferty];
         const fraza = szukanaFraza.toLowerCase().trim();
 
+        // 1. Filtr typu
         if (typFiltr !== 'wszystkie') {
             wynik = wynik.filter(o =>
                 o.typ_oferty === typFiltr || (!o.typ_oferty && typFiltr === 'sprzedam')
             );
         }
 
+        // 2. Filtr kategorii
         if (aktywnyFiltr !== "Wszystko") {
             wynik = wynik.filter(o => {
                 const mat = (o.material || '').toLowerCase();
@@ -136,6 +141,7 @@ export default function Rynek() {
             });
         }
 
+        // 3. Filtr województw z dropdownu
         if (wybrane.length > 0) {
             wynik = wynik.filter(o => {
                 if (isOgolnopolska(o.lokalizacja) || isZagranica(o.lokalizacja)) return true;
@@ -151,19 +157,23 @@ export default function Rynek() {
             });
         }
 
+        // 4. Wyszukiwanie tekstowe
         if (fraza) {
             const frazaNorm = normalizuj(fraza);
             const wykryteWoj = wykryjWojewodztwo(fraza);
 
             if (wykryteWoj) {
+                // Fraza rozpoznana jako województwo — filtruj geograficznie, dołącz ogólnopolskie
+                const wykryteNorm = normalizuj(wykryteWoj);
                 wynik = wynik.filter(o => {
                     if (isOgolnopolska(o.lokalizacja) || isZagranica(o.lokalizacja)) return true;
                     const woj = normalizuj(o.wojewodztwo || '');
                     const lok = normalizuj(o.lokalizacja || '');
-                    const wykryteNorm = normalizuj(wykryteWoj);
-                    return woj === wykryteNorm || lok === wykryteNorm;
+                    return woj.startsWith(wykryteNorm.substring(0, frazaNorm.length)) ||
+                        lok.startsWith(frazaNorm);
                 });
             } else {
+                // Szukaj po materiale / tytule / lokalizacji
                 wynik = wynik.filter(o =>
                     normalizuj(o.material || '').includes(frazaNorm) ||
                     normalizuj(o.title || '').includes(frazaNorm) ||
@@ -173,6 +183,7 @@ export default function Rynek() {
             }
         }
 
+        // 5. Sortowanie
         wynik.sort((a, b) => {
             if (sortowanie === 'popularne') {
                 const diff = (b.wyswietlenia ?? 0) - (a.wyswietlenia ?? 0);
@@ -401,7 +412,6 @@ export default function Rynek() {
                                             <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-4">
                                                 <div>
                                                     <span className="text-[10px] font-black text-slate-400 uppercase">Cena ok.</span>
-                                                    {/* STAŁY STYL — identyczny niezależnie od wartości ceny */}
                                                     <div className="text-xl font-black text-slate-900 tracking-tighter">
                                                         {formatCena(o.cena)}
                                                     </div>

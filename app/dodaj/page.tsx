@@ -79,34 +79,51 @@ interface ParsedData {
     telefon?: string; waga?: string; cena?: string;
     lokalizacja?: string; wojewodztwo?: string; material?: string;
     autoBdo?: string; title?: string; typOferty?: 'sprzedam' | 'kupie';
+    website_url?: string;
 }
 
 function parsujTekst(tekst: string): ParsedData {
     const wynik: ParsedData = {};
     const t = tekst.toLowerCase();
+
+    // TELEFON
     const telMatch = tekst.match(/(\+48\s?)?(\d[\s\-]?){8}\d/);
     if (telMatch) {
         const cyfry = telMatch[0].replace(/\D/g, '').slice(-9);
         if (cyfry.length === 9) wynik.telefon = cyfry.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
     }
+
+    // WAGA
     const wagaMatch = tekst.match(/(\d+[\.,]?\d*)\s*(t\b|ton\b|tony\b|kg\b)/i);
     if (wagaMatch) {
         let val = parseFloat(wagaMatch[1].replace(',', '.'));
         if (wagaMatch[2].toLowerCase() === 'kg') val = val / 1000;
         wynik.waga = val.toString();
     }
+
+    // CENA
     const cenaMatch = tekst.match(/(\d+[\.,]?\d*)\s*(zł|pln|zl)/i);
     if (cenaMatch) wynik['cena' as keyof ParsedData] = parseFloat(cenaMatch[1].replace(',', '.')) as any;
 
+    // URL — wykrywa: https://..., www.coś, oraz samo coś.pl / coś.com / coś.eu itd.
+    // Regex: opcjonalny protokół + opcjonalne www LUB od razu nazwa.tld
+    const urlMatch = tekst.match(
+        /(?:https?:\/\/(?:www\.)?|www\.)[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]?(?:\.[a-zA-Z]{2,6})+(?:[/?#][^\s]*)?|(?<!\w)[a-zA-Z0-9][a-zA-Z0-9\-]{1,61}[a-zA-Z0-9]\.(?:pl|com|eu|net|org|biz|info|co)(?:[/?#][^\s]*)?/i
+    );
+    if (urlMatch) {
+        let url = urlMatch[0];
+        if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+        wynik.website_url = url;
+    }
+
+    // LOKALIZACJA
     if (t.includes('cała polska') || t.includes('caly kraj') || t.includes('ogólnopolski') || t.includes('cały kraj')) {
         wynik.lokalizacja = 'Cała Polska';
         wynik.wojewodztwo = '';
     } else {
-        // 1. NAJPIERW szukaj polskich województw — mają NAJWYżSZY priorytet
         for (const woj of WOJEWODZTWA) {
             if (t.includes(woj)) { wynik.wojewodztwo = woj; break; }
         }
-        // 2. Szukaj miast polskich
         for (const [miasto, woj] of Object.entries(MIASTA_WOJEWODZTWA)) {
             if (t.includes(miasto)) {
                 wynik.lokalizacja = miasto.charAt(0).toUpperCase() + miasto.slice(1);
@@ -114,7 +131,6 @@ function parsujTekst(tekst: string): ParsedData {
                 break;
             }
         }
-        // 3. Zagranicy szukamy TYLKO jeśli nie znaleziono żadnego polskiego województwa/miasta
         if (!wynik.wojewodztwo && !wynik.lokalizacja) {
             if (t.includes('europa') || t.includes('zagranica') || t.includes('eksport')) {
                 wynik.lokalizacja = 'Europa / Zagranica';
@@ -123,6 +139,7 @@ function parsujTekst(tekst: string): ParsedData {
         }
     }
 
+    // KATEGORIA
     for (const { slowa, kategoria } of SLOWA_KLUCZE) {
         if (slowa.some(s => t.includes(s))) {
             wynik.material = kategoria;
@@ -131,20 +148,23 @@ function parsujTekst(tekst: string): ParsedData {
             break;
         }
     }
+
+    // TYP OFERTY
     if (SLOWA_KUPIE.some(s => t.includes(s))) wynik.typOferty = 'kupie';
     else if (SLOWA_SPRZEDAM.some(s => t.includes(s))) wynik.typOferty = 'sprzedam';
+
+    // TYTUŁ
     const pierwszaLinia = tekst.split('\n')[0].trim().substring(0, 60);
     if (pierwszaLinia.length > 5) wynik.title = pierwszaLinia;
+
     return wynik;
 }
 
-// Specjalne opcje zasięgu (nie-województwa)
 const SPECIAL_OPTIONS = [
     { value: 'Cała Polska', label: '🌐 Cała Polska' },
     { value: 'Europa / Zagranica', label: '✈️ Europa / Zagranica' },
 ];
 
-// Oblicz etykietę przycisku dropdownu
 function getLokalizacjaLabel(lokalizacja: string, wybrane: string[]): string {
     if (lokalizacja === 'Cała Polska') return '🌐 Cała Polska';
     if (lokalizacja === 'Europa / Zagranica') return '✈️ Europa / Zagranica';
@@ -161,7 +181,6 @@ export default function DodajOferteKrok1() {
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
     const [lokalizacja, setLokalizacja] = useState('');
-    // wybrane = lista zaznaczonych województw (może być wiele)
     const [wybrane, setWybrane] = useState<string[]>([]);
     const [telefon, setTelefon] = useState('');
     const [autoBdo, setAutoBdo] = useState('');
@@ -181,18 +200,14 @@ export default function DodajOferteKrok1() {
 
     useEffect(() => { setIsCheckingAuth(false); }, []);
 
-    // Zamknij dropdown po kliknięciu poza
     useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-                setDropdownOpen(false);
-            }
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Oblicz efektywną lokalizację do zapisu
     const getEfektywnaLokalizacja = () => {
         if (lokalizacja === 'Cała Polska' || lokalizacja === 'Europa / Zagranica') return lokalizacja;
         return wybrane.length > 0 ? wybrane[0] : '';
@@ -203,17 +218,10 @@ export default function DodajOferteKrok1() {
         return wybrane.join(', ');
     };
 
-    const handleSpecjalny = (val: string) => {
-        setLokalizacja(val);
-        setWybrane([]);
-        setDropdownOpen(false);
-    };
-
+    const handleSpecjalny = (val: string) => { setLokalizacja(val); setWybrane([]); setDropdownOpen(false); };
     const handleToggleWojewodztwo = (woj: string) => {
         setLokalizacja('');
-        setWybrane(prev =>
-            prev.includes(woj) ? prev.filter(w => w !== woj) : [...prev, woj]
-        );
+        setWybrane(prev => prev.includes(woj) ? prev.filter(w => w !== woj) : [...prev, woj]);
     };
 
     const handleAnalizuj = () => {
@@ -235,13 +243,10 @@ export default function DodajOferteKrok1() {
         else nowePodswietlone.add('waga');
 
         if (parsed.lokalizacja === 'Cała Polska' || parsed.lokalizacja === 'Europa / Zagranica') {
-            setLokalizacja(parsed.lokalizacja);
-            setWybrane([]);
+            setLokalizacja(parsed.lokalizacja); setWybrane([]);
         } else {
-            if (parsed.wojewodztwo) {
-                setWybrane([parsed.wojewodztwo]);
-                setLokalizacja('');
-            } else nowePodswietlone.add('lokalizacja');
+            if (parsed.wojewodztwo) { setWybrane([parsed.wojewodztwo]); setLokalizacja(''); }
+            else nowePodswietlone.add('lokalizacja');
         }
 
         if (parsed.material) {
@@ -249,10 +254,13 @@ export default function DodajOferteKrok1() {
             const found = KATEGORIE_Z_BDO.find(k => k.nazwa === parsed.material);
             if (found) setAutoBdo(found.bdo);
         } else nowePodswietlone.add('material');
+
         if (parsed.title) zastap('Tytuł', parsed.title, title, setTitle);
         else nowePodswietlone.add('title');
+
         if (parsed.typOferty) setTypOferty(parsed.typOferty);
         if (parsed.cena) localStorage.setItem('magic_cena', String(parsed.cena));
+        if (parsed.website_url) localStorage.setItem('magic_website_url', parsed.website_url);
         setPodswietlone(nowePodswietlone);
 
         const nowyTytul = parsed.title || title;
@@ -436,23 +444,14 @@ export default function DodajOferteKrok1() {
                         </div>
                     </div>
 
-                    {/* ============ LOKALIZACJA — jedna wysuwajka ============ */}
+                    {/* LOKALIZACJA */}
                     <div>
                         <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-2 block">
                             Lokalizacja <span className="text-red-500">*</span>
                         </label>
-
                         <div ref={dropdownRef} className="relative">
-                            {/* Przycisk otwierający */}
-                            <button
-                                type="button"
-                                onClick={() => setDropdownOpen(o => !o)}
-                                className={`w-full flex items-center justify-between p-5 border-2 rounded-[24px] font-bold outline-none transition-colors text-left ${
-                                    maWybor
-                                        ? 'border-blue-500 bg-blue-50 text-slate-900'
-                                        : 'border-slate-200 bg-slate-50 text-slate-400'
-                                }`}
-                            >
+                            <button type="button" onClick={() => setDropdownOpen(o => !o)}
+                                className={`w-full flex items-center justify-between p-5 border-2 rounded-[24px] font-bold outline-none transition-colors text-left ${maWybor ? 'border-blue-500 bg-blue-50 text-slate-900' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
                                 <span className="flex items-center gap-2">
                                     <Globe size={18} className={maWybor ? 'text-blue-600' : 'text-slate-300'} />
                                     {lokalizacjaLabel}
@@ -460,65 +459,34 @@ export default function DodajOferteKrok1() {
                                 <ChevronDown size={18} className={`transition-transform text-slate-400 ${dropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
 
-                            {/* Dropdown */}
                             {dropdownOpen && (
                                 <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-[24px] shadow-2xl border border-slate-100 z-50 overflow-hidden">
                                     <div className="p-3 max-h-80 overflow-y-auto">
-
-                                        {/* Opcje specjalne */}
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 mb-2">Zasięg ogólny</p>
                                         {SPECIAL_OPTIONS.map(opt => (
-                                            <button
-                                                key={opt.value}
-                                                type="button"
-                                                onClick={() => handleSpecjalny(opt.value)}
-                                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-sm transition-all mb-1 ${
-                                                    lokalizacja === opt.value
-                                                        ? 'bg-slate-900 text-white'
-                                                        : 'text-slate-700 hover:bg-slate-50'
-                                                }`}
-                                            >
+                                            <button key={opt.value} type="button" onClick={() => handleSpecjalny(opt.value)}
+                                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-sm transition-all mb-1 ${lokalizacja === opt.value ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>
                                                 {opt.label}
                                             </button>
                                         ))}
-
                                         <div className="border-t border-slate-100 my-3" />
-
-                                        {/* Województwa */}
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 mb-2">Województwa (możesz wybrać kilka)</p>
                                         {WOJEWODZTWA.map(woj => {
                                             const zaznaczone = wybrane.includes(woj);
                                             return (
-                                                <button
-                                                    key={woj}
-                                                    type="button"
-                                                    onClick={() => handleToggleWojewodztwo(woj)}
-                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-bold text-sm capitalize transition-all ${
-                                                        zaznaczone ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
-                                                    }`}
-                                                >
-                                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
-                                                        zaznaczone ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
-                                                    }`}>
-                                                        {zaznaczone && (
-                                                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                                                                <path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                                            </svg>
-                                                        )}
+                                                <button key={woj} type="button" onClick={() => handleToggleWojewodztwo(woj)}
+                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-bold text-sm capitalize transition-all ${zaznaczone ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}>
+                                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${zaznaczone ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                                                        {zaznaczone && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                                     </div>
                                                     {woj}
                                                 </button>
                                             );
                                         })}
                                     </div>
-
-                                    {/* Stopka dropdownu — zamknij */}
                                     <div className="border-t border-slate-100 p-3">
-                                        <button
-                                            type="button"
-                                            onClick={() => setDropdownOpen(false)}
-                                            className="w-full bg-slate-900 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all"
-                                        >
+                                        <button type="button" onClick={() => setDropdownOpen(false)}
+                                            className="w-full bg-slate-900 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all">
                                             Zatwierdź
                                         </button>
                                     </div>
@@ -526,20 +494,12 @@ export default function DodajOferteKrok1() {
                             )}
                         </div>
 
-                        {/* Tagi zaznaczonych województw */}
                         {wybrane.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-3">
                                 {wybrane.map(woj => (
-                                    <span
-                                        key={woj}
-                                        className="flex items-center gap-1.5 bg-blue-100 text-blue-700 text-xs font-black px-3 py-1.5 rounded-xl"
-                                    >
+                                    <span key={woj} className="flex items-center gap-1.5 bg-blue-100 text-blue-700 text-xs font-black px-3 py-1.5 rounded-xl">
                                         {woj}
-                                        <button
-                                            type="button"
-                                            onClick={() => setWybrane(prev => prev.filter(w => w !== woj))}
-                                            className="hover:text-red-500 transition-colors"
-                                        >
+                                        <button type="button" onClick={() => setWybrane(prev => prev.filter(w => w !== woj))} className="hover:text-red-500 transition-colors">
                                             <X size={12} />
                                         </button>
                                     </span>
