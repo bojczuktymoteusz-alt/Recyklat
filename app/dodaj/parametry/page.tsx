@@ -17,6 +17,7 @@ interface Step1Data {
     zdjecie_url: string;
     bdo_code?: string;
     magic_box_used?: boolean;
+    supply_frequency?: string;
 }
 
 interface FormData {
@@ -150,6 +151,7 @@ export default function ParametryDetailsPage() {
             opis: sanitizeText(formData.description) || null,
             firma: sanitizeText(formData.firma) || null,
             website_url: sanitizeText(formData.website_url) || null,
+            supply_frequency: step1Data.supply_frequency || 'jednorazowo',
             status: 'aktywna',
             manage_token: wygenerowanyToken,
             magic_box_used: formData.magic_box_used,

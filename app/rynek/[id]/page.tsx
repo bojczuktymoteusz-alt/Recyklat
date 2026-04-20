@@ -15,6 +15,31 @@ export default function SzczegolyOferty() {
     const [oferta, setOferta] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [czyToMoje, setCzyToMoje] = useState(false);
+    const [numerOdkryty, setNumerOdkryty] = useState(false);
+
+    // Logowanie klikniecia w telefon — fire & forget, nie blokuje UI
+    const logClick = (ofertaId: number) => {
+        fetch('/api/log-click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ofertaId, userType: 'gosc' }),
+        }).catch(() => {});
+    };
+
+    const handlePokaz = (ofertaId: number) => {
+        setNumerOdkryty(true);
+        logClick(ofertaId);
+    };
+
+    // Maskowanie numeru: 600 700 ***
+    const maskujNumer = (tel: string) => {
+        if (!tel) return '';
+        const cyfry = tel.replace(/\D/g, '');
+        if (cyfry.length >= 9) {
+            return cyfry.slice(0, 3) + ' ' + cyfry.slice(3, 6) + ' ***';
+        }
+        return tel.slice(0, -3) + '***';
+    };
 
     useEffect(() => {
         const handleViews = async () => {
@@ -359,14 +384,35 @@ export default function SzczegolyOferty() {
                         </div>
                     ) : (
                         <div className="flex gap-3">
-                            <a href={`tel:${oferta.telefon}`}
-                                className={`flex-1 rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${jestZapotrzebowanie ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
-                                <Phone size={24} fill="currentColor" />
-                                Zadzwoń: {oferta.telefon}
-                            </a>
+                            {!numerOdkryty ? (
+                                // PRZYCISK POKAZ NUMER — maskuje koncówkę
+                                <button
+                                    onClick={() => handlePokaz(oferta.id)}
+                                    className={`flex-1 rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${
+                                        jestZapotrzebowanie ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'
+                                    }`}
+                                >
+                                    <Phone size={24} />
+                                    <span>{maskujNumer(oferta.telefon)}</span>
+                                    <span className="text-xs font-black bg-white/20 px-2 py-1 rounded-lg ml-1">POKAŻ NUMER</span>
+                                </button>
+                            ) : (
+                                // NUMER ODKRYTY — klikalny link tel:
+                                <a
+                                    href={`tel:${oferta.telefon}`}
+                                    className={`flex-1 rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${
+                                        jestZapotrzebowanie ? 'bg-blue-600 hover:bg-blue-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                                    }`}
+                                >
+                                    <Phone size={24} fill="currentColor" />
+                                    Zadzwoń: {oferta.telefon}
+                                </a>
+                            )}
                             {oferta.email && (
                                 <a href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
-                                    className={`px-8 font-black uppercase tracking-widest rounded-[24px] flex items-center justify-center gap-2 border-2 active:scale-95 transition-all ${jestZapotrzebowanie ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                                    className={`px-8 font-black uppercase tracking-widest rounded-[24px] flex items-center justify-center gap-2 border-2 active:scale-95 transition-all ${
+                                        jestZapotrzebowanie ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                    }`}>
                                     <Mail size={24} /><span>Napisz</span>
                                 </a>
                             )}

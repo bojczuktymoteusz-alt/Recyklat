@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import {
-    Recycle, MapPin, Search, Package, ChevronDown, TrendingUp, Clock, Globe, Plane
+    Recycle, MapPin, Search, Package, ChevronDown, TrendingUp, Clock, Globe, Plane, RefreshCw
 } from 'lucide-react';
 import { getFallbackTitle, formatCena } from '@/lib/ofertaUtils';
 
@@ -21,7 +21,14 @@ interface Oferta {
     status?: string;
     typ_oferty?: string;
     wyswietlenia?: number;
+    supply_frequency?: string;
 }
+
+const SUPPLY_BADGE: Record<string, { label: string; color: string }> = {
+    co_tydzien:      { label: 'Co tydzień',     color: 'bg-emerald-500 text-white' },
+    co_miesiac:      { label: 'Co miesiąc',     color: 'bg-emerald-600 text-white' },
+    stala_wspolpraca:{ label: 'Dostawa stała', color: 'bg-amber-500 text-white' },
+};
 
 const KATEGORIE = [
     { nazwa: "Wszystko", ikona: "🌐" },
@@ -105,7 +112,7 @@ export default function Rynek() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('oferty')
-                .select('id, title, material, form, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia')
+                .select('id, title, material, form, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia, supply_frequency')
                 .eq('status', 'aktywna')
                 .order('wyswietlenia', { ascending: false, nullsFirst: false })
                 .order('created_at', { ascending: false });
@@ -386,14 +393,23 @@ export default function Rynek() {
                                                 }}
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                                             />
-                                            <div className="absolute top-4 left-4 right-4 flex justify-between">
-                                                <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
+                                            <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+                                            <div className="flex flex-col gap-1.5">
+                                            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
                                                     {o.typ_oferty === 'kupie' ? 'Kupię' : 'Sprzedam'}
                                                 </div>
-                                                <div className="bg-white/90 backdrop-blur px-2 py-1.5 rounded-xl text-lg shadow-md">
-                                                    {getIcon(o.material)}
-                                                </div>
+                                            {/* BADGE CYKLICZNOSCI */}
+                                                {o.supply_frequency && SUPPLY_BADGE[o.supply_frequency] && (
+                                                        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${SUPPLY_BADGE[o.supply_frequency].color}`}>
+                                                        <RefreshCw size={9} />
+                                                        {SUPPLY_BADGE[o.supply_frequency].label}
+                                                    </div>
+                                                )}
                                             </div>
+                                            <div className="bg-white/90 backdrop-blur px-2 py-1.5 rounded-xl text-lg shadow-md">
+                                                {getIcon(o.material)}
+                                            </div>
+                                        </div>
                                         </div>
 
                                         <div className="p-6 flex flex-col flex-1">
