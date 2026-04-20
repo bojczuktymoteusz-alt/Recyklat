@@ -4,7 +4,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
     ArrowLeft, MapPin, Phone, Info, Truck, Building2,
-    Clock, Mail, CheckCircle, FileText, Eye, ExternalLink
+    Clock, Mail, CheckCircle, FileText, Eye, ExternalLink,
+    ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { wyglądaJakUrl, fixUrl, urlDoWyswietlenia } from '@/lib/ofertaUtils';
@@ -17,16 +18,12 @@ export default function SzczegolyOferty() {
     const [czyToMoje, setCzyToMoje] = useState(false);
     const [numerOdkryty, setNumerOdkryty] = useState(false);
 
-    // POPRAWKA: payload zawiera type: 'phone_click' — wymagane przez admin-stats
+    // POPRAWKA: payload zawiera type: 'phone_click'
     const logClick = (ofertaId: number) => {
         fetch('/api/log-click', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                ofertaId,
-                type: 'phone_click',
-                userType: 'gosc',
-            }),
+            body: JSON.stringify({ ofertaId, type: 'phone_click', userType: 'gosc' }),
         }).catch(() => {});
     };
 
@@ -35,11 +32,21 @@ export default function SzczegolyOferty() {
         logClick(ofertaId);
     };
 
+    // Maskowanie: 606 488 *** (3 grupy, ostatnia zamaskowana)
     const maskujNumer = (tel: string) => {
         if (!tel) return '';
         const cyfry = tel.replace(/\D/g, '');
-        if (cyfry.length >= 9) return cyfry.slice(0, 3) + ' ' + cyfry.slice(3, 6) + ' ***';
+        if (cyfry.length >= 9) {
+            return cyfry.slice(0, 3) + ' ' + cyfry.slice(3, 6) + ' ***';
+        }
         return tel.slice(0, -3) + '***';
+    };
+
+    // Format wyświetlanego numeru po odkryciu: 606 488 123
+    const formatujNumer = (tel: string) => {
+        const cyfry = tel.replace(/\D/g, '');
+        if (cyfry.length === 9) return cyfry.slice(0, 3) + ' ' + cyfry.slice(3, 6) + ' ' + cyfry.slice(6);
+        return tel;
     };
 
     useEffect(() => {
@@ -148,6 +155,12 @@ export default function SzczegolyOferty() {
     const maFirme = !!oferta.firma || maStrone;
     const nazwaWyswietlana = oferta.firma || urlSkrocony.split('/')[0];
 
+    // Kolory akcentu zależne od typu oferty
+    const accentBg = jestZapotrzebowanie ? 'bg-blue-600' : 'bg-slate-900';
+    const accentHover = jestZapotrzebowanie ? 'hover:bg-blue-700' : 'hover:bg-slate-800';
+    const accentBgRevealed = jestZapotrzebowanie ? 'bg-blue-600' : 'bg-emerald-600';
+    const accentHoverRevealed = jestZapotrzebowanie ? 'hover:bg-blue-700' : 'hover:bg-emerald-700';
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col relative">
 
@@ -182,7 +195,7 @@ export default function SzczegolyOferty() {
                 </div>
             </div>
 
-            <div className="max-w-4xl mx-auto px-4 py-8 w-full pb-32">
+            <div className="max-w-4xl mx-auto px-4 py-8 w-full pb-36">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                     {/* LEWA KOLUMNA */}
@@ -358,44 +371,81 @@ export default function SzczegolyOferty() {
                 </div>
             </div>
 
-            {/* DOLNY PASEK KONTAKTOWY */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 p-4 z-50">
-                <div className="max-w-4xl mx-auto">
+            {/* ═══════════════════════════════════════════════════
+                DOLNY PASEK KONTAKTOWY — przeprojektowany mobile
+            ═══════════════════════════════════════════════════ */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 z-50">
+                <div className="max-w-4xl mx-auto px-4 py-3">
                     {jestSprzedane ? (
-                        <div className="h-16 w-full bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-center gap-3">
-                            <CheckCircle size={24} className="text-red-600" />
-                            <span className="text-red-600 font-black uppercase tracking-tighter text-xl">Ogłoszenie archiwalne</span>
+                        /* Archiwalne */
+                        <div className="h-14 w-full bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-center gap-3">
+                            <CheckCircle size={20} className="text-red-500" />
+                            <span className="text-red-600 font-black uppercase tracking-tight text-base">Ogłoszenie archiwalne</span>
                         </div>
-                    ) : (
-                        <div className="flex gap-3">
-                            {!numerOdkryty ? (
-                                <button
-                                    onClick={() => handlePokaz(oferta.id)}
-                                    className={`flex-1 rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${
-                                        jestZapotrzebowanie ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'
-                                    }`}
-                                >
-                                    <Phone size={24} />
-                                    <span>{maskujNumer(oferta.telefon)}</span>
-                                    <span className="text-xs font-black bg-white/20 px-2 py-1 rounded-lg ml-1">POKAŻ NUMER</span>
-                                </button>
-                            ) : (
+                    ) : !numerOdkryty ? (
+                        /* ── STAN: NUMER UKRYTY ────────────────────────
+                           Duży przycisk z wezwaniem + zamaskowany numer   */
+                        <div className="flex gap-2 items-stretch">
+                            <button
+                                onClick={() => handlePokaz(oferta.id)}
+                                className={`flex-1 ${accentBg} ${accentHover} text-white rounded-2xl active:scale-95 transition-all shadow-xl flex flex-col items-center justify-center py-3 gap-0.5`}
+                            >
+                                {/* Etykieta CTA */}
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-75 flex items-center gap-1">
+                                    <Phone size={10} /> Dotknij, aby odkryć numer
+                                </span>
+                                {/* Numer z gwiazdkami — duży, czytelny */}
+                                <span className="text-2xl font-black tracking-widest">
+                                    {maskujNumer(oferta.telefon)}
+                                </span>
+                            </button>
+
+                            {/* Przycisk email — tylko jeśli istnieje */}
+                            {oferta.email && (
                                 <a
-                                    href={`tel:${oferta.telefon}`}
-                                    className={`flex-1 rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${
-                                        jestZapotrzebowanie ? 'bg-blue-600 hover:bg-blue-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                                    href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
+                                    className={`w-16 rounded-2xl flex flex-col items-center justify-center gap-1 border-2 active:scale-95 transition-all shrink-0 ${
+                                        jestZapotrzebowanie
+                                            ? 'bg-blue-50 text-blue-600 border-blue-200'
+                                            : 'bg-slate-50 text-slate-600 border-slate-200'
                                     }`}
                                 >
-                                    <Phone size={24} fill="currentColor" />
-                                    Zadzwoń: {oferta.telefon}
+                                    <Mail size={20} />
+                                    <span className="text-[9px] font-black uppercase">Mail</span>
                                 </a>
                             )}
+                        </div>
+                    ) : (
+                        /* ── STAN: NUMER ODKRYTY ───────────────────────
+                           Klikalny link tel: z pełnym numerem             */
+                        <div className="flex gap-2 items-stretch">
+                            <a
+                                href={`tel:${oferta.telefon}`}
+                                className={`flex-1 ${accentBgRevealed} ${accentHoverRevealed} text-white rounded-2xl active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 py-4`}
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                                    <Phone size={22} fill="white" />
+                                </div>
+                                <div className="flex flex-col items-start">
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Zadzwoń teraz</span>
+                                    <span className="text-2xl font-black tracking-widest leading-tight">
+                                        {formatujNumer(oferta.telefon)}
+                                    </span>
+                                </div>
+                                <ChevronRight size={20} className="opacity-60 ml-auto" />
+                            </a>
+
                             {oferta.email && (
-                                <a href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
-                                    className={`px-8 font-black uppercase tracking-widest rounded-[24px] flex items-center justify-center gap-2 border-2 active:scale-95 transition-all ${
-                                        jestZapotrzebowanie ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                                    }`}>
-                                    <Mail size={24} /><span>Napisz</span>
+                                <a
+                                    href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
+                                    className={`w-16 rounded-2xl flex flex-col items-center justify-center gap-1 border-2 active:scale-95 transition-all shrink-0 ${
+                                        jestZapotrzebowanie
+                                            ? 'bg-blue-50 text-blue-600 border-blue-200'
+                                            : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                    }`}
+                                >
+                                    <Mail size={20} />
+                                    <span className="text-[9px] font-black uppercase">Mail</span>
                                 </a>
                             )}
                         </div>
