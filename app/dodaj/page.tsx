@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
-import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, ChevronDown, Mic, MicOff, Calendar } from 'lucide-react';
+import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, ChevronDown, Mic, MicOff, Calendar, Keyboard } from 'lucide-react';
 import { sanitizeText } from '@/lib/security';
 
 const KATEGORIE_Z_BDO = [
@@ -30,21 +30,12 @@ const WOJEWODZTWA = [
 ];
 
 const WOJEWODZTWA_ASCII: Record<string, string> = {
-    "dolnoslaskie": "dolnośląskie",
-    "kujawsko-pomorskie": "kujawsko-pomorskie",
-    "lubelskie": "lubelskie",
-    "lubuskie": "lubuskie",
-    "lodzkie": "łódzkie",
-    "malopolskie": "małopolskie",
-    "mazowieckie": "mazowieckie",
-    "opolskie": "opolskie",
-    "podkarpackie": "podkarpackie",
-    "podlaskie": "podlaskie",
-    "pomorskie": "pomorskie",
-    "slaskie": "śląskie",
-    "swietokrzyskie": "świętokrzyskie",
-    "warminsko-mazurskie": "warmińsko-mazurskie",
-    "wielkopolskie": "wielkopolskie",
+    "dolnoslaskie": "dolnośląskie", "kujawsko-pomorskie": "kujawsko-pomorskie",
+    "lubelskie": "lubelskie", "lubuskie": "lubuskie", "lodzkie": "łódzkie",
+    "malopolskie": "małopolskie", "mazowieckie": "mazowieckie", "opolskie": "opolskie",
+    "podkarpackie": "podkarpackie", "podlaskie": "podlaskie", "pomorskie": "pomorskie",
+    "slaskie": "śląskie", "swietokrzyskie": "świętokrzyskie",
+    "warminsko-mazurskie": "warmińsko-mazurskie", "wielkopolskie": "wielkopolskie",
     "zachodniopomorskie": "zachodniopomorskie",
 };
 
@@ -128,14 +119,12 @@ interface ParsedData {
     website_url?: string; supplyFreq?: SupplyFreq;
 }
 
-// Regex wykrywający domenę/URL — żeby nie mylić z nazwą firmy
 const URL_REGEX = /(?:https?:\/\/|www\.)\S+|\S+\.(?:pl|com|eu|net|org|biz|info)\S*/gi;
 
 function parsujTekst(tekst: string): ParsedData {
     const wynik: ParsedData = {};
     const t = norm(tekst);
 
-    // 1. TELEFON — 9 cyfr (kilka warstw)
     const telFmt = tekst.match(/(\+48[\s-]?)?\d{3}[\s-]\d{3}[\s-]\d{3}/);
     if (telFmt) {
         const c = telFmt[0].replace(/\D/g, '').slice(-9);
@@ -153,7 +142,6 @@ function parsujTekst(tekst: string): ParsedData {
         }
     }
 
-    // 2. WAGA
     const wagaMatch = tekst.match(/(\d+[\.,]?\d*)\s*(t\b|ton\b|tony\b|kg\b)/i);
     if (wagaMatch) {
         let val = parseFloat(wagaMatch[1].replace(',', '.'));
@@ -161,16 +149,12 @@ function parsujTekst(tekst: string): ParsedData {
         wynik.waga = val.toString();
     }
 
-    // 3. CENA — frazy negocjacyjne → brak ceny
     const negFrazy = ['do ustalenia', 'do negocjacji', 'negocjacja', 'do uzgodnienia', 'cena umowna', 'bez ceny'];
     if (!negFrazy.some(f => t.includes(f))) {
         const cenaMatch = tekst.match(/(\d+[\.,]?\d*)\s*(?:zł|pln|zl)/i);
         if (cenaMatch) wynik.cena = parseFloat(cenaMatch[1].replace(',', '.'));
     }
 
-    // 4. URL — TYLKO jawne linki (http/www), a nie domeny bez protokołu
-    //    interia.pl bez www NIE jest traktowane jako URL przez parser —
-    //    o tym decyduje wyglądaJakUrl() na stronie szczegółów oferty
     const urlMatch = tekst.match(/(?:https?:\/\/|www\.)[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]?(?:\.[a-zA-Z]{2,6})+(?:[/?#][^\s]*)?\b/i);
     if (urlMatch) {
         let url = urlMatch[0];
@@ -178,7 +162,6 @@ function parsujTekst(tekst: string): ParsedData {
         wynik.website_url = url;
     }
 
-    // 5. LOKALIZACJA
     if (t.includes('cala polska') || t.includes('caly kraj') || t.includes('ogolnopolski')) {
         wynik.lokalizacja = 'Cała Polska';
     } else {
@@ -198,7 +181,6 @@ function parsujTekst(tekst: string): ParsedData {
         }
     }
 
-    // 6. KATEGORIA
     for (const { slowa, kategoria } of SLOWA_KLUCZE) {
         if (slowa.some(s => t.includes(s))) {
             const found = KATEGORIE_Z_BDO.find(k => norm(k.nazwa).includes(norm(kategoria).split(' ')[0]));
@@ -208,39 +190,29 @@ function parsujTekst(tekst: string): ParsedData {
         }
     }
 
-    // 7. TYP OFERTY
     if (SLOWA_KUPIE.some(s => t.includes(s))) wynik.typOferty = 'kupie';
     else if (SLOWA_SPRZEDAM.some(s => t.includes(s))) wynik.typOferty = 'sprzedam';
 
-    // 8. CYKLICZNOŚĆ
     for (const { slowa, wartosc } of SLOWA_CYKL) {
         if (slowa.some(s => t.includes(s))) { wynik.supplyFreq = wartosc; break; }
     }
 
-    // 9. TYTUŁ — sam konkret, bez zbędnych słów
-    // Lista słów absolutnie zakazanych w tytule
     const ZBEDNE_TYTUL = [
         'sprzedam', 'kupie', 'oferuje', 'oferujemy', 'zapraszamy', 'oddam',
         'firma', 'przedsiebiorstwo', 'spolka', 'oferta', 'ogloszenie',
-        'tel', 'telefon', 'kontakt', 'dzwon',
-        'ilosc', 'ilo',      // "ilość", "ilo" — zakazane
-        'cena', 'cene',      // cena należy do pola cena
+        'tel', 'telefon', 'kontakt', 'dzwon', 'ilosc', 'ilo', 'cena', 'cene',
     ];
 
-    // Tekst bez URL-i (interia.pl, www.firma.pl — to NIE jest nazwa firmy)
     const tekstBezUrl = tekst.replace(URL_REGEX, '').replace(/\s+/g, ' ').trim();
 
-    // Próba 1: fragment zaczynający się od nazwy surowca
     const surowiecMatch = tekstBezUrl.match(
         /(regranulat|re\s*granulat|przemial|aglomerat|folia|zlom|makulatura|karton|drewno|kabel|platki|butelk|kanister|recyklat|aglo)[\s\w\-\/]{0,50}/i
     );
     if (surowiecMatch) {
         let tyt = surowiecMatch[0]
             .replace(/[\.,!?;:]+$/, '')
-            // Utnij od telefonu/ilości/kontaktu
             .replace(/(?:tel\.?|telefon|kontakt|dzwon|ilo[sś][cć]?|\d{9})[^\w].*$/i, '')
             .trim();
-        // Usuń zakazane słowa ze środka
         const tytN = norm(tyt);
         for (const fraza of ZBEDNE_TYTUL) {
             if (tytN.includes(fraza))
@@ -250,12 +222,9 @@ function parsujTekst(tekst: string): ParsedData {
         if (tyt.length > 3) wynik.title = tyt.charAt(0).toUpperCase() + tyt.slice(1);
     }
 
-    // Fallback: pierwsza linia oczyszczona
     if (!wynik.title || wynik.title.length < 4) {
         let linia = tekstBezUrl.split('\n')[0].trim();
-        // Usuń "z Łodzi", "z Warszawy" itp.
         linia = linia.replace(/\b(?:z|ze)\s+\w+(?:a|y|i|u|ów|em)\b/gi, '');
-        // Usuń zakazane słowa
         const liniaN = norm(linia);
         for (const fraza of ZBEDNE_TYTUL) {
             if (liniaN.includes(fraza))
@@ -282,6 +251,22 @@ function getLokalizacjaLabel(lokalizacja: string, wybrane: string[]): string {
     return 'Wybierz lokalizację...';
 }
 
+// ============================================================
+// WYKRYWANIE iOS SAFARI
+// ============================================================
+function czyiOS(): boolean {
+    if (typeof window === 'undefined') return false;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+}
+
+function czyWebkitSpeech(): boolean {
+    if (typeof window === 'undefined') return false;
+    return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+}
+
+// ============================================================
+// KOMPONENT GŁÓWNY
+// ============================================================
 export default function DodajOferteKrok1() {
     const router = useRouter();
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -306,25 +291,37 @@ export default function DodajOferteKrok1() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [supplyFreq, setSupplyFreq] = useState<SupplyFreq>('jednorazowo');
     const [nasluchuje, setNasluchuje] = useState(false);
-    const [wspieraMikrofon, setWspieraMikrofon] = useState(false);
+    // null = nie sprawdzono, true = działa, false = brak wsparcia
+    const [wspieraMikrofon, setWspieraMikrofon] = useState<boolean | null>(null);
+    // iOS: pokazuj instrukcję klawiatury jako fallback
+    const [pokazInstrukcjeIOS, setPokazInstrukcjeIOS] = useState(false);
 
     const zdjecieRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<any>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => { setIsCheckingAuth(false); }, []);
 
     useEffect(() => {
-        if (typeof window !== 'undefined' &&
-            ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window))
-            setWspieraMikrofon(true);
+        // Wykrywanie wsparcia — po stronie klienta
+        setWspieraMikrofon(czyWebkitSpeech());
     }, []);
 
-    const toggleMikrofon = () => {
-        if (!wspieraMikrofon) return;
-        // iOS Safari wymaga webkitSpeechRecognition + synchronicznego start()
-        const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRec) { setWspieraMikrofon(false); return; }
+    // ──────────────────────────────────────────────────────────
+    // MIKROFON — naprawiony dla iOS Safari
+    //
+    // Kluczowa zasada iOS: recognition.start() MUSI być wywołane
+    // synchronicznie w event handlerze dotyku/kliknięcia.
+    // Żadnego setTimeout, żadnego await przed start().
+    // ──────────────────────────────────────────────────────────
+    const startMikrofon = () => {
+        if (!czyWebkitSpeech()) {
+            // Brak wsparcia przeglądarki → pokaż instrukcję iOS
+            if (czyiOS()) setPokazInstrukcjeIOS(true);
+            setWspieraMikrofon(false);
+            return;
+        }
 
         if (nasluchuje && recognitionRef.current) {
             recognitionRef.current.stop();
@@ -332,37 +329,56 @@ export default function DodajOferteKrok1() {
             return;
         }
 
+        const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         const recognition = new SpeechRec();
         recognition.lang = 'pl-PL';
         recognition.continuous = false;
+        // interimResults: false — iOS Safari lepiej radzi sobie bez interim
         recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
         recognitionRef.current = recognition;
 
         recognition.onstart = () => setNasluchuje(true);
+
+        recognition.onresult = (e: any) => {
+            const transkrypcja = e.results[0]?.[0]?.transcript || '';
+            if (transkrypcja) {
+                setMagicTekst(prev => prev ? prev + ' ' + transkrypcja : transkrypcja);
+            }
+        };
+
         recognition.onend = () => {
             setNasluchuje(false);
-            setTimeout(() => { if (magicTekst.trim()) handleAnalizuj(); }, 400);
-        };
-        recognition.onresult = (e: any) => {
-            const finalny = Array.from(e.results)
-                .filter((r: any) => r.isFinal)
-                .map((r: any) => r[0].transcript)
-                .join(' ');
-            if (finalny) setMagicTekst(prev => prev ? prev + ' ' + finalny : finalny);
-        };
-        recognition.onerror = (e: any) => {
-            console.error('Speech error:', e.error);
-            setNasluchuje(false);
+            // Nie auto-analizuj — daj użytkownikowi szansę przejrzenia tekstu
         };
 
-        // iOS: start() musi byc wywolane SYNCHRONICZNIE, bez await ani setTimeout
-        try { recognition.start(); }
-        catch (err) { console.error('Recognition start failed:', err); setNasluchuje(false); }
+        recognition.onerror = (e: any) => {
+            setNasluchuje(false);
+            if (e.error === 'not-allowed') {
+                // Uprawnienia odrzucone
+                alert('Zezwól na dostęp do mikrofonu w ustawieniach przeglądarki, a następnie odśwież stronę.');
+            } else if (e.error === 'no-speech') {
+                // Cisza — nie rób nic, użytkownik sam spróbuje ponownie
+            } else {
+                console.warn('Speech error:', e.error);
+            }
+        };
+
+        // iOS WYMAGA: start() synchronicznie w user gesture — ZERO opóźnień
+        try {
+            recognition.start();
+        } catch (err) {
+            console.warn('Recognition start failed:', err);
+            setNasluchuje(false);
+        }
     };
 
+    // Hero click: otwiera Magic Box I uruchamia mikrofon w TYM SAMYM handlerze
+    // (nie przez setTimeout — to by złamało iOS gesture chain)
     const handleHeroClick = () => {
         setMagicOtwarte(true);
-        setTimeout(() => toggleMikrofon(), 300);
+        // Na iOS: wywołaj synchronicznie, bez setTimeout
+        startMikrofon();
     };
 
     useEffect(() => {
@@ -429,7 +445,6 @@ export default function DodajOferteKrok1() {
         if (parsed.website_url) localStorage.setItem('magic_website_url', parsed.website_url);
         setPodswietlone(nowePodswietlone);
 
-        // Opis SEO — bez powtarzania "Sprzedam" i lokalizacji jeśli już są w polach
         const nowyTytul = parsed.title || title;
         const nowyMaterial = parsed.material || material;
         const nowaLok = parsed.lokalizacja || getEfektywnaLokalizacja();
@@ -491,6 +506,9 @@ export default function DodajOferteKrok1() {
     const lokalizacjaLabel = getLokalizacjaLabel(lokalizacja, wybrane);
     const maWybor = lokalizacja !== '' || wybrane.length > 0;
 
+    // Czy mikrofon jest w ogóle dostępny (po wykryciu)
+    const mikrofonDostepny = wspieraMikrofon === true;
+
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 sm:p-8 font-sans">
             <div className="max-w-xl w-full bg-white rounded-[40px] shadow-2xl p-8 md:p-12 border-4 border-white">
@@ -510,25 +528,33 @@ export default function DodajOferteKrok1() {
                     <Link href="/rynek" className="bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 p-3 rounded-2xl transition-all font-black text-[10px] uppercase">Anuluj</Link>
                 </div>
 
-                {/* HERO — VOICE AI */}
+                {/* ══════════════════════════════════════════════════
+                    HERO — otwiera Magic Box + startuje mikrofon
+                    JEDEN handler = iOS gesture chain zachowany
+                ══════════════════════════════════════════════════ */}
                 {!magicOtwarte && (
-                    <button type="button" onClick={handleHeroClick}
-                        className="w-full mb-6 group relative overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-900 to-blue-900 p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-2xl">
+                    <button
+                        type="button"
+                        onClick={handleHeroClick}
+                        className="w-full mb-6 group relative overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-900 to-blue-900 p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-2xl"
+                    >
                         <div className="absolute -right-6 -top-6 w-36 h-36 rounded-full bg-red-500/20 animate-ping" />
                         <div className="absolute -right-4 -top-4 w-28 h-28 rounded-full bg-red-500/30" />
                         <div className="relative flex items-center gap-5">
-                            <div className="shrink-0 w-16 h-16 rounded-2xl bg-red-500 flex items-center justify-center shadow-xl">
+                            <div className={`shrink-0 w-16 h-16 rounded-2xl bg-red-500 flex items-center justify-center shadow-xl ${nasluchuje ? 'animate-pulse' : ''}`}>
                                 <Mic size={32} className="text-white" strokeWidth={2.5} />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] mb-1">✦ Nowość — AI asystent</p>
                                 <h2 className="text-xl font-black text-white uppercase tracking-tight leading-tight mb-1">Wystaw ofertę głosem</h2>
                                 <p className="text-slate-300 text-xs font-medium leading-relaxed">
-                                    Kliknij, powiedz co masz, miasto i telefon — AI wypełni resztę za Ciebie.
+                                    Kliknij, powiedz co masz, miasto i telefon — AI wypełni resztę.
                                 </p>
                             </div>
                             <div className="shrink-0 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
                             </div>
                         </div>
                         <p className="relative mt-4 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
@@ -537,7 +563,9 @@ export default function DodajOferteKrok1() {
                     </button>
                 )}
 
-                {/* MAGIC BOX */}
+                {/* ══════════════════════════════════════════════════
+                    MAGIC BOX (rozwinięty)
+                ══════════════════════════════════════════════════ */}
                 {magicOtwarte && (
                     <div className="border-2 border-blue-400 rounded-[28px] overflow-hidden shadow-lg mb-6">
                         <div className="bg-blue-600 px-5 py-3 flex items-center justify-between">
@@ -546,27 +574,68 @@ export default function DodajOferteKrok1() {
                                 <span className="font-black text-xs uppercase tracking-widest">Magic Box — AI</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                {wspieraMikrofon && (
-                                    <button type="button" onClick={toggleMikrofon}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${nasluchuje ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}>
+                                {/* Przycisk mikrofonu — dostępny tylko gdy Speech API działa */}
+                                {mikrofonDostepny && (
+                                    <button
+                                        type="button"
+                                        onClick={startMikrofon}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                                            nasluchuje
+                                                ? 'bg-red-500 text-white animate-pulse shadow-lg'
+                                                : 'bg-white/20 text-white hover:bg-white/30'
+                                        }`}
+                                    >
                                         {nasluchuje ? <MicOff size={13} /> : <Mic size={13} />}
-                                        <span className="hidden sm:inline">{nasluchuje ? 'Słucham...' : 'Dyktuj (AI)'}</span>
+                                        <span className="hidden sm:inline">{nasluchuje ? 'Słucham...' : 'Dyktuj'}</span>
                                     </button>
                                 )}
-                                <button type="button" onClick={() => setMagicOtwarte(false)} className="text-blue-200 hover:text-white ml-1"><X size={18} /></button>
+                                <button type="button" onClick={() => { setMagicOtwarte(false); setNasluchuje(false); recognitionRef.current?.stop(); }} className="text-blue-200 hover:text-white ml-1">
+                                    <X size={18} />
+                                </button>
                             </div>
                         </div>
+
                         <div className="p-4 bg-white">
+
+                            {/* Wskaźnik nagrywania */}
                             {nasluchuje && (
                                 <div className="flex items-center gap-2 mb-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
                                     <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shrink-0" />
-                                    <span className="text-red-600 text-xs font-black uppercase tracking-widest">Słucham... powiedz co masz, miasto i telefon</span>
+                                    <span className="text-red-600 text-xs font-black uppercase tracking-widest">
+                                        Słucham... powiedz co masz, miasto i telefon
+                                    </span>
                                 </div>
                             )}
+
+                            {/* FALLBACK iOS: instrukcja klawiatury gdy Speech API niedostępne */}
+                            {pokazInstrukcjeIOS && !mikrofonDostepny && (
+                                <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
+                                    <Keyboard size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-amber-800 text-xs font-black uppercase tracking-widest mb-1">
+                                            Dyktowanie przez klawiaturę iPhone
+                                        </p>
+                                        <p className="text-amber-700 text-[11px] font-medium leading-relaxed">
+                                            Dotknij pola tekstowego poniżej → na klawiaturze naciśnij ikonę 🎤 (mikrofon) obok spacji → dyktuj po polsku.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Textarea — na iOS z atrybutem dla dyktowania klawiatury */}
                             <textarea
-                                className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-[20px] font-medium text-slate-700 min-h-[100px] resize-none outline-none focus:border-blue-400 transition-colors text-sm placeholder:text-slate-400"
-                                placeholder="np. Sprzedam 24 tony PP czarny, Łódź, tel. 676 787 678"
-                                value={magicTekst} onChange={e => setMagicTekst(e.target.value)} />
+                                ref={textareaRef}
+                                className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-[20px] font-medium text-slate-700 min-h-[110px] resize-none outline-none focus:border-blue-400 transition-colors text-sm placeholder:text-slate-400"
+                                placeholder="Wpisz lub powiedz: Sprzedam 24 tony PP czarny, Łódź, tel. 676 787 678"
+                                value={magicTekst}
+                                onChange={e => setMagicTekst(e.target.value)}
+                                // iOS: te atrybuty pomagają z polskim dyktowaniem klawiatury
+                                lang="pl"
+                                autoCorrect="on"
+                                autoCapitalize="sentences"
+                            />
+
+                            {/* Suflery */}
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {[
                                     { label: 'Sprzedam...', tekst: 'Sprzedam 24 tony regranulatu PP czarny, cena 2500 zł/t, tel. 600 700 800, śląskie.' },
@@ -579,10 +648,12 @@ export default function DodajOferteKrok1() {
                                     </button>
                                 ))}
                             </div>
+
                             <button type="button" onClick={handleAnalizuj} disabled={!magicTekst.trim()}
                                 className="mt-3 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white py-3 rounded-[18px] font-black text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95">
                                 <Sparkles size={16} /> Analizuj i wypełnij pola
                             </button>
+
                             {seoWygenerowane && (
                                 <div className="mt-4 border-2 border-emerald-400 rounded-[20px] overflow-hidden">
                                     <div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-200">
