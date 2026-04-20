@@ -1,18 +1,25 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageCircle, X, PhoneCall, Mail } from 'lucide-react';
 
 export default function LiveChat() {
     const [isOpen, setIsOpen] = useState(false);
     const [visible, setVisible] = useState(false);
+    const pathname = usePathname();
 
-    // Pojawia się dopiero po 5 sekundach
+    // Nie renderuj na ścieżkach administracyjnych
+    const sciezkiAdmina = ['/admin-dashboard', '/admin-recyklat'];
+    const jestAdminPanel = sciezkiAdmina.some(s => pathname?.startsWith(s));
+
     useEffect(() => {
+        if (jestAdminPanel) return;
         const timer = setTimeout(() => setVisible(true), 5000);
         return () => clearTimeout(timer);
-    }, []);
+    }, [jestAdminPanel]);
 
-    if (!visible) return null;
+    // Ukryty na panelach admina — zero DOM, zero konfliktu z layoutem
+    if (jestAdminPanel || !visible) return null;
 
     return (
         <div className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-[100] flex flex-col items-end font-sans">
@@ -73,19 +80,18 @@ export default function LiveChat() {
                 className="transition-all duration-300 active:scale-95"
             >
                 {isOpen ? (
-                    /* Otwarty — pełny przycisk na wszystkich ekranach */
                     <div className="bg-blue-600 text-white p-4 rounded-[20px] shadow-2xl flex items-center justify-center">
                         <X size={24} strokeWidth={2.5} />
                     </div>
                 ) : (
                     <>
-                        {/* MOBILE: małe, półprzezroczyste kółko */}
+                        {/* MOBILE */}
                         <div className="flex sm:hidden w-12 h-12 bg-blue-600/75 backdrop-blur-sm text-white rounded-full shadow-lg items-center justify-center relative">
                             <MessageCircle size={20} strokeWidth={2.5} />
                             <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white"></div>
                         </div>
 
-                        {/* DESKTOP: pełny przycisk z tekstem */}
+                        {/* DESKTOP */}
                         <div className="hidden sm:flex bg-blue-600 text-white pr-6 pl-5 py-5 rounded-[24px] shadow-2xl hover:shadow-blue-500/40 hover:scale-105 items-center gap-3 group">
                             <div className="relative">
                                 <MessageCircle size={28} strokeWidth={2.5} className="group-hover:-rotate-12 transition-transform duration-300" />

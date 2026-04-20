@@ -17,12 +17,16 @@ export default function SzczegolyOferty() {
     const [czyToMoje, setCzyToMoje] = useState(false);
     const [numerOdkryty, setNumerOdkryty] = useState(false);
 
-    // Logowanie klikniecia w telefon — fire & forget, nie blokuje UI
+    // POPRAWKA: payload zawiera type: 'phone_click' — wymagane przez admin-stats
     const logClick = (ofertaId: number) => {
         fetch('/api/log-click', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ofertaId, userType: 'gosc' }),
+            body: JSON.stringify({
+                ofertaId,
+                type: 'phone_click',
+                userType: 'gosc',
+            }),
         }).catch(() => {});
     };
 
@@ -31,13 +35,10 @@ export default function SzczegolyOferty() {
         logClick(ofertaId);
     };
 
-    // Maskowanie numeru: 600 700 ***
     const maskujNumer = (tel: string) => {
         if (!tel) return '';
         const cyfry = tel.replace(/\D/g, '');
-        if (cyfry.length >= 9) {
-            return cyfry.slice(0, 3) + ' ' + cyfry.slice(3, 6) + ' ***';
-        }
+        if (cyfry.length >= 9) return cyfry.slice(0, 3) + ' ' + cyfry.slice(3, 6) + ' ***';
         return tel.slice(0, -3) + '***';
     };
 
@@ -141,17 +142,11 @@ export default function SzczegolyOferty() {
         normaliz(oferta.category) !== normaliz(oferta.material) &&
         normaliz(oferta.category) !== normaliz(oferta.form);
 
-    // ── LOGIKA WYSTAWCY ────────────────────────────────────────────────
-    // maStrone = true jeśli website_url wygląda jak poprawna domena
     const maStrone = wyglądaJakUrl(oferta.website_url);
     const pelnyUrl = maStrone ? fixUrl(oferta.website_url) : '';
     const urlSkrocony = maStrone ? urlDoWyswietlenia(oferta.website_url) : '';
-
-    // Firma: jest jeśli podano nazwę LUB poprawną domenę
     const maFirme = !!oferta.firma || maStrone;
-    // Wyświetlana nazwa: albo wpisana firma, albo domena bez www/protokołu
     const nazwaWyswietlana = oferta.firma || urlSkrocony.split('/')[0];
-    // ──────────────────────────────────────────────────────────────────
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col relative">
@@ -207,20 +202,18 @@ export default function SzczegolyOferty() {
                             />
                         </div>
 
-                        {/* ── WYSTAWCA ─────────────────────────────────── */}
+                        {/* WYSTAWCA */}
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm border-l-8 border-l-blue-600">
                             <h3 className="font-black text-gray-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest">
                                 <Building2 size={14} /> Wystawca
                             </h3>
                             <div className="flex items-center gap-4">
-                                {/* Avatar */}
                                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-white font-black text-xl ${maFirme ? 'bg-blue-600' : 'bg-slate-700'}`}>
                                     {maFirme
                                         ? (oferta.firma ? oferta.firma[0].toUpperCase() : <Building2 size={24} />)
                                         : '?'}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    {/* Nazwa — link jeśli jest strona, tekst jeśli nie */}
                                     {maFirme ? (
                                         maStrone ? (
                                             <a href={pelnyUrl} target="_blank" rel="noopener noreferrer"
@@ -229,22 +222,14 @@ export default function SzczegolyOferty() {
                                                 <ExternalLink size={14} className="shrink-0" />
                                             </a>
                                         ) : (
-                                            <p className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">
-                                                {nazwaWyswietlana}
-                                            </p>
+                                            <p className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">{nazwaWyswietlana}</p>
                                         )
                                     ) : (
-                                        <p className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">
-                                            Ogłoszenie prywatne
-                                        </p>
+                                        <p className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">Ogłoszenie prywatne</p>
                                     )}
-
-                                    {/* Podtytuł */}
                                     <p className={`text-xs font-bold uppercase tracking-widest mt-1 ${maFirme ? 'text-blue-600' : 'text-slate-400'}`}>
                                         {maFirme ? 'Firma' : 'Użytkownik indywidualny'}
                                     </p>
-
-                                    {/* URL pod nazwą (klikalny, nie przykryty) */}
                                     {maStrone && (
                                         <a href={pelnyUrl} target="_blank" rel="noopener noreferrer"
                                             className="text-[11px] text-slate-400 hover:text-blue-500 font-bold mt-0.5 truncate block transition-colors">
@@ -254,7 +239,6 @@ export default function SzczegolyOferty() {
                                 </div>
                             </div>
                         </div>
-                        {/* ─────────────────────────────────────────────── */}
 
                         {/* TYTUŁ I CENA */}
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm space-y-6">
@@ -385,7 +369,6 @@ export default function SzczegolyOferty() {
                     ) : (
                         <div className="flex gap-3">
                             {!numerOdkryty ? (
-                                // PRZYCISK POKAZ NUMER — maskuje koncówkę
                                 <button
                                     onClick={() => handlePokaz(oferta.id)}
                                     className={`flex-1 rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${
@@ -397,7 +380,6 @@ export default function SzczegolyOferty() {
                                     <span className="text-xs font-black bg-white/20 px-2 py-1 rounded-lg ml-1">POKAŻ NUMER</span>
                                 </button>
                             ) : (
-                                // NUMER ODKRYTY — klikalny link tel:
                                 <a
                                     href={`tel:${oferta.telefon}`}
                                     className={`flex-1 rounded-[24px] h-16 flex items-center justify-center gap-3 font-black text-xl shadow-2xl active:scale-95 transition-all uppercase tracking-tight text-white ${

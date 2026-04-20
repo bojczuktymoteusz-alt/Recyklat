@@ -322,15 +322,22 @@ export default function DodajOferteKrok1() {
 
     const toggleMikrofon = () => {
         if (!wspieraMikrofon) return;
+        // iOS Safari wymaga webkitSpeechRecognition + synchronicznego start()
         const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRec) { setWspieraMikrofon(false); return; }
+
         if (nasluchuje && recognitionRef.current) {
-            recognitionRef.current.stop(); setNasluchuje(false); return;
+            recognitionRef.current.stop();
+            setNasluchuje(false);
+            return;
         }
+
         const recognition = new SpeechRec();
         recognition.lang = 'pl-PL';
         recognition.continuous = false;
         recognition.interimResults = false;
         recognitionRef.current = recognition;
+
         recognition.onstart = () => setNasluchuje(true);
         recognition.onend = () => {
             setNasluchuje(false);
@@ -343,8 +350,14 @@ export default function DodajOferteKrok1() {
                 .join(' ');
             if (finalny) setMagicTekst(prev => prev ? prev + ' ' + finalny : finalny);
         };
-        recognition.onerror = () => setNasluchuje(false);
-        recognition.start();
+        recognition.onerror = (e: any) => {
+            console.error('Speech error:', e.error);
+            setNasluchuje(false);
+        };
+
+        // iOS: start() musi byc wywolane SYNCHRONICZNIE, bez await ani setTimeout
+        try { recognition.start(); }
+        catch (err) { console.error('Recognition start failed:', err); setNasluchuje(false); }
     };
 
     const handleHeroClick = () => {
