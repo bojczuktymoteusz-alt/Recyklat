@@ -251,22 +251,12 @@ function getLokalizacjaLabel(lokalizacja: string, wybrane: string[]): string {
     return 'Wybierz lokalizację...';
 }
 
-// ============================================================
-// WYKRYWANIE iOS SAFARI
-// ============================================================
+// Wykrywa iOS (iPhone/iPad)
 function czyiOS(): boolean {
-    if (typeof window === 'undefined') return false;
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    if (typeof navigator === 'undefined') return false;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
 
-function czyWebkitSpeech(): boolean {
-    if (typeof window === 'undefined') return false;
-    return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-}
-
-// ============================================================
-// KOMPONENT GŁÓWNY
-// ============================================================
 export default function DodajOferteKrok1() {
     const router = useRouter();
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -291,37 +281,27 @@ export default function DodajOferteKrok1() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [supplyFreq, setSupplyFreq] = useState<SupplyFreq>('jednorazowo');
     const [nasluchuje, setNasluchuje] = useState(false);
-    // null = nie sprawdzono, true = działa, false = brak wsparcia
-    const [wspieraMikrofon, setWspieraMikrofon] = useState<boolean | null>(null);
-    // iOS: pokazuj instrukcję klawiatury jako fallback
-    const [pokazInstrukcjeIOS, setPokazInstrukcjeIOS] = useState(false);
+    const [wspieraMikrofon, setWspieraMikrofon] = useState(false);
+    // iOS: czy pokazywać instrukcję klawiatury zamiast przycisku mikrofonu
+    const [jestIOS, setJestIOS] = useState(false);
 
     const zdjecieRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<any>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-    useEffect(() => { setIsCheckingAuth(false); }, []);
 
     useEffect(() => {
-        // Wykrywanie wsparcia — po stronie klienta
-        setWspieraMikrofon(czyWebkitSpeech());
+        setIsCheckingAuth(false);
+        const ios = czyiOS();
+        setJestIOS(ios);
+        // Na iOS nie próbujemy Speech API — używamy klawiatury
+        if (!ios && typeof window !== 'undefined') {
+            setWspieraMikrofon('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+        }
     }, []);
 
-    // ──────────────────────────────────────────────────────────
-    // MIKROFON — naprawiony dla iOS Safari
-    //
-    // Kluczowa zasada iOS: recognition.start() MUSI być wywołane
-    // synchronicznie w event handlerze dotyku/kliknięcia.
-    // Żadnego setTimeout, żadnego await przed start().
-    // ──────────────────────────────────────────────────────────
+    // Mikrofon — tylko dla nie-iOS
     const startMikrofon = () => {
-        if (!czyWebkitSpeech()) {
-            // Brak wsparcia przeglądarki → pokaż instrukcję iOS
-            if (czyiOS()) setPokazInstrukcjeIOS(true);
-            setWspieraMikrofon(false);
-            return;
-        }
+        if (!wspieraMikrofon || jestIOS) return;
 
         if (nasluchuje && recognitionRef.current) {
             recognitionRef.current.stop();
@@ -330,55 +310,40 @@ export default function DodajOferteKrok1() {
         }
 
         const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRec) return;
+
         const recognition = new SpeechRec();
         recognition.lang = 'pl-PL';
         recognition.continuous = false;
-        // interimResults: false — iOS Safari lepiej radzi sobie bez interim
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
         recognitionRef.current = recognition;
 
         recognition.onstart = () => setNasluchuje(true);
-
         recognition.onresult = (e: any) => {
-            const transkrypcja = e.results[0]?.[0]?.transcript || '';
-            if (transkrypcja) {
-                setMagicTekst(prev => prev ? prev + ' ' + transkrypcja : transkrypcja);
-            }
+            const tekst = e.results[0]?.[0]?.transcript || '';
+            if (tekst) setMagicTekst(prev => prev ? prev + ' ' + tekst : tekst);
         };
-
-        recognition.onend = () => {
-            setNasluchuje(false);
-            // Nie auto-analizuj — daj użytkownikowi szansę przejrzenia tekstu
-        };
-
+        recognition.onend = () => setNasluchuje(false);
         recognition.onerror = (e: any) => {
             setNasluchuje(false);
             if (e.error === 'not-allowed') {
-                // Uprawnienia odrzucone
-                alert('Zezwól na dostęp do mikrofonu w ustawieniach przeglądarki, a następnie odśwież stronę.');
-            } else if (e.error === 'no-speech') {
-                // Cisza — nie rób nic, użytkownik sam spróbuje ponownie
-            } else {
-                console.warn('Speech error:', e.error);
+                alert('Zezwól na dostęp do mikrofonu w ustawieniach przeglądarki.');
             }
         };
 
-        // iOS WYMAGA: start() synchronicznie w user gesture — ZERO opóźnień
-        try {
-            recognition.start();
-        } catch (err) {
-            console.warn('Recognition start failed:', err);
-            setNasluchuje(false);
-        }
+        try { recognition.start(); } catch { setNasluchuje(false); }
     };
 
-    // Hero click: otwiera Magic Box I uruchamia mikrofon w TYM SAMYM handlerze
-    // (nie przez setTimeout — to by złamało iOS gesture chain)
+    // Hero click: otwiera Magic Box
+    // Na iOS NIE próbuje uruchamiać Speech API — od razu pokazuje instrukcję klawiatury
+    // Na Android/Desktop — uruchamia mikrofon synchronicznie (wymagane przez przeglądarki)
     const handleHeroClick = () => {
         setMagicOtwarte(true);
-        // Na iOS: wywołaj synchronicznie, bez setTimeout
-        startMikrofon();
+        if (!jestIOS) {
+            startMikrofon();
+        }
+        // Na iOS: instrukcja klawiatury jest zawsze widoczna w Magic Box
     };
 
     useEffect(() => {
@@ -506,9 +471,6 @@ export default function DodajOferteKrok1() {
     const lokalizacjaLabel = getLokalizacjaLabel(lokalizacja, wybrane);
     const maWybor = lokalizacja !== '' || wybrane.length > 0;
 
-    // Czy mikrofon jest w ogóle dostępny (po wykryciu)
-    const mikrofonDostepny = wspieraMikrofon === true;
-
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 sm:p-8 font-sans">
             <div className="max-w-xl w-full bg-white rounded-[40px] shadow-2xl p-8 md:p-12 border-4 border-white">
@@ -528,10 +490,7 @@ export default function DodajOferteKrok1() {
                     <Link href="/rynek" className="bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 p-3 rounded-2xl transition-all font-black text-[10px] uppercase">Anuluj</Link>
                 </div>
 
-                {/* ══════════════════════════════════════════════════
-                    HERO — otwiera Magic Box + startuje mikrofon
-                    JEDEN handler = iOS gesture chain zachowany
-                ══════════════════════════════════════════════════ */}
+                {/* HERO */}
                 {!magicOtwarte && (
                     <button
                         type="button"
@@ -541,14 +500,18 @@ export default function DodajOferteKrok1() {
                         <div className="absolute -right-6 -top-6 w-36 h-36 rounded-full bg-red-500/20 animate-ping" />
                         <div className="absolute -right-4 -top-4 w-28 h-28 rounded-full bg-red-500/30" />
                         <div className="relative flex items-center gap-5">
-                            <div className={`shrink-0 w-16 h-16 rounded-2xl bg-red-500 flex items-center justify-center shadow-xl ${nasluchuje ? 'animate-pulse' : ''}`}>
-                                <Mic size={32} className="text-white" strokeWidth={2.5} />
+                            <div className="shrink-0 w-16 h-16 rounded-2xl bg-red-500 flex items-center justify-center shadow-xl">
+                                {jestIOS ? <Keyboard size={30} className="text-white" strokeWidth={2} /> : <Mic size={32} className="text-white" strokeWidth={2.5} />}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] mb-1">✦ Nowość — AI asystent</p>
-                                <h2 className="text-xl font-black text-white uppercase tracking-tight leading-tight mb-1">Wystaw ofertę głosem</h2>
+                                <h2 className="text-xl font-black text-white uppercase tracking-tight leading-tight mb-1">
+                                    {jestIOS ? 'Dyktuj przez klawiaturę' : 'Wystaw ofertę głosem'}
+                                </h2>
                                 <p className="text-slate-300 text-xs font-medium leading-relaxed">
-                                    Kliknij, powiedz co masz, miasto i telefon — AI wypełni resztę.
+                                    {jestIOS
+                                        ? 'Kliknij → dotknij pola tekstowego → naciśnij 🎤 na klawiaturze → dyktuj.'
+                                        : 'Kliknij, powiedz co masz, miasto i telefon — AI wypełni resztę.'}
                                 </p>
                             </div>
                             <div className="shrink-0 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
@@ -563,9 +526,7 @@ export default function DodajOferteKrok1() {
                     </button>
                 )}
 
-                {/* ══════════════════════════════════════════════════
-                    MAGIC BOX (rozwinięty)
-                ══════════════════════════════════════════════════ */}
+                {/* MAGIC BOX */}
                 {magicOtwarte && (
                     <div className="border-2 border-blue-400 rounded-[28px] overflow-hidden shadow-lg mb-6">
                         <div className="bg-blue-600 px-5 py-3 flex items-center justify-between">
@@ -574,8 +535,8 @@ export default function DodajOferteKrok1() {
                                 <span className="font-black text-xs uppercase tracking-widest">Magic Box — AI</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* Przycisk mikrofonu — dostępny tylko gdy Speech API działa */}
-                                {mikrofonDostepny && (
+                                {/* Przycisk mikrofonu tylko na nie-iOS */}
+                                {wspieraMikrofon && !jestIOS && (
                                     <button
                                         type="button"
                                         onClick={startMikrofon}
@@ -589,7 +550,11 @@ export default function DodajOferteKrok1() {
                                         <span className="hidden sm:inline">{nasluchuje ? 'Słucham...' : 'Dyktuj'}</span>
                                     </button>
                                 )}
-                                <button type="button" onClick={() => { setMagicOtwarte(false); setNasluchuje(false); recognitionRef.current?.stop(); }} className="text-blue-200 hover:text-white ml-1">
+                                <button
+                                    type="button"
+                                    onClick={() => { setMagicOtwarte(false); setNasluchuje(false); recognitionRef.current?.stop(); }}
+                                    className="text-blue-200 hover:text-white ml-1"
+                                >
                                     <X size={18} />
                                 </button>
                             </div>
@@ -597,7 +562,7 @@ export default function DodajOferteKrok1() {
 
                         <div className="p-4 bg-white">
 
-                            {/* Wskaźnik nagrywania */}
+                            {/* Wskaźnik nagrywania (Android/Desktop) */}
                             {nasluchuje && (
                                 <div className="flex items-center gap-2 mb-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
                                     <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shrink-0" />
@@ -607,29 +572,31 @@ export default function DodajOferteKrok1() {
                                 </div>
                             )}
 
-                            {/* FALLBACK iOS: instrukcja klawiatury gdy Speech API niedostępne */}
-                            {pokazInstrukcjeIOS && !mikrofonDostepny && (
-                                <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
-                                    <Keyboard size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                            {/* Instrukcja dla iOS — zawsze widoczna na iPhone/iPad */}
+                            {jestIOS && (
+                                <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-3">
+                                    <span className="text-2xl shrink-0">🎤</span>
                                     <div>
-                                        <p className="text-amber-800 text-xs font-black uppercase tracking-widest mb-1">
-                                            Dyktowanie przez klawiaturę iPhone
+                                        <p className="text-blue-800 text-xs font-black uppercase tracking-widest mb-1">
+                                            Dyktowanie na iPhone
                                         </p>
-                                        <p className="text-amber-700 text-[11px] font-medium leading-relaxed">
-                                            Dotknij pola tekstowego poniżej → na klawiaturze naciśnij ikonę 🎤 (mikrofon) obok spacji → dyktuj po polsku.
+                                        <p className="text-blue-700 text-[12px] font-medium leading-relaxed">
+                                            <strong>1.</strong> Dotknij pola poniżej<br />
+                                            <strong>2.</strong> Naciśnij ikonę 🎤 na klawiaturze (obok spacji)<br />
+                                            <strong>3.</strong> Dyktuj: <em>&quot;Sprzedam dwadzieścia ton PP czarny Łódź sześćset siedemset osiemset&quot;</em>
                                         </p>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Textarea — na iOS z atrybutem dla dyktowania klawiatury */}
+                            {/* Textarea */}
                             <textarea
-                                ref={textareaRef}
                                 className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-[20px] font-medium text-slate-700 min-h-[110px] resize-none outline-none focus:border-blue-400 transition-colors text-sm placeholder:text-slate-400"
-                                placeholder="Wpisz lub powiedz: Sprzedam 24 tony PP czarny, Łódź, tel. 676 787 678"
+                                placeholder={jestIOS
+                                    ? 'Dotknij tutaj → naciśnij 🎤 na klawiaturze i dyktuj...'
+                                    : 'Wpisz lub powiedz: Sprzedam 24 tony PP czarny, Łódź, tel. 676 787 678'}
                                 value={magicTekst}
                                 onChange={e => setMagicTekst(e.target.value)}
-                                // iOS: te atrybuty pomagają z polskim dyktowaniem klawiatury
                                 lang="pl"
                                 autoCorrect="on"
                                 autoCapitalize="sentences"
