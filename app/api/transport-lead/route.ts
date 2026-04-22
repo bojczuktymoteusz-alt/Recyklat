@@ -2,46 +2,46 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Wspolna funkcja wysylki przez Resend
 async function wyslijEmail(apiKey: string, to: string, subject: string, html: string) {
-    const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-            from: 'Recyklat <onboarding@resend.dev>',
-            to: [to],
-            subject,
-            html,
-        }),
-    });
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      from: 'Recyklat <kontakt@recyklat.pl>',
+      to: [to],
+      subject,
+      html,
+    }),
+  });
 
-    if (!res.ok) {
-        const text = await res.text();
-        console.error('[Resend error]', res.status, text);
-        return false;
-    }
-    return true;
+  if (!res.ok) {
+    const text = await res.text();
+    console.error('[Resend error]', res.status, text);
+    return false;
+  }
+  return true;
 }
 
 // ── TRANSPORT LEAD ────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-    const body = await req.json();
-    const { type, ...data } = body;
+  const body = await req.json();
+  const { type, ...data } = body;
 
-    const apiKey = process.env.RESEND_API_KEY;
-    const adminEmail = process.env.ADMIN_EMAIL || 'bojczuktymoteusz@gmail.com';
+  const apiKey = process.env.RESEND_API_KEY;
+  const adminEmail = process.env.ADMIN_EMAIL || 'bojczuktymoteusz@gmail.com';
 
-    if (!apiKey) {
-        console.error('[Mail] Brak RESEND_API_KEY');
-        return NextResponse.json({ ok: false, error: 'Brak klucza API' }, { status: 500 });
-    }
+  if (!apiKey) {
+    console.error('[Mail] Brak RESEND_API_KEY');
+    return NextResponse.json({ ok: false, error: 'Brak klucza API' }, { status: 500 });
+  }
 
-    // ── WERYFIKACJA FIRMY ────────────────────────────────────────────────────
-    if (type === 'weryfikacja') {
-        const { nip, nazwaFirmy, telefon, ofertaId, chceCO2 } = data;
+  // ── WERYFIKACJA FIRMY ────────────────────────────────────────────────────
+  if (type === 'weryfikacja') {
+    const { nip, nazwaFirmy, telefon, ofertaId, chceCO2 } = data;
 
-        const html = `
+    const html = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #fffbeb; border-radius: 12px;">
           <div style="background: #b45309; padding: 20px 24px; border-radius: 10px; margin-bottom: 24px;">
             <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 900;">⭐ Nowe zgłoszenie weryfikacji — Recyklat.pl</h1>
@@ -75,21 +75,21 @@ export async function POST(req: NextRequest) {
           </p>
         </div>`;
 
-        const ok = await wyslijEmail(
-            apiKey,
-            adminEmail,
-            `⭐ Weryfikacja: ${nazwaFirmy} (NIP: ${nip}) — CO₂: ${chceCO2 ? 'TAK' : 'NIE'}`,
-            html
-        );
+    const ok = await wyslijEmail(
+      apiKey,
+      adminEmail,
+      `⭐ Weryfikacja: ${nazwaFirmy} (NIP: ${nip}) — CO₂: ${chceCO2 ? 'TAK' : 'NIE'}`,
+      html
+    );
 
-        return NextResponse.json({ ok });
-    }
+    return NextResponse.json({ ok });
+  }
 
-    // ── TRANSPORT LEAD (domyslny typ) ─────────────────────────────────────────
-    const { ofertaId, tytul, lokalizacja, wojewodztwo, dystansKm, kosztPaliwa, cenaPaliwa, waga } = data;
-    const lokStr = [lokalizacja, wojewodztwo].filter(Boolean).join(', ') || '—';
+  // ── TRANSPORT LEAD (domyslny typ) ─────────────────────────────────────────
+  const { ofertaId, tytul, lokalizacja, wojewodztwo, dystansKm, kosztPaliwa, cenaPaliwa, waga } = data;
+  const lokStr = [lokalizacja, wojewodztwo].filter(Boolean).join(', ') || '—';
 
-    const html = `
+  const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #f8fafc; border-radius: 12px;">
       <div style="background: #0f172a; padding: 20px 24px; border-radius: 10px; margin-bottom: 24px;">
         <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 900;">🚛 Zapytanie o transport — Recyklat.pl</h1>
@@ -127,12 +127,12 @@ export async function POST(req: NextRequest) {
       </p>
     </div>`;
 
-    const ok = await wyslijEmail(
-        apiKey,
-        adminEmail,
-        `🚛 Lead transportowy: Oferta #${ofertaId} — ${lokStr}`,
-        html
-    );
+  const ok = await wyslijEmail(
+    apiKey,
+    adminEmail,
+    `🚛 Lead transportowy: Oferta #${ofertaId} — ${lokStr}`,
+    html
+  );
 
-    return NextResponse.json({ ok });
+  return NextResponse.json({ ok });
 }
