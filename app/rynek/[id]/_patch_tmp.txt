@@ -1,0 +1,6 @@
+    const [dystansInput, setDystansInput] = useState('');
+
+    const zatwierdDystans = (val: string) => {
+        const km = parseFloat(val);
+        if (!isNaN(km) && km > 0) { setDystans(km); setBlad(''); }
+    };

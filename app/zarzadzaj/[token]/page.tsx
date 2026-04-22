@@ -125,6 +125,20 @@ export default function ZarzadzajOferta() {
             console.error('Błąd weryfikacji:', errWer.message);
             setBladWeryfikacji('Błąd zapisu. Spróbuj ponownie.');
         } else {
+            // Wyslij email do admina — fire & forget
+            fetch('/api/transport-lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'weryfikacja',
+                    nip: nip.trim(),
+                    nazwaFirmy: nazwaFirmy.trim(),
+                    telefon: telefonDoZapisu,
+                    ofertaId: oferta.id,
+                    chceCO2,
+                }),
+            }).catch(err => console.error('Email weryfikacja:', err));
+
             setWyslanoPomyslnie(true);
         }
     }

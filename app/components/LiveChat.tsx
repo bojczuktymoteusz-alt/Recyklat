@@ -8,18 +8,19 @@ export default function LiveChat() {
     const [visible, setVisible] = useState(false);
     const pathname = usePathname();
 
-    // Nie renderuj na ścieżkach administracyjnych
-    const sciezkiAdmina = ['/admin-dashboard', '/admin-recyklat'];
-    const jestAdminPanel = sciezkiAdmina.some(s => pathname?.startsWith(s));
+    // Białą lista ścieżek — widget widoczny TYLKO tutaj
+    const sciezkiDozwolone = ['/', '/rynek'];
+    const jestDozwolona = sciezkiDozwolone.includes(pathname ?? '');
 
+    // Hooks ZAWSZE przed return — zasada React
     useEffect(() => {
-        if (jestAdminPanel) return;
+        if (!jestDozwolona) return;
         const timer = setTimeout(() => setVisible(true), 5000);
         return () => clearTimeout(timer);
-    }, [jestAdminPanel]);
+    }, [jestDozwolona]);
 
-    // Ukryty na panelach admina — zero DOM, zero konfliktu z layoutem
-    if (jestAdminPanel || !visible) return null;
+    // Ukryj po sprawdzeniu hooków
+    if (!jestDozwolona || !visible) return null;
 
     return (
         <div className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-[100] flex flex-col items-end font-sans">
@@ -53,19 +54,19 @@ export default function LiveChat() {
                         <div className="space-y-3">
                             <a
                                 href="tel:667887562"
-                                className="block w-full bg-slate-900 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-sm hover:bg-blue-600 active:scale-95 transition-all shadow-xl hover:shadow-blue-500/30 flex items-center justify-center gap-2 group"
+                                className="block w-full bg-slate-900 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-sm hover:bg-blue-600 active:scale-95 transition-all shadow-xl hover:shadow-blue-500/30 flex items-center justify-center gap-2"
                             >
                                 <PhoneCall size={18} />
                                 667 887 562
                             </a>
                             <a
                                 href="mailto:kontakt@recyklat.pl?subject=Zapytanie z platformy Recyklat B2B"
-                                className="w-full bg-white text-slate-700 border-2 border-slate-200 py-3 px-4 rounded-2xl hover:border-slate-300 hover:bg-slate-50 active:scale-95 transition-all shadow-sm flex items-center justify-start gap-4 group cursor-pointer"
+                                className="w-full bg-white text-slate-700 border-2 border-slate-200 py-3 px-4 rounded-2xl hover:border-slate-300 hover:bg-slate-50 active:scale-95 transition-all shadow-sm flex items-center justify-start gap-4 cursor-pointer"
                             >
-                                <div className="bg-slate-100 p-2 rounded-xl group-hover:bg-blue-100 transition-colors">
-                                    <Mail size={18} className="text-slate-500 group-hover:text-blue-600 transition-colors" />
+                                <div className="bg-slate-100 p-2 rounded-xl hover:bg-blue-100 transition-colors">
+                                    <Mail size={18} className="text-slate-500" />
                                 </div>
-                                <span className="text-sm font-bold lowercase tracking-normal text-slate-900 group-hover:text-blue-600 transition-colors leading-none">
+                                <span className="text-sm font-bold lowercase text-slate-900 leading-none">
                                     kontakt@recyklat.pl
                                 </span>
                             </a>
@@ -85,13 +86,13 @@ export default function LiveChat() {
                     </div>
                 ) : (
                     <>
-                        {/* MOBILE */}
+                        {/* MOBILE: małe kółko */}
                         <div className="flex sm:hidden w-12 h-12 bg-blue-600/75 backdrop-blur-sm text-white rounded-full shadow-lg items-center justify-center relative">
                             <MessageCircle size={20} strokeWidth={2.5} />
                             <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white"></div>
                         </div>
 
-                        {/* DESKTOP */}
+                        {/* DESKTOP: pełny przycisk */}
                         <div className="hidden sm:flex bg-blue-600 text-white pr-6 pl-5 py-5 rounded-[24px] shadow-2xl hover:shadow-blue-500/40 hover:scale-105 items-center gap-3 group">
                             <div className="relative">
                                 <MessageCircle size={28} strokeWidth={2.5} className="group-hover:-rotate-12 transition-transform duration-300" />

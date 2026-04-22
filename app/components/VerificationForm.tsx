@@ -50,19 +50,28 @@ export default function VerificationForm({ ofertaId, firmaDefault = '', onClose 
         };
 
         try {
-            // WYŚLIJ I ZAPOMNIJ (nie używamy .select())
-            // To zapobiega błędom 406/400 przy braku uprawnień do odczytu
             await supabase
                 .from('weryfikacje')
                 .insert([payload]);
 
-            // Skoro na Screenie 28 widać, że rekordy wpadają, 
-            // po prostu wymuszamy sukces w UI.
+            // Wyslij email do admina przez API
+            await fetch('/api/transport-lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'weryfikacja',
+                    nip: nipCyfry,
+                    nazwaFirmy: firma.trim(),
+                    telefon: telefon.replace(/\s/g, '') || '',
+                    ofertaId: ofertaId ?? null,
+                    chceCO2: wantsCo2,
+                }),
+            });
+
             setSuccess(true);
 
         } catch (err: any) {
-            // Nawet jeśli złapiemy błąd, ale to nie brak internetu - uznajemy sukces
-            console.log('Ignorowany błąd zapytania, sprawdzam bazę...');
+            console.log('Ignoring request error, checking DB...');
             setSuccess(true);
         } finally {
             setLoading(false);

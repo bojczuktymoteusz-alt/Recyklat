@@ -5,10 +5,195 @@ import { supabase } from '@/lib/supabase';
 import {
     ArrowLeft, MapPin, Phone, Info, Truck, Building2,
     Clock, Mail, CheckCircle, FileText, Eye, ExternalLink,
-    ChevronRight
+    ChevronRight, Fuel, Calculator, Send
 } from 'lucide-react';
 import Link from 'next/link';
 import { wyglądaJakUrl, fixUrl, urlDoWyswietlenia } from '@/lib/ofertaUtils';
+
+const SPALANIE = 33;
+const CENA_ON_DOMYSLNA = 6.5;
+
+function obliczKosztPaliwa(dystansKm: number, cenaPaliwa: number): number {
+    return Math.round((dystansKm / 100) * SPALANIE * cenaPaliwa);
+}
+
+function KalkulatorTransportu({ oferta }: { oferta: any }) {
+    const [mojaMiejscowosc, setMojaMiejscowosc] = useState('');
+    const [dystans, setDystans] = useState<number | null>(null);
+    const [ladowanie, setLadowanie] = useState(false);
+    const [pokazReczny, setPokazReczny] = useState(false);
+    // ↓ stan tymczasowy — przechowuje wpisany tekst, NIE triggeruje obliczeń
+    const [dystansRecznyInput, setDystansRecznyInput] = useState('');
+    const [leadWyslany, setLeadWyslany] = useState(false);
+    const [leadLadowanie, setLeadLadowanie] = useState(false);
+
+    const cenaPaliwa = parseFloat(process.env.NEXT_PUBLIC_CENA_ON || '') || CENA_ON_DOMYSLNA;
+    const kosztPaliwa = dystans !== null ? obliczKosztPaliwa(dystans, cenaPaliwa) : null;
+    const lokalizacjaTowaru = [oferta.lokalizacja, oferta.wojewodztwo].filter(Boolean).join(', ');
+
+    const handleOblicz = async () => {
+        if (!mojaMiejscowosc.trim()) return;
+        setLadowanie(true);
+        setDystans(null);
+        setPokazReczny(false);
+        setDystansRecznyInput('');
+        try {
+            const res = await fetch(`/api/distance?from=${encodeURIComponent(mojaMiejscowosc)}&to=${encodeURIComponent(lokalizacjaTowaru)}`);
+            if (res.ok) {
+                const data = await res.json();
+                setDystans(data.dystansKm);
+            } else {
+                setPokazReczny(true);
+            }
+        } catch {
+            setPokazReczny(true);
+        }
+        setLadowanie(false);
+    };
+
+    // Zatwierdza dystans — wywoływane tylko przez onBlur lub Enter, NIE przez onChange
+    const zatwierdDystans = () => {
+        const km = parseFloat(dystansRecznyInput);
+        if (!isNaN(km) && km > 0) setDystans(km);
+    };
+
+    const handleLead = async () => {
+        setLeadLadowanie(true);
+        try {
+            await fetch('/api/transport-lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ofertaId: oferta.id,
+                    tytul: oferta.title || oferta.material,
+                    lokalizacja: oferta.lokalizacja,
+                    wojewodztwo: oferta.wojewodztwo,
+                    dystansKm: dystans,
+                    kosztPaliwa,
+                    cenaPaliwa,
+                    waga: oferta.waga,
+                }),
+            });
+        } catch { }
+        setLeadLadowanie(false);
+        setLeadWyslany(true);
+    };
+
+    return (
+        <div className="bg-white p-8 rounded-[40px] border shadow-sm border-l-8 border-l-emerald-500">
+            <h3 className="font-black text-gray-500 mb-1 flex items-center gap-2 text-xs uppercase tracking-widest">
+                <Truck size={14} className="text-emerald-500" /> Kalkulator transportu
+            </h3>
+            <p className="text-slate-400 text-[11px] font-bold mb-5">
+                Szacunkowy koszt paliwa dla TIR-a ({SPALANIE} l/100km · ON {cenaPaliwa} zł/l)
+            </p>
+
+            <div className="bg-slate-50 rounded-2xl px-4 py-3 mb-4 flex items-center gap-2">
+                <MapPin size={14} className="text-blue-500 shrink-0" />
+                <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Towar jest w</p>
+                    <p className="font-black text-slate-900 text-sm">{lokalizacjaTowaru || 'Lokalizacja nieznana'}</p>
+                </div>
+            </div>
+
+            {/* Pole miejscowości + przycisk */}
+            <div className="flex gap-2 mb-3">
+                <input
+                    type="text"
+                    placeholder="Twoja miejscowość, np. Gdańsk"
+                    value={mojaMiejscowosc}
+                    onChange={e => setMojaMiejscowosc(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleOblicz()}
+                    className="flex-1 p-4 bg-slate-50 border-2 border-slate-200 focus:border-emerald-400 rounded-2xl outline-none font-bold text-slate-900 text-sm"
+                />
+                <button
+                    onClick={handleOblicz}
+                    disabled={!mojaMiejscowosc.trim() || ladowanie}
+                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5"
+                >
+                    <Calculator size={14} />
+                    <span className="hidden sm:inline">Oblicz</span>
+                </button>
+            </div>
+
+            {/* Ręczny dystans — onChange tylko aktualizuje string, wynik liczy się na blur/Enter */}
+            {pokazReczny && (
+                <div className="mb-3">
+                    <p className="text-slate-500 text-xs font-bold mb-2">
+                        Podaj przybliżony dystans ręcznie (km):
+                    </p>
+                    <div className="flex gap-2">
+                        <input
+                            type="number"
+                            placeholder="np. 317"
+                            value={dystansRecznyInput}
+                            onChange={e => setDystansRecznyInput(e.target.value)}
+                            onBlur={zatwierdDystans}
+                            onKeyDown={e => e.key === 'Enter' && zatwierdDystans()}
+                            className="flex-1 p-3 bg-slate-50 border-2 border-slate-200 focus:border-emerald-400 rounded-xl outline-none font-bold text-slate-900 text-sm"
+                        />
+                        <button
+                            onClick={zatwierdDystans}
+                            disabled={!dystansRecznyInput}
+                            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5"
+                        >
+                            <Calculator size={14} />
+                            Przelicz
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {ladowanie && (
+                <div className="text-center py-4 text-slate-400 text-sm font-bold animate-pulse">
+                    Obliczam dystans...
+                </div>
+            )}
+
+            {/* WYNIK */}
+            {dystans !== null && kosztPaliwa !== null && (
+                <div className="mt-4 space-y-3">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <Fuel size={10} /> Szacunkowy koszt paliwa
+                        </p>
+                        <p className="text-4xl font-black text-emerald-700 tracking-tighter">
+                            {kosztPaliwa.toLocaleString('pl-PL')} zł
+                        </p>
+                        <p className="text-emerald-600 text-[11px] font-bold mt-1">
+                            Dystans: ~{Math.round(dystans)} km · {SPALANIE} l/100km · {cenaPaliwa} zł/l
+                        </p>
+                        <p className="text-slate-400 text-[10px] font-bold mt-2">
+                            * Tylko koszt paliwa — bez wynagrodzenia kierowcy, amortyzacji i opłat drogowych.
+                        </p>
+                    </div>
+
+                    {leadWyslany ? (
+                        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                            <CheckCircle size={20} className="text-blue-600 shrink-0" />
+                            <div>
+                                <p className="font-black text-blue-900 text-sm">Zapytanie wysłane!</p>
+                                <p className="text-blue-600 text-[11px] font-bold">Skontaktujemy się z propozycją transportu.</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleLead}
+                            disabled={leadLadowanie}
+                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            <Send size={16} />
+                            {leadLadowanie ? 'Wysyłam...' : 'Chcę wycenę transportu'}
+                        </button>
+                    )}
+                    <p className="text-slate-400 text-[10px] text-center font-bold">
+                        Wyślemy Ci propozycję przewoźnika dla tej trasy
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function SzczegolyOferty() {
     const { id } = useParams();
@@ -18,31 +203,23 @@ export default function SzczegolyOferty() {
     const [czyToMoje, setCzyToMoje] = useState(false);
     const [numerOdkryty, setNumerOdkryty] = useState(false);
 
-    // POPRAWKA: payload zawiera type: 'phone_click'
     const logClick = (ofertaId: number) => {
         fetch('/api/log-click', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ofertaId, type: 'phone_click', userType: 'gosc' }),
-        }).catch(() => {});
+        }).catch(() => { });
     };
 
-    const handlePokaz = (ofertaId: number) => {
-        setNumerOdkryty(true);
-        logClick(ofertaId);
-    };
+    const handlePokaz = (ofertaId: number) => { setNumerOdkryty(true); logClick(ofertaId); };
 
-    // Maskowanie: 606 488 *** (3 grupy, ostatnia zamaskowana)
     const maskujNumer = (tel: string) => {
         if (!tel) return '';
         const cyfry = tel.replace(/\D/g, '');
-        if (cyfry.length >= 9) {
-            return cyfry.slice(0, 3) + ' ' + cyfry.slice(3, 6) + ' ***';
-        }
+        if (cyfry.length >= 9) return cyfry.slice(0, 3) + ' ' + cyfry.slice(3, 6) + ' ***';
         return tel.slice(0, -3) + '***';
     };
 
-    // Format wyświetlanego numeru po odkryciu: 606 488 123
     const formatujNumer = (tel: string) => {
         const cyfry = tel.replace(/\D/g, '');
         if (cyfry.length === 9) return cyfry.slice(0, 3) + ' ' + cyfry.slice(3, 6) + ' ' + cyfry.slice(6);
@@ -68,7 +245,7 @@ export default function SzczegolyOferty() {
             if (!id) return;
             const { data, error } = await supabase
                 .from('oferty')
-                .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, telefon, email, zdjecie_url, created_at, status, typ_oferty, bdo_code, impurity, form, certificates, logistics, pickup_hours, opis, extra_photo_docs, firma, website_url, wyswietlenia, category, material_type, color, param_mfi')
+                .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, telefon, email, zdjecie_url, created_at, status, typ_oferty, bdo_code, impurity, form, certificates, logistics, pickup_hours, opis, firma, website_url, wyswietlenia, category, material_type, color, param_mfi')
                 .eq('id', id)
                 .single();
 
@@ -155,16 +332,17 @@ export default function SzczegolyOferty() {
     const maFirme = !!oferta.firma || maStrone;
     const nazwaWyswietlana = oferta.firma || urlSkrocony.split('/')[0];
 
-    // Kolory akcentu zależne od typu oferty
     const accentBg = jestZapotrzebowanie ? 'bg-blue-600' : 'bg-slate-900';
     const accentHover = jestZapotrzebowanie ? 'hover:bg-blue-700' : 'hover:bg-slate-800';
     const accentBgRevealed = jestZapotrzebowanie ? 'bg-blue-600' : 'bg-emerald-600';
     const accentHoverRevealed = jestZapotrzebowanie ? 'hover:bg-blue-700' : 'hover:bg-emerald-700';
 
+    const lokalizacjaWyswietlana = [oferta.lokalizacja, oferta.wojewodztwo]
+        .filter(Boolean).join(', ') || 'Polska';
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col relative">
 
-            {/* NAVBAR */}
             <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
                     <Link href="/rynek" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-bold uppercase text-xs tracking-widest">
@@ -197,11 +375,7 @@ export default function SzczegolyOferty() {
 
             <div className="max-w-4xl mx-auto px-4 py-8 w-full pb-36">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-                    {/* LEWA KOLUMNA */}
                     <div className="space-y-6">
-
-                        {/* ZDJĘCIE */}
                         <div className="aspect-square bg-white rounded-[40px] overflow-hidden border shadow-sm">
                             <img
                                 src={oferta.zdjecie_url || (jestZapotrzebowanie ? '/placeholder-kupie.jpg' : '/placeholder-sprzedam.jpg')}
@@ -215,24 +389,20 @@ export default function SzczegolyOferty() {
                             />
                         </div>
 
-                        {/* WYSTAWCA */}
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm border-l-8 border-l-blue-600">
                             <h3 className="font-black text-gray-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest">
                                 <Building2 size={14} /> Wystawca
                             </h3>
                             <div className="flex items-center gap-4">
                                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-white font-black text-xl ${maFirme ? 'bg-blue-600' : 'bg-slate-700'}`}>
-                                    {maFirme
-                                        ? (oferta.firma ? oferta.firma[0].toUpperCase() : <Building2 size={24} />)
-                                        : '?'}
+                                    {maFirme ? (oferta.firma ? oferta.firma[0].toUpperCase() : <Building2 size={24} />) : '?'}
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     {maFirme ? (
                                         maStrone ? (
                                             <a href={pelnyUrl} target="_blank" rel="noopener noreferrer"
                                                 className="text-xl font-black text-blue-600 uppercase tracking-tighter hover:underline inline-flex items-center gap-1.5 leading-tight">
-                                                {nazwaWyswietlana}
-                                                <ExternalLink size={14} className="shrink-0" />
+                                                {nazwaWyswietlana}<ExternalLink size={14} className="shrink-0" />
                                             </a>
                                         ) : (
                                             <p className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">{nazwaWyswietlana}</p>
@@ -253,7 +423,6 @@ export default function SzczegolyOferty() {
                             </div>
                         </div>
 
-                        {/* TYTUŁ I CENA */}
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm space-y-6">
                             <h1 className="text-2xl md:text-3xl font-black tracking-tighter uppercase text-slate-900 leading-none">
                                 {wyswietlanyTytul}
@@ -263,22 +432,18 @@ export default function SzczegolyOferty() {
                                     {oferta.cena > 0 ? `${oferta.cena} zł / t` : 'Cena do negocjacji'}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3 pt-4 border-t">
-                                <MapPin size={24} className="text-blue-500 shrink-0" />
-                                <div>
-                                    <span className="font-black text-xl uppercase text-slate-900">{oferta.lokalizacja || 'Polska'}</span>
-                                    {oferta.wojewodztwo && (
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Woj. {oferta.wojewodztwo}</p>
-                                    )}
-                                </div>
+                            <div className="flex items-start gap-3 pt-4 border-t">
+                                <MapPin size={24} className="text-blue-500 shrink-0 mt-0.5" />
+                                <span className="font-black text-xl uppercase text-slate-900 leading-tight">
+                                    {lokalizacjaWyswietlana}
+                                </span>
                             </div>
                         </div>
+
+                        {!jestSprzedane && <KalkulatorTransportu oferta={oferta} />}
                     </div>
 
-                    {/* PRAWA KOLUMNA */}
                     <div className="space-y-6">
-
-                        {/* SZCZEGÓŁY TECHNICZNE */}
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                             <h3 className="font-black text-gray-500 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest">
                                 <Info size={14} /> Szczegóły techniczne
@@ -333,7 +498,6 @@ export default function SzczegolyOferty() {
                             )}
                         </div>
 
-                        {/* LOGISTYKA */}
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm">
                             <h3 className="font-black text-gray-500 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest">
                                 <Truck size={14} /> Logistyka
@@ -356,7 +520,6 @@ export default function SzczegolyOferty() {
                             </div>
                         </div>
 
-                        {/* DODATKOWE INFORMACJE */}
                         {oferta.opis && (
                             <div className="bg-white p-8 rounded-[40px] border shadow-sm border-l-8 border-l-emerald-500">
                                 <h3 className="font-black text-gray-500 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest">
@@ -371,79 +534,48 @@ export default function SzczegolyOferty() {
                 </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════════
-                DOLNY PASEK KONTAKTOWY — przeprojektowany mobile
-            ═══════════════════════════════════════════════════ */}
             <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 z-50">
                 <div className="max-w-4xl mx-auto px-4 py-3">
                     {jestSprzedane ? (
-                        /* Archiwalne */
                         <div className="h-14 w-full bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-center gap-3">
                             <CheckCircle size={20} className="text-red-500" />
                             <span className="text-red-600 font-black uppercase tracking-tight text-base">Ogłoszenie archiwalne</span>
                         </div>
                     ) : !numerOdkryty ? (
-                        /* ── STAN: NUMER UKRYTY ────────────────────────
-                           Duży przycisk z wezwaniem + zamaskowany numer   */
                         <div className="flex gap-2 items-stretch">
                             <button
                                 onClick={() => handlePokaz(oferta.id)}
                                 className={`flex-1 ${accentBg} ${accentHover} text-white rounded-2xl active:scale-95 transition-all shadow-xl flex flex-col items-center justify-center py-3 gap-0.5`}
                             >
-                                {/* Etykieta CTA */}
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-75 flex items-center gap-1">
                                     <Phone size={10} /> Dotknij, aby odkryć numer
                                 </span>
-                                {/* Numer z gwiazdkami — duży, czytelny */}
-                                <span className="text-2xl font-black tracking-widest">
-                                    {maskujNumer(oferta.telefon)}
-                                </span>
+                                <span className="text-2xl font-black tracking-widest">{maskujNumer(oferta.telefon)}</span>
                             </button>
-
-                            {/* Przycisk email — tylko jeśli istnieje */}
                             {oferta.email && (
-                                <a
-                                    href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
-                                    className={`w-16 rounded-2xl flex flex-col items-center justify-center gap-1 border-2 active:scale-95 transition-all shrink-0 ${
-                                        jestZapotrzebowanie
-                                            ? 'bg-blue-50 text-blue-600 border-blue-200'
-                                            : 'bg-slate-50 text-slate-600 border-slate-200'
-                                    }`}
-                                >
+                                <a href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
+                                    className={`w-16 rounded-2xl flex flex-col items-center justify-center gap-1 border-2 active:scale-95 transition-all shrink-0 ${jestZapotrzebowanie ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                                     <Mail size={20} />
                                     <span className="text-[9px] font-black uppercase">Mail</span>
                                 </a>
                             )}
                         </div>
                     ) : (
-                        /* ── STAN: NUMER ODKRYTY ───────────────────────
-                           Klikalny link tel: z pełnym numerem             */
                         <div className="flex gap-2 items-stretch">
-                            <a
-                                href={`tel:${oferta.telefon}`}
-                                className={`flex-1 ${accentBgRevealed} ${accentHoverRevealed} text-white rounded-2xl active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 py-4`}
-                            >
+                            <a href={`tel:${oferta.telefon}`}
+                                className={`flex-1 ${accentBgRevealed} ${accentHoverRevealed} text-white rounded-2xl active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 py-4`}>
                                 <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
                                     <Phone size={22} fill="white" />
                                 </div>
                                 <div className="flex flex-col items-start">
                                     <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Zadzwoń teraz</span>
-                                    <span className="text-2xl font-black tracking-widest leading-tight">
-                                        {formatujNumer(oferta.telefon)}
-                                    </span>
+                                    <span className="text-2xl font-black tracking-widest leading-tight">{formatujNumer(oferta.telefon)}</span>
                                 </div>
                                 <ChevronRight size={20} className="opacity-60 ml-auto" />
                             </a>
-
                             {oferta.email && (
-                                <a
-                                    href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
-                                    className={`w-16 rounded-2xl flex flex-col items-center justify-center gap-1 border-2 active:scale-95 transition-all shrink-0 ${
-                                        jestZapotrzebowanie
-                                            ? 'bg-blue-50 text-blue-600 border-blue-200'
-                                            : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                    }`}
-                                >
+                                <a href={`mailto:${oferta.email}?subject=Zapytanie o: ${wyswietlanyTytul}`}
+                                    className={`w-16 rounded-2xl flex flex-col items-center justify-center gap-1 border-2 active:scale-95 transition-all shrink-0 ${jestZapotrzebowanie ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
                                     <Mail size={20} />
                                     <span className="text-[9px] font-black uppercase">Mail</span>
                                 </a>

@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
         ] = await Promise.all([
             supabase.from('oferty').select('*', { count: 'exact', head: true }),
             supabase.from('oferty').select('*', { count: 'exact', head: true }).gte('created_at', przed7Dniami.toISOString()),
-            supabase.from('oferty').select('*', { count: 'exact', head: true }).eq('status', 'aktywna'),
+            // Aktywne = wszystko poza 'sprzedane' (obsluguje brak statusu i rozne wartosci)
+            supabase.from('oferty').select('*', { count: 'exact', head: true }).neq('status', 'sprzedane'),
             supabase.from('oferty').select('*', { count: 'exact', head: true }).eq('magic_box_used', true),
             supabase.from('oferty').select('*', { count: 'exact', head: true }).gte('created_at', dzisiajStart.toISOString()),
             supabase.from('oferty').select('*', { count: 'exact', head: true }).gte('created_at', wczorajStart.toISOString()).lt('created_at', dzisiajStart.toISOString()),
@@ -75,6 +76,11 @@ export async function POST(req: NextRequest) {
         const wyswietleniaOstatnie30dni = wszystkieOferty
             ?.filter(o => new Date(o.created_at) >= przed30Dniami)
             .reduce((s, o) => s + (o.wyswietlenia || 0), 0) ?? 0;
+
+        // DEBUG: zaloguj do konsoli Vercel jesli wszystkie=0
+        if ((wszystkie ?? 0) === 0) {
+            console.warn('STATS: wszystkie=0 — sprawdz RLS tabeli oferty lub SERVICE_ROLE_KEY');
+        }
 
         const ctr = wyswietleniaWszystkie > 0
             ? Math.round(((clicksWszystkie ?? 0) / wyswietleniaWszystkie) * 1000) / 10

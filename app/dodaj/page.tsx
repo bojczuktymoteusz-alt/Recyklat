@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
-import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, ChevronDown, Mic, MicOff, Calendar, Keyboard } from 'lucide-react';
+import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, ChevronDown, Mic, MicOff, Calendar, Keyboard, MapPin } from 'lucide-react';
 import { sanitizeText } from '@/lib/security';
 
 const KATEGORIE_Z_BDO = [
@@ -114,7 +114,7 @@ function slugify(text: string): string {
 
 interface ParsedData {
     telefon?: string; waga?: string; cena?: number | null;
-    lokalizacja?: string; wojewodztwo?: string; material?: string;
+    miejscowosc?: string; wojewodztwo?: string; material?: string;
     autoBdo?: string; title?: string; typOferty?: 'sprzedam' | 'kupie';
     website_url?: string; supplyFreq?: SupplyFreq;
 }
@@ -162,22 +162,23 @@ function parsujTekst(tekst: string): ParsedData {
         wynik.website_url = url;
     }
 
+    // Lokalizacja: ROZDZIELONE — miejscowość osobno, województwo osobno
     if (t.includes('cala polska') || t.includes('caly kraj') || t.includes('ogolnopolski')) {
-        wynik.lokalizacja = 'Cała Polska';
+        wynik.miejscowosc = 'Cała Polska';
+        wynik.wojewodztwo = '';
     } else {
+        // Szukaj województw
         for (const [asciiKey, plNazwa] of Object.entries(WOJEWODZTWA_ASCII)) {
             if (t.includes(asciiKey)) { wynik.wojewodztwo = plNazwa; break; }
         }
+        // Szukaj miast — trafia TYLKO do pola miejscowość
         for (const [miastoKey, wojKey] of Object.entries(MIASTA_WOJEWODZTWA)) {
             if (t.includes(miastoKey)) {
-                wynik.lokalizacja = MIASTA_NAZWY_PL[miastoKey] || miastoKey;
+                wynik.miejscowosc = MIASTA_NAZWY_PL[miastoKey] || miastoKey;
+                // Ustaw województwo tylko jeśli nie wykryto z tekstu
                 if (!wynik.wojewodztwo) wynik.wojewodztwo = WOJEWODZTWA_ASCII[wojKey] || wojKey;
                 break;
             }
-        }
-        if (!wynik.wojewodztwo && !wynik.lokalizacja) {
-            if (t.includes('europa') || t.includes('zagranica') || t.includes('eksport'))
-                wynik.lokalizacja = 'Europa / Zagranica';
         }
     }
 
@@ -238,20 +239,6 @@ function parsujTekst(tekst: string): ParsedData {
     return wynik;
 }
 
-const SPECIAL_OPTIONS = [
-    { value: 'Cała Polska', label: '🌐 Cała Polska' },
-    { value: 'Europa / Zagranica', label: '✈️ Europa / Zagranica' },
-];
-
-function getLokalizacjaLabel(lokalizacja: string, wybrane: string[]): string {
-    if (lokalizacja === 'Cała Polska') return '🌐 Cała Polska';
-    if (lokalizacja === 'Europa / Zagranica') return '✈️ Europa / Zagranica';
-    if (wybrane.length === 1) return wybrane[0];
-    if (wybrane.length > 1) return `${wybrane.length} województw`;
-    return 'Wybierz lokalizację...';
-}
-
-// Wykrywa iOS (iPhone/iPad)
 function czyiOS(): boolean {
     if (typeof navigator === 'undefined') return false;
     return /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -264,8 +251,9 @@ export default function DodajOferteKrok1() {
     const [title, setTitle] = useState('');
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
-    const [lokalizacja, setLokalizacja] = useState('');
-    const [wybrane, setWybrane] = useState<string[]>([]);
+    // ROZDZIELONE POLA LOKALIZACJI
+    const [miejscowosc, setMiejscowosc] = useState('');
+    const [wojewodztwo, setWojewodztwo] = useState('');
     const [telefon, setTelefon] = useState('');
     const [autoBdo, setAutoBdo] = useState('');
     const [file, setFile] = useState<File | null>(null);
@@ -278,47 +266,36 @@ export default function DodajOferteKrok1() {
     const [seoOpis, setSeoOpis] = useState('');
     const [seoWygenerowane, setSeoWygenerowane] = useState(false);
     const [tooltipVisible, setTooltipVisible] = useState<string | null>(null);
-    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [supplyFreq, setSupplyFreq] = useState<SupplyFreq>('jednorazowo');
     const [nasluchuje, setNasluchuje] = useState(false);
     const [wspieraMikrofon, setWspieraMikrofon] = useState(false);
-    // iOS: czy pokazywać instrukcję klawiatury zamiast przycisku mikrofonu
     const [jestIOS, setJestIOS] = useState(false);
 
     const zdjecieRef = useRef<HTMLDivElement>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<any>(null);
 
     useEffect(() => {
         setIsCheckingAuth(false);
         const ios = czyiOS();
         setJestIOS(ios);
-        // Na iOS nie próbujemy Speech API — używamy klawiatury
         if (!ios && typeof window !== 'undefined') {
             setWspieraMikrofon('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
         }
     }, []);
 
-    // Mikrofon — tylko dla nie-iOS
     const startMikrofon = () => {
         if (!wspieraMikrofon || jestIOS) return;
-
         if (nasluchuje && recognitionRef.current) {
-            recognitionRef.current.stop();
-            setNasluchuje(false);
-            return;
+            recognitionRef.current.stop(); setNasluchuje(false); return;
         }
-
         const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRec) return;
-
         const recognition = new SpeechRec();
         recognition.lang = 'pl-PL';
         recognition.continuous = false;
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
         recognitionRef.current = recognition;
-
         recognition.onstart = () => setNasluchuje(true);
         recognition.onresult = (e: any) => {
             const tekst = e.results[0]?.[0]?.transcript || '';
@@ -327,47 +304,14 @@ export default function DodajOferteKrok1() {
         recognition.onend = () => setNasluchuje(false);
         recognition.onerror = (e: any) => {
             setNasluchuje(false);
-            if (e.error === 'not-allowed') {
-                alert('Zezwól na dostęp do mikrofonu w ustawieniach przeglądarki.');
-            }
+            if (e.error === 'not-allowed') alert('Zezwól na dostęp do mikrofonu w ustawieniach przeglądarki.');
         };
-
         try { recognition.start(); } catch { setNasluchuje(false); }
     };
 
-    // Hero click: otwiera Magic Box
-    // Na iOS NIE próbuje uruchamiać Speech API — od razu pokazuje instrukcję klawiatury
-    // Na Android/Desktop — uruchamia mikrofon synchronicznie (wymagane przez przeglądarki)
     const handleHeroClick = () => {
         setMagicOtwarte(true);
-        if (!jestIOS) {
-            startMikrofon();
-        }
-        // Na iOS: instrukcja klawiatury jest zawsze widoczna w Magic Box
-    };
-
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
-                setDropdownOpen(false);
-        };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, []);
-
-    const getEfektywnaLokalizacja = () => {
-        if (lokalizacja === 'Cała Polska' || lokalizacja === 'Europa / Zagranica') return lokalizacja;
-        return wybrane.length > 0 ? wybrane[0] : '';
-    };
-    const getEfektywneWojewodztwo = () => {
-        if (lokalizacja === 'Cała Polska' || lokalizacja === 'Europa / Zagranica') return '';
-        return wybrane.join(', ');
-    };
-
-    const handleSpecjalny = (val: string) => { setLokalizacja(val); setWybrane([]); setDropdownOpen(false); };
-    const handleToggleWojewodztwo = (woj: string) => {
-        setLokalizacja('');
-        setWybrane(prev => prev.includes(woj) ? prev.filter(w => w !== woj) : [...prev, woj]);
+        if (!jestIOS) startMikrofon();
     };
 
     const handleAnalizuj = () => {
@@ -388,12 +332,11 @@ export default function DodajOferteKrok1() {
         if (parsed.waga) zastap('Waga', parsed.waga, waga, setWaga);
         else nowePodswietlone.add('waga');
 
-        if (parsed.lokalizacja === 'Cała Polska' || parsed.lokalizacja === 'Europa / Zagranica') {
-            setLokalizacja(parsed.lokalizacja); setWybrane([]);
-        } else {
-            if (parsed.wojewodztwo) { setWybrane([parsed.wojewodztwo]); setLokalizacja(''); }
-            else nowePodswietlone.add('lokalizacja');
-        }
+        // Rozdzielone: miejscowość i województwo niezależnie
+        if (parsed.miejscowosc) zastap('Miejscowość', parsed.miejscowosc, miejscowosc, setMiejscowosc);
+        else nowePodswietlone.add('miejscowosc');
+        if (parsed.wojewodztwo) zastap('Województwo', parsed.wojewodztwo, wojewodztwo, setWojewodztwo);
+        else nowePodswietlone.add('wojewodztwo');
 
         if (parsed.material) {
             zastap('Kategoria', parsed.material, material, setMaterial);
@@ -412,7 +355,7 @@ export default function DodajOferteKrok1() {
 
         const nowyTytul = parsed.title || title;
         const nowyMaterial = parsed.material || material;
-        const nowaLok = parsed.lokalizacja || getEfektywnaLokalizacja();
+        const nowaLok = [parsed.miejscowosc || miejscowosc, parsed.wojewodztwo || wojewodztwo].filter(Boolean).join(', ');
         const opis = [
             nowyTytul || nowyMaterial,
             nowyMaterial && nowyMaterial !== nowyTytul ? `Kategoria: ${nowyMaterial}` : '',
@@ -421,7 +364,7 @@ export default function DodajOferteKrok1() {
         ].filter(Boolean).join('\n');
         setSeoOpis(opis);
         localStorage.setItem('magic_opis', opis);
-        const slugBase = [nowyTytul || nowyMaterial, nowaLok].filter(Boolean).join(' ');
+        const slugBase = [nowyTytul || nowyMaterial, parsed.miejscowosc || miejscowosc].filter(Boolean).join(' ');
         if (slugBase) localStorage.setItem('magic_slug', slugify(slugBase));
         setSeoWygenerowane(true);
     };
@@ -450,8 +393,9 @@ export default function DodajOferteKrok1() {
                 title: sanitizeText(title),
                 material: sanitizeText(material),
                 waga: parseFloat(waga) || 0,
-                lokalizacja: sanitizeText(getEfektywnaLokalizacja()),
-                wojewodztwo: sanitizeText(getEfektywneWojewodztwo()),
+                // ROZDZIELONE: lokalizacja = miasto, wojewodztwo = województwo
+                lokalizacja: sanitizeText(miejscowosc),
+                wojewodztwo: sanitizeText(wojewodztwo),
                 telefon: sanitizeText(telefon),
                 zdjecie_url: uploadedImageUrl,
                 bdo_code: autoBdo,
@@ -467,9 +411,6 @@ export default function DodajOferteKrok1() {
     };
 
     if (isCheckingAuth) return null;
-
-    const lokalizacjaLabel = getLokalizacjaLabel(lokalizacja, wybrane);
-    const maWybor = lokalizacja !== '' || wybrane.length > 0;
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 sm:p-8 font-sans">
@@ -492,11 +433,8 @@ export default function DodajOferteKrok1() {
 
                 {/* HERO */}
                 {!magicOtwarte && (
-                    <button
-                        type="button"
-                        onClick={handleHeroClick}
-                        className="w-full mb-6 group relative overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-900 to-blue-900 p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-2xl"
-                    >
+                    <button type="button" onClick={handleHeroClick}
+                        className="w-full mb-6 group relative overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-900 to-blue-900 p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-2xl">
                         <div className="absolute -right-6 -top-6 w-36 h-36 rounded-full bg-red-500/20 animate-ping" />
                         <div className="absolute -right-4 -top-4 w-28 h-28 rounded-full bg-red-500/30" />
                         <div className="relative flex items-center gap-5">
@@ -535,74 +473,44 @@ export default function DodajOferteKrok1() {
                                 <span className="font-black text-xs uppercase tracking-widest">Magic Box — AI</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* Przycisk mikrofonu tylko na nie-iOS */}
                                 {wspieraMikrofon && !jestIOS && (
-                                    <button
-                                        type="button"
-                                        onClick={startMikrofon}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
-                                            nasluchuje
-                                                ? 'bg-red-500 text-white animate-pulse shadow-lg'
-                                                : 'bg-white/20 text-white hover:bg-white/30'
-                                        }`}
-                                    >
+                                    <button type="button" onClick={startMikrofon}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${nasluchuje ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}>
                                         {nasluchuje ? <MicOff size={13} /> : <Mic size={13} />}
                                         <span className="hidden sm:inline">{nasluchuje ? 'Słucham...' : 'Dyktuj'}</span>
                                     </button>
                                 )}
-                                <button
-                                    type="button"
-                                    onClick={() => { setMagicOtwarte(false); setNasluchuje(false); recognitionRef.current?.stop(); }}
-                                    className="text-blue-200 hover:text-white ml-1"
-                                >
+                                <button type="button" onClick={() => { setMagicOtwarte(false); setNasluchuje(false); recognitionRef.current?.stop(); }} className="text-blue-200 hover:text-white ml-1">
                                     <X size={18} />
                                 </button>
                             </div>
                         </div>
-
                         <div className="p-4 bg-white">
-
-                            {/* Wskaźnik nagrywania (Android/Desktop) */}
                             {nasluchuje && (
                                 <div className="flex items-center gap-2 mb-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
                                     <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shrink-0" />
-                                    <span className="text-red-600 text-xs font-black uppercase tracking-widest">
-                                        Słucham... powiedz co masz, miasto i telefon
-                                    </span>
+                                    <span className="text-red-600 text-xs font-black uppercase tracking-widest">Słucham... powiedz co masz, miasto i telefon</span>
                                 </div>
                             )}
-
-                            {/* Instrukcja dla iOS — zawsze widoczna na iPhone/iPad */}
                             {jestIOS && (
                                 <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-3">
                                     <span className="text-2xl shrink-0">🎤</span>
                                     <div>
-                                        <p className="text-blue-800 text-xs font-black uppercase tracking-widest mb-1">
-                                            Dyktowanie na iPhone
-                                        </p>
+                                        <p className="text-blue-800 text-xs font-black uppercase tracking-widest mb-1">Dyktowanie na iPhone</p>
                                         <p className="text-blue-700 text-[12px] font-medium leading-relaxed">
                                             <strong>1.</strong> Dotknij pola poniżej<br />
-                                            <strong>2.</strong> Naciśnij ikonę 🎤 na klawiaturze (obok spacji)<br />
-                                            <strong>3.</strong> Dyktuj: <em>&quot;Sprzedam dwadzieścia ton PP czarny Łódź sześćset siedemset osiemset&quot;</em>
+                                            <strong>2.</strong> Naciśnij ikonę 🎤 na klawiaturze<br />
+                                            <strong>3.</strong> Dyktuj po polsku
                                         </p>
                                     </div>
                                 </div>
                             )}
-
-                            {/* Textarea */}
                             <textarea
                                 className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-[20px] font-medium text-slate-700 min-h-[110px] resize-none outline-none focus:border-blue-400 transition-colors text-sm placeholder:text-slate-400"
-                                placeholder={jestIOS
-                                    ? 'Dotknij tutaj → naciśnij 🎤 na klawiaturze i dyktuj...'
-                                    : 'Wpisz lub powiedz: Sprzedam 24 tony PP czarny, Łódź, tel. 676 787 678'}
-                                value={magicTekst}
-                                onChange={e => setMagicTekst(e.target.value)}
-                                lang="pl"
-                                autoCorrect="on"
-                                autoCapitalize="sentences"
+                                placeholder={jestIOS ? 'Dotknij tutaj → naciśnij 🎤 na klawiaturze i dyktuj...' : 'Wpisz lub powiedz: Sprzedam 24 tony PP czarny, Łódź, tel. 676 787 678'}
+                                value={magicTekst} onChange={e => setMagicTekst(e.target.value)}
+                                lang="pl" autoCorrect="on" autoCapitalize="sentences"
                             />
-
-                            {/* Suflery */}
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {[
                                     { label: 'Sprzedam...', tekst: 'Sprzedam 24 tony regranulatu PP czarny, cena 2500 zł/t, tel. 600 700 800, śląskie.' },
@@ -615,12 +523,10 @@ export default function DodajOferteKrok1() {
                                     </button>
                                 ))}
                             </div>
-
                             <button type="button" onClick={handleAnalizuj} disabled={!magicTekst.trim()}
                                 className="mt-3 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white py-3 rounded-[18px] font-black text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95">
                                 <Sparkles size={16} /> Analizuj i wypełnij pola
                             </button>
-
                             {seoWygenerowane && (
                                 <div className="mt-4 border-2 border-emerald-400 rounded-[20px] overflow-hidden">
                                     <div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-200">
@@ -636,6 +542,7 @@ export default function DodajOferteKrok1() {
                 )}
 
                 <form onSubmit={handleDalej} className="space-y-6">
+                    {/* TYP OFERTY */}
                     <div className="grid grid-cols-2 gap-3 bg-slate-100 p-2 rounded-[28px]">
                         <button type="button" onClick={() => setTypOferty('sprzedam')}
                             className={`py-4 rounded-[20px] text-sm font-black uppercase flex items-center justify-center gap-3 transition-all ${typOferty === 'sprzedam' ? 'bg-white text-emerald-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -647,6 +554,7 @@ export default function DodajOferteKrok1() {
                         </button>
                     </div>
 
+                    {/* TYTUŁ */}
                     <div>
                         <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
                             Tytuł ogłoszenia <span className="text-red-500">*</span>
@@ -662,6 +570,7 @@ export default function DodajOferteKrok1() {
                             value={title} onChange={e => { setTitle(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('title'); return n; }); }} />
                     </div>
 
+                    {/* KATEGORIA */}
                     <div>
                         <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">Kategoria surowca <span className="text-red-500">*</span></label>
                         <select required className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('material')}`}
@@ -677,6 +586,7 @@ export default function DodajOferteKrok1() {
                         </select>
                     </div>
 
+                    {/* WAGA I TELEFON */}
                     <div className="grid grid-cols-2 gap-6">
                         <div>
                             <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">Waga (tony)</label>
@@ -692,63 +602,36 @@ export default function DodajOferteKrok1() {
                         </div>
                     </div>
 
+                    {/* WOJEWÓDZTWO — select */}
                     <div>
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-2 block">Lokalizacja <span className="text-red-500">*</span></label>
-                        <div ref={dropdownRef} className="relative">
-                            <button type="button" onClick={() => setDropdownOpen(o => !o)}
-                                className={`w-full flex items-center justify-between p-5 border-2 rounded-[24px] font-bold outline-none transition-colors text-left ${maWybor ? 'border-blue-500 bg-blue-50 text-slate-900' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
-                                <span className="flex items-center gap-2">
-                                    <Globe size={18} className={maWybor ? 'text-blue-600' : 'text-slate-300'} />
-                                    {lokalizacjaLabel}
-                                </span>
-                                <ChevronDown size={18} className={`transition-transform text-slate-400 ${dropdownOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                            {dropdownOpen && (
-                                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-[24px] shadow-2xl border border-slate-100 z-50 overflow-hidden">
-                                    <div className="p-3 max-h-80 overflow-y-auto">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 mb-2">Zasięg ogólny</p>
-                                        {SPECIAL_OPTIONS.map(opt => (
-                                            <button key={opt.value} type="button" onClick={() => handleSpecjalny(opt.value)}
-                                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-sm transition-all mb-1 ${lokalizacja === opt.value ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                        <div className="border-t border-slate-100 my-3" />
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 mb-2">Województwa (możesz wybrać kilka)</p>
-                                        {WOJEWODZTWA.map(woj => {
-                                            const zaznaczone = wybrane.includes(woj);
-                                            return (
-                                                <button key={woj} type="button" onClick={() => handleToggleWojewodztwo(woj)}
-                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-bold text-sm capitalize transition-all ${zaznaczone ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}>
-                                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${zaznaczone ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
-                                                        {zaznaczone && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                                                    </div>
-                                                    {woj}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                    <div className="border-t border-slate-100 p-3">
-                                        <button type="button" onClick={() => setDropdownOpen(false)}
-                                            className="w-full bg-slate-900 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all">
-                                            Zatwierdź
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        {wybrane.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                {wybrane.map(woj => (
-                                    <span key={woj} className="flex items-center gap-1.5 bg-blue-100 text-blue-700 text-xs font-black px-3 py-1.5 rounded-xl">
-                                        {woj}
-                                        <button type="button" onClick={() => setWybrane(prev => prev.filter(w => w !== woj))} className="hover:text-red-500 transition-colors"><X size={12} /></button>
-                                    </span>
-                                ))}
-                            </div>
-                        )}
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
+                            <Globe size={11} /> Województwo <span className="text-red-500">*</span>
+                        </label>
+                        <select required
+                            className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('wojewodztwo')}`}
+                            value={wojewodztwo}
+                            onChange={e => { setWojewodztwo(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('wojewodztwo'); return n; }); }}>
+                            <option value="">Wybierz województwo...</option>
+                            {WOJEWODZTWA.map(w => <option key={w} value={w}>{w}</option>)}
+                        </select>
                     </div>
 
+                    {/* MIEJSCOWOŚĆ — swobodne pole tekstowe */}
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
+                            <MapPin size={11} /> Miejscowość
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="np. Toruń, Włocławek, Bydgoszcz..."
+                            className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('miejscowosc')}`}
+                            value={miejscowosc}
+                            onChange={e => { setMiejscowosc(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('miejscowosc'); return n; }); }}
+                        />
+                        <p className="text-[10px] text-slate-400 font-bold ml-5 mt-1">Opcjonalne — pomaga kupującym z sąsiedztwa</p>
+                    </div>
+
+                    {/* CZĘSTOTLIWOŚĆ */}
                     <div>
                         <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-2 flex items-center gap-2">
                             <Calendar size={12} /> Częstotliwość sprzedaży
@@ -769,6 +652,7 @@ export default function DodajOferteKrok1() {
                         </div>
                     </div>
 
+                    {/* ZDJĘCIE */}
                     <div ref={zdjecieRef} onClick={() => document.getElementById('fileInput')?.click()}
                         className="border-4 border-dashed rounded-[40px] p-10 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
                         <input type="file" id="fileInput" className="hidden" accept="image/*" onChange={e => {
