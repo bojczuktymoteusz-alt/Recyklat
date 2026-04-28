@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -84,7 +84,10 @@ const wykryjWojewodztwo = (fraza: string): string | null => {
 
 const ITEMS_PER_PAGE = 12;
 
-export default function Rynek() {
+// ─────────────────────────────────────────────────────────────────────────────
+// Właściwy komponent — używa useSearchParams, musi być w <Suspense>
+// ─────────────────────────────────────────────────────────────────────────────
+function RynekInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -106,8 +109,8 @@ export default function Rynek() {
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
     const [dropdownOpen, setDropdownOpen] = useState(false);
 
+    const dropdownRef = React.useRef<HTMLDivElement>(null);
     const kategorieRef = React.useRef<HTMLDivElement>(null);
-    const dropdownRef   = React.useRef<HTMLDivElement>(null);
 
     // Synchronizacja stan → URL
     useEffect(() => {
@@ -213,15 +216,12 @@ export default function Rynek() {
 
     const wyswietlaneOferty = filtrowaneOferty.slice(0, visibleCount);
 
-    // Helper: toggle województwa — zamyka dropdown po wyborze pojedynczego,
-    // NIE zamyka gdy odznaczamy (żeby można było odznaczyć kilka z rzędu)
     const toggleWojewodztwo = (woj: string, zaznaczone: boolean) => {
         setWybrane(prev =>
             zaznaczone
                 ? prev.filter(w => w !== woj)
                 : [...prev.filter(w => w !== 'Europa / Zagranica'), woj]
         );
-        // Zamknij tylko przy dodawaniu, nie przy odznaczaniu
         if (!zaznaczone) setDropdownOpen(false);
     };
 
@@ -468,5 +468,20 @@ export default function Rynek() {
                 </p>
             </footer>
         </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Eksport domyślny — owijamy w Suspense wymagany przez useSearchParams
+// ─────────────────────────────────────────────────────────────────────────────
+export default function Rynek() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+        }>
+            <RynekInner />
+        </Suspense>
     );
 }
