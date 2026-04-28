@@ -1,0 +1,38 @@
+{
+  "_comment": "UI strings for Recyklat Chrome Extension. Edit here to localize.",
+  "_version": "1.6",
+  "badge": {
+    "matchMethod": "{method} ({score}%)",
+    "addToDb": "+ Dodaj do Bazy",
+    "copyLead": "Kopiuj Lead"
+  },
+  "tags": {
+    "hot": {
+      "label": "🔥 Hot",
+      "key": "HOT"
+    },
+    "contact": {
+      "label": "📞 Contact",
+      "key": "CONTACT"
+    },
+    "archive": {
+      "label": "📁 Archive",
+      "key": "ARCHIVE"
+    }
+  },
+  "toast": {
+    "contactAdded": "✅ Dodano: {name}",
+    "contactExists": "ℹ️ Już istnieje: {name}",
+    "leadCopied": "📋 Lead skopiowany do schowka",
+    "leadCopyFailed": "⚠️ Nie można skopiować do schowka",
+    "tagSet": "🏷️ Tag: {tag}"
+  },
+  "prompt": {
+    "addContact": "Dodaję: \"{name}\"\nNotatka (materiał, uwaga) — zostaw puste jeśli brak:"
+  },
+  "leadFormat": "[{tag}] [{date}] | {author} | {content} | {url}",
+  "noDate": "—",
+  "noContent": "(brak treści)",
+  "noUrl": "(brak linku)",
+  "noTag": "NIEOZNACZONY"
+}

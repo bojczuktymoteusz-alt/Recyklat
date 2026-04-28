@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recyklat Contacts</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 340px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      color: #111;
+      background: #f9fafb;
+    }
+
+    header {
+      background: #15803d;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    header h1 { font-size: 15px; font-weight: 700; }
+    header span { font-size: 11px; opacity: 0.8; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 12px 16px;
+    }
+    .stat-box {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+    .stat-box__num   { font-size: 22px; font-weight: 700; color: #15803d; }
+    .stat-box__label { font-size: 10px; color: #6b7280; margin-top: 2px; }
+
+    .section-title {
+      padding: 4px 16px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #6b7280;
+      letter-spacing: 0.05em;
+    }
+
+    .add-form {
+      padding: 8px 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .add-form input {
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      background: white;
+      outline: none;
+    }
+    .add-form input:focus { border-color: #15803d; }
+    .add-form button {
+      background: #15803d;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .add-form button:hover { background: #166534; }
+
+    .user-contacts {
+      max-height: 160px;
+      overflow-y: auto;
+      border-top: 1px solid #e5e7eb;
+    }
+    .user-contact-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      gap: 6px;
+    }
+    .user-contact-item:hover { background: #f9fafb; }
+    .user-contact-name  { font-weight: 600; font-size: 12px; flex: 1; }
+    .user-contact-notes { font-size: 10px; color: #6b7280; max-width: 100px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .user-contact-del {
+      color: #ef4444;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 11px;
+      padding: 16px;
+    }
+
+    /* ── Export section ───────────────────────────────────────────────── */
+    .export-section {
+      padding: 8px 16px 12px;
+      display: flex;
+      gap: 6px;
+    }
+    .export-section button {
+      flex: 1;
+      border: 1.5px solid #d1d5db;
+      border-radius: 6px;
+      padding: 6px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      background: white;
+      color: #374151;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .export-section button:hover {
+      background: #f0fdf4;
+      border-color: #15803d;
+      color: #15803d;
+    }
+    #btn-export-csv { border-color: #6b7280; }
+
+    footer {
+      padding: 8px 16px;
+      font-size: 10px;
+      color: #9ca3af;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>♻️ Recyklat Contacts</h1>
+      <span>Weryfikacja kontaktów na FB</span>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat-box">
+      <div class="stat-box__num" id="stat-total">—</div>
+      <div class="stat-box__label">Kontaktów w bazie</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-box__num" id="stat-added">—</div>
+      <div class="stat-box__label">Dodanych przez Ciebie</div>
+    </div>
+  </div>
+
+  <div class="section-title">Dodaj nowy kontakt</div>
+  <div class="add-form">
+    <input id="input-name"  type="text" placeholder="Imię i nazwisko"                  maxlength="80">
+    <input id="input-notes" type="text" placeholder="Notatka (np. LDPE, granulat PP…)" maxlength="120">
+    <button id="btn-add">+ Dodaj do bazy</button>
+  </div>
+
+  <div class="section-title">Twoje dodane kontakty</div>
+  <div class="user-contacts" id="user-contacts-list">
+    <div class="empty-state">Brak ręcznie dodanych kontaktów</div>
+  </div>
+
+  <div class="section-title">Eksport</div>
+  <div class="export-section">
+    <button id="btn-export-csv" title="Pobierz całą bazę jako CSV (Excel)">
+      📊 Cała baza (.csv)
+    </button>
+    <button id="btn-export-txt" title="Pobierz tylko Twoje kontakty jako TXT">
+      📄 Moje kontakty (.txt)
+    </button>
+  </div>
+
+  <footer>recyklat.pl &bull; v1.6 &bull; Manifest V3 &bull; Dane lokalne</footer>
+
+  <script src="contacts-db.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

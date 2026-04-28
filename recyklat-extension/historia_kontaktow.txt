@@ -1,0 +1,3 @@
+# Historia kontaktów Recyklat
+# Format: YYYY-MM-DD HH:MM | Nazwa | Notatka
+

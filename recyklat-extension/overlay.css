@@ -1,0 +1,151 @@
+/* overlay.css — Recyklat Chrome Extension v1.4 */
+
+/* ── Badge base ──────────────────────────────────────────── */
+.recyklat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  margin-left: 6px;
+  vertical-align: middle;
+  max-width: 420px;
+  line-height: 1.3;
+  box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  position: relative;
+  z-index: 100;
+}
+
+/* ── Known contact — green ───────────────────────────────── */
+.recyklat-badge--known {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  color: #15803d;
+}
+.recyklat-badge--known .recyklat-badge__notes {
+  background: #bbf7d0;
+  padding: 1px 5px;
+  border-radius: 10px;
+  font-size: 10px;
+  color: #166534;
+  font-weight: 500;
+}
+.recyklat-badge--known .recyklat-badge__method {
+  font-size: 9px;
+  opacity: 0.55;
+  font-weight: 400;
+}
+
+/* ── Unknown contact — red ───────────────────────────────── */
+.recyklat-badge--unknown {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+}
+
+/* ── Shared button base ──────────────────────────────────── */
+.recyklat-badge__add-btn,
+.recyklat-badge__copy-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+/* ── Add to database — red fill ──────────────────────────── */
+.recyklat-badge__add-btn {
+  background: #ef4444;
+  color: #fff;
+}
+.recyklat-badge__add-btn:hover { background: #b91c1c; }
+
+/* ── Copy lead — neutral outline ─────────────────────────── */
+.recyklat-badge__copy-btn {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  opacity: 0.75;
+}
+.recyklat-badge__copy-btn:hover { opacity: 1; background: rgba(0,0,0,0.06); }
+
+/* ── Tag group wrapper ───────────────────────────────────── */
+.recyklat-badge__tag-group {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+/* ── Tag buttons base ────────────────────────────────────── */
+.recyklat-badge__tag-btn {
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.12s, transform 0.1s;
+  white-space: nowrap;
+  opacity: 0.45;
+  background: rgba(0,0,0,0.07);
+  color: inherit;
+}
+.recyklat-badge__tag-btn:hover {
+  opacity: 0.85;
+  transform: scale(1.05);
+}
+
+/* ── Active tag state — each key gets its own colour ────── */
+/* HOT — red/orange */
+.recyklat-badge__tag-btn--active[data-tag-key="HOT"] {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #b91c1c;
+  opacity: 1;
+}
+/* CONTACT — blue */
+.recyklat-badge__tag-btn--active[data-tag-key="CONTACT"] {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  opacity: 1;
+}
+/* ARCHIVE — gray */
+.recyklat-badge__tag-btn--active[data-tag-key="ARCHIVE"] {
+  background: #f3f4f6;
+  border-color: #6b7280;
+  color: #374151;
+  opacity: 1;
+}
+
+/* ── Toast notification ──────────────────────────────────── */
+#recyklat-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1f2937;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 999999;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  animation: recyklat-in 0.2s ease;
+  max-width: 360px;
+}
+@keyframes recyklat-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

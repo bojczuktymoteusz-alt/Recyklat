@@ -22,7 +22,6 @@ function KalkulatorTransportu({ oferta }: { oferta: any }) {
     const [dystans, setDystans] = useState<number | null>(null);
     const [ladowanie, setLadowanie] = useState(false);
     const [pokazReczny, setPokazReczny] = useState(false);
-    // ↓ stan tymczasowy — przechowuje wpisany tekst, NIE triggeruje obliczeń
     const [dystansRecznyInput, setDystansRecznyInput] = useState('');
     const [leadWyslany, setLeadWyslany] = useState(false);
     const [leadLadowanie, setLeadLadowanie] = useState(false);
@@ -51,7 +50,6 @@ function KalkulatorTransportu({ oferta }: { oferta: any }) {
         setLadowanie(false);
     };
 
-    // Zatwierdza dystans — wywoływane tylko przez onBlur lub Enter, NIE przez onChange
     const zatwierdDystans = () => {
         const km = parseFloat(dystansRecznyInput);
         if (!isNaN(km) && km > 0) setDystans(km);
@@ -87,7 +85,6 @@ function KalkulatorTransportu({ oferta }: { oferta: any }) {
             <p className="text-slate-400 text-[11px] font-bold mb-5">
                 Szacunkowy koszt paliwa dla TIR-a ({SPALANIE} l/100km · ON {cenaPaliwa} zł/l)
             </p>
-
             <div className="bg-slate-50 rounded-2xl px-4 py-3 mb-4 flex items-center gap-2">
                 <MapPin size={14} className="text-blue-500 shrink-0" />
                 <div>
@@ -95,8 +92,6 @@ function KalkulatorTransportu({ oferta }: { oferta: any }) {
                     <p className="font-black text-slate-900 text-sm">{lokalizacjaTowaru || 'Lokalizacja nieznana'}</p>
                 </div>
             </div>
-
-            {/* Pole miejscowości + przycisk */}
             <div className="flex gap-2 mb-3">
                 <input
                     type="text"
@@ -106,60 +101,38 @@ function KalkulatorTransportu({ oferta }: { oferta: any }) {
                     onKeyDown={e => e.key === 'Enter' && handleOblicz()}
                     className="flex-1 p-4 bg-slate-50 border-2 border-slate-200 focus:border-emerald-400 rounded-2xl outline-none font-bold text-slate-900 text-sm"
                 />
-                <button
-                    onClick={handleOblicz}
-                    disabled={!mojaMiejscowosc.trim() || ladowanie}
-                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5"
-                >
+                <button onClick={handleOblicz} disabled={!mojaMiejscowosc.trim() || ladowanie}
+                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5">
                     <Calculator size={14} />
                     <span className="hidden sm:inline">Oblicz</span>
                 </button>
             </div>
-
-            {/* Ręczny dystans — onChange tylko aktualizuje string, wynik liczy się na blur/Enter */}
             {pokazReczny && (
                 <div className="mb-3">
-                    <p className="text-slate-500 text-xs font-bold mb-2">
-                        Podaj przybliżony dystans ręcznie (km):
-                    </p>
+                    <p className="text-slate-500 text-xs font-bold mb-2">Podaj przybliżony dystans ręcznie (km):</p>
                     <div className="flex gap-2">
-                        <input
-                            type="number"
-                            placeholder="np. 317"
+                        <input type="number" placeholder="np. 317"
                             value={dystansRecznyInput}
                             onChange={e => setDystansRecznyInput(e.target.value)}
                             onBlur={zatwierdDystans}
                             onKeyDown={e => e.key === 'Enter' && zatwierdDystans()}
                             className="flex-1 p-3 bg-slate-50 border-2 border-slate-200 focus:border-emerald-400 rounded-xl outline-none font-bold text-slate-900 text-sm"
                         />
-                        <button
-                            onClick={zatwierdDystans}
-                            disabled={!dystansRecznyInput}
-                            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5"
-                        >
-                            <Calculator size={14} />
-                            Przelicz
+                        <button onClick={zatwierdDystans} disabled={!dystansRecznyInput}
+                            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5">
+                            <Calculator size={14} /> Przelicz
                         </button>
                     </div>
                 </div>
             )}
-
-            {ladowanie && (
-                <div className="text-center py-4 text-slate-400 text-sm font-bold animate-pulse">
-                    Obliczam dystans...
-                </div>
-            )}
-
-            {/* WYNIK */}
+            {ladowanie && <div className="text-center py-4 text-slate-400 text-sm font-bold animate-pulse">Obliczam dystans...</div>}
             {dystans !== null && kosztPaliwa !== null && (
                 <div className="mt-4 space-y-3">
                     <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
                         <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1 flex items-center gap-1">
                             <Fuel size={10} /> Szacunkowy koszt paliwa
                         </p>
-                        <p className="text-4xl font-black text-emerald-700 tracking-tighter">
-                            {kosztPaliwa.toLocaleString('pl-PL')} zł
-                        </p>
+                        <p className="text-4xl font-black text-emerald-700 tracking-tighter">{kosztPaliwa.toLocaleString('pl-PL')} zł</p>
                         <p className="text-emerald-600 text-[11px] font-bold mt-1">
                             Dystans: ~{Math.round(dystans)} km · {SPALANIE} l/100km · {cenaPaliwa} zł/l
                         </p>
@@ -167,7 +140,6 @@ function KalkulatorTransportu({ oferta }: { oferta: any }) {
                             * Tylko koszt paliwa — bez wynagrodzenia kierowcy, amortyzacji i opłat drogowych.
                         </p>
                     </div>
-
                     {leadWyslany ? (
                         <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-4">
                             <CheckCircle size={20} className="text-blue-600 shrink-0" />
@@ -177,18 +149,13 @@ function KalkulatorTransportu({ oferta }: { oferta: any }) {
                             </div>
                         </div>
                     ) : (
-                        <button
-                            onClick={handleLead}
-                            disabled={leadLadowanie}
-                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
-                        >
+                        <button onClick={handleLead} disabled={leadLadowanie}
+                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2">
                             <Send size={16} />
                             {leadLadowanie ? 'Wysyłam...' : 'Chcę wycenę transportu'}
                         </button>
                     )}
-                    <p className="text-slate-400 text-[10px] text-center font-bold">
-                        Wyślemy Ci propozycję przewoźnika dla tej trasy
-                    </p>
+                    <p className="text-slate-400 text-[10px] text-center font-bold">Wyślemy Ci propozycję przewoźnika dla tej trasy</p>
                 </div>
             )}
         </div>
@@ -336,18 +303,20 @@ export default function SzczegolyOferty() {
     const accentHover = jestZapotrzebowanie ? 'hover:bg-blue-700' : 'hover:bg-slate-800';
     const accentBgRevealed = jestZapotrzebowanie ? 'bg-blue-600' : 'bg-emerald-600';
     const accentHoverRevealed = jestZapotrzebowanie ? 'hover:bg-blue-700' : 'hover:bg-emerald-700';
-
-    const lokalizacjaWyswietlana = [oferta.lokalizacja, oferta.wojewodztwo]
-        .filter(Boolean).join(', ') || 'Polska';
+    const lokalizacjaWyswietlana = [oferta.lokalizacja, oferta.wojewodztwo].filter(Boolean).join(', ') || 'Polska';
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col relative">
 
             <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <Link href="/rynek" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-bold uppercase text-xs tracking-widest">
+                    {/* router.back() — wraca do /rynek z zachowanymi filtrami w URL */}
+                    <button
+                        onClick={() => router.back()}
+                        className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-bold uppercase text-xs tracking-widest"
+                    >
                         <ArrowLeft size={18} /><span>Powrót</span>
-                    </Link>
+                    </button>
                     <div className="flex items-center gap-4">
                         {czyToMoje && (
                             <>
@@ -543,10 +512,8 @@ export default function SzczegolyOferty() {
                         </div>
                     ) : !numerOdkryty ? (
                         <div className="flex gap-2 items-stretch">
-                            <button
-                                onClick={() => handlePokaz(oferta.id)}
-                                className={`flex-1 ${accentBg} ${accentHover} text-white rounded-2xl active:scale-95 transition-all shadow-xl flex flex-col items-center justify-center py-3 gap-0.5`}
-                            >
+                            <button onClick={() => handlePokaz(oferta.id)}
+                                className={`flex-1 ${accentBg} ${accentHover} text-white rounded-2xl active:scale-95 transition-all shadow-xl flex flex-col items-center justify-center py-3 gap-0.5`}>
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-75 flex items-center gap-1">
                                     <Phone size={10} /> Dotknij, aby odkryć numer
                                 </span>
