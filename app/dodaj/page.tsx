@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
-import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, ChevronDown, Mic, MicOff, Calendar, Keyboard, MapPin } from 'lucide-react';
+import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, ChevronDown, Mic, MicOff, Calendar, Keyboard, MapPin, Plane } from 'lucide-react';
 import { sanitizeText } from '@/lib/security';
 
 const KATEGORIE_Z_BDO = [
@@ -27,6 +27,12 @@ const WOJEWODZTWA = [
     "łódzkie", "małopolskie", "mazowieckie", "opolskie",
     "podkarpackie", "podlaskie", "pomorskie", "śląskie",
     "świętokrzyskie", "warmińsko-mazurskie", "wielkopolskie", "zachodniopomorskie"
+];
+
+// Specjalne opcje zasięgu — wartości trafiają do pola lokalizacja
+const ZASIEG_SPECJALNY = [
+    { value: '__cala_polska__', label: '🌐 Cała Polska', lokalizacja: 'Cała Polska', wojewodztwo: '' },
+    { value: '__zagranica__',   label: '✈️ Europa / Zagranica', lokalizacja: 'Europa / Zagranica', wojewodztwo: '' },
 ];
 
 const WOJEWODZTWA_ASCII: Record<string, string> = {
@@ -162,20 +168,19 @@ function parsujTekst(tekst: string): ParsedData {
         wynik.website_url = url;
     }
 
-    // Lokalizacja: ROZDZIELONE — miejscowość osobno, województwo osobno
     if (t.includes('cala polska') || t.includes('caly kraj') || t.includes('ogolnopolski')) {
         wynik.miejscowosc = 'Cała Polska';
         wynik.wojewodztwo = '';
+    } else if (t.includes('europa') || t.includes('zagranica') || t.includes('eksport')) {
+        wynik.miejscowosc = 'Europa / Zagranica';
+        wynik.wojewodztwo = '';
     } else {
-        // Szukaj województw
         for (const [asciiKey, plNazwa] of Object.entries(WOJEWODZTWA_ASCII)) {
             if (t.includes(asciiKey)) { wynik.wojewodztwo = plNazwa; break; }
         }
-        // Szukaj miast — trafia TYLKO do pola miejscowość
         for (const [miastoKey, wojKey] of Object.entries(MIASTA_WOJEWODZTWA)) {
             if (t.includes(miastoKey)) {
                 wynik.miejscowosc = MIASTA_NAZWY_PL[miastoKey] || miastoKey;
-                // Ustaw województwo tylko jeśli nie wykryto z tekstu
                 if (!wynik.wojewodztwo) wynik.wojewodztwo = WOJEWODZTWA_ASCII[wojKey] || wojKey;
                 break;
             }
@@ -198,42 +203,31 @@ function parsujTekst(tekst: string): ParsedData {
         if (slowa.some(s => t.includes(s))) { wynik.supplyFreq = wartosc; break; }
     }
 
-    const ZBEDNE_TYTUL = [
-        'sprzedam', 'kupie', 'oferuje', 'oferujemy', 'zapraszamy', 'oddam',
+    const ZBEDNE_TYTUL = ['sprzedam', 'kupie', 'oferuje', 'oferujemy', 'zapraszamy', 'oddam',
         'firma', 'przedsiebiorstwo', 'spolka', 'oferta', 'ogloszenie',
-        'tel', 'telefon', 'kontakt', 'dzwon', 'ilosc', 'ilo', 'cena', 'cene',
-    ];
-
+        'tel', 'telefon', 'kontakt', 'dzwon', 'ilosc', 'ilo', 'cena', 'cene'];
     const tekstBezUrl = tekst.replace(URL_REGEX, '').replace(/\s+/g, ' ').trim();
-
     const surowiecMatch = tekstBezUrl.match(
         /(regranulat|re\s*granulat|przemial|aglomerat|folia|zlom|makulatura|karton|drewno|kabel|platki|butelk|kanister|recyklat|aglo)[\s\w\-\/]{0,50}/i
     );
     if (surowiecMatch) {
-        let tyt = surowiecMatch[0]
-            .replace(/[\.,!?;:]+$/, '')
-            .replace(/(?:tel\.?|telefon|kontakt|dzwon|ilo[sś][cć]?|\d{9})[^\w].*$/i, '')
-            .trim();
+        let tyt = surowiecMatch[0].replace(/[\.,!?;:]+$/, '').replace(/(?:tel\.?|telefon|kontakt|dzwon|ilo[sś][cć]?|\d{9})[^\w].*$/i, '').trim();
         const tytN = norm(tyt);
         for (const fraza of ZBEDNE_TYTUL) {
-            if (tytN.includes(fraza))
-                tyt = tyt.replace(new RegExp('(?:^|\\s)' + fraza + '(?:\\s|$)', 'gi'), ' ');
+            if (tytN.includes(fraza)) tyt = tyt.replace(new RegExp('(?:^|\\s)' + fraza + '(?:\\s|$)', 'gi'), ' ');
         }
         tyt = tyt.replace(/\s+/g, ' ').trim().substring(0, 55);
         if (tyt.length > 3) wynik.title = tyt.charAt(0).toUpperCase() + tyt.slice(1);
     }
-
     if (!wynik.title || wynik.title.length < 4) {
         let linia = tekstBezUrl.split('\n')[0].trim();
         linia = linia.replace(/\b(?:z|ze)\s+\w+(?:a|y|i|u|ów|em)\b/gi, '');
         const liniaN = norm(linia);
         for (const fraza of ZBEDNE_TYTUL) {
-            if (liniaN.includes(fraza))
-                linia = linia.replace(new RegExp('(?:^|\\s)' + fraza + '(?:\\s|$)', 'gi'), ' ');
+            if (liniaN.includes(fraza)) linia = linia.replace(new RegExp('(?:^|\\s)' + fraza + '(?:\\s|$)', 'gi'), ' ');
         }
         linia = linia.replace(/\s+/g, ' ').trim();
-        if (linia.length > 3)
-            wynik.title = linia.charAt(0).toUpperCase() + linia.slice(1).substring(0, 55);
+        if (linia.length > 3) wynik.title = linia.charAt(0).toUpperCase() + linia.slice(1).substring(0, 55);
     }
 
     return wynik;
@@ -244,6 +238,13 @@ function czyiOS(): boolean {
     return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
 
+// Zwraca wartość selectu dla aktualnych stanów lokalizacja/województwo
+function getSelectValue(miejscowosc: string, wojewodztwo: string): string {
+    if (miejscowosc === 'Cała Polska') return '__cala_polska__';
+    if (miejscowosc === 'Europa / Zagranica') return '__zagranica__';
+    return wojewodztwo;
+}
+
 export default function DodajOferteKrok1() {
     const router = useRouter();
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -251,7 +252,6 @@ export default function DodajOferteKrok1() {
     const [title, setTitle] = useState('');
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
-    // ROZDZIELONE POLA LOKALIZACJI
     const [miejscowosc, setMiejscowosc] = useState('');
     const [wojewodztwo, setWojewodztwo] = useState('');
     const [telefon, setTelefon] = useState('');
@@ -274,6 +274,9 @@ export default function DodajOferteKrok1() {
     const zdjecieRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<any>(null);
 
+    // Czy wybrana opcja to zasięg ogólny (ukrywa pole miejscowości)
+    const jestZasiegOgolny = miejscowosc === 'Cała Polska' || miejscowosc === 'Europa / Zagranica';
+
     useEffect(() => {
         setIsCheckingAuth(false);
         const ios = czyiOS();
@@ -285,33 +288,33 @@ export default function DodajOferteKrok1() {
 
     const startMikrofon = () => {
         if (!wspieraMikrofon || jestIOS) return;
-        if (nasluchuje && recognitionRef.current) {
-            recognitionRef.current.stop(); setNasluchuje(false); return;
-        }
+        if (nasluchuje && recognitionRef.current) { recognitionRef.current.stop(); setNasluchuje(false); return; }
         const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRec) return;
         const recognition = new SpeechRec();
-        recognition.lang = 'pl-PL';
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
+        recognition.lang = 'pl-PL'; recognition.continuous = false; recognition.interimResults = false; recognition.maxAlternatives = 1;
         recognitionRef.current = recognition;
         recognition.onstart = () => setNasluchuje(true);
-        recognition.onresult = (e: any) => {
-            const tekst = e.results[0]?.[0]?.transcript || '';
-            if (tekst) setMagicTekst(prev => prev ? prev + ' ' + tekst : tekst);
-        };
+        recognition.onresult = (e: any) => { const tekst = e.results[0]?.[0]?.transcript || ''; if (tekst) setMagicTekst(prev => prev ? prev + ' ' + tekst : tekst); };
         recognition.onend = () => setNasluchuje(false);
-        recognition.onerror = (e: any) => {
-            setNasluchuje(false);
-            if (e.error === 'not-allowed') alert('Zezwól na dostęp do mikrofonu w ustawieniach przeglądarki.');
-        };
+        recognition.onerror = (e: any) => { setNasluchuje(false); if (e.error === 'not-allowed') alert('Zezwól na dostęp do mikrofonu.'); };
         try { recognition.start(); } catch { setNasluchuje(false); }
     };
 
-    const handleHeroClick = () => {
-        setMagicOtwarte(true);
-        if (!jestIOS) startMikrofon();
+    const handleHeroClick = () => { setMagicOtwarte(true); if (!jestIOS) startMikrofon(); };
+
+    // Obsługa zmiany selekta lokalizacji
+    const handleLokalizacjaChange = (val: string) => {
+        const specjalna = ZASIEG_SPECJALNY.find(z => z.value === val);
+        if (specjalna) {
+            setMiejscowosc(specjalna.lokalizacja);
+            setWojewodztwo(specjalna.wojewodztwo);
+        } else {
+            // Wybrano województwo — czyść zasięg ogólny z miejscowości jeśli był
+            if (jestZasiegOgolny) setMiejscowosc('');
+            setWojewodztwo(val);
+        }
+        setPodswietlone(p => { const n = new Set(p); n.delete('wojewodztwo'); return n; });
     };
 
     const handleAnalizuj = () => {
@@ -327,26 +330,16 @@ export default function DodajOferteKrok1() {
             setter(nowaWartosc);
         };
 
-        if (parsed.telefon) zastap('Telefon', parsed.telefon, telefon, setTelefon);
-        else nowePodswietlone.add('telefon');
-        if (parsed.waga) zastap('Waga', parsed.waga, waga, setWaga);
-        else nowePodswietlone.add('waga');
-
-        // Rozdzielone: miejscowość i województwo niezależnie
-        if (parsed.miejscowosc) zastap('Miejscowość', parsed.miejscowosc, miejscowosc, setMiejscowosc);
-        else nowePodswietlone.add('miejscowosc');
-        if (parsed.wojewodztwo) zastap('Województwo', parsed.wojewodztwo, wojewodztwo, setWojewodztwo);
-        else nowePodswietlone.add('wojewodztwo');
-
+        if (parsed.telefon) zastap('Telefon', parsed.telefon, telefon, setTelefon); else nowePodswietlone.add('telefon');
+        if (parsed.waga) zastap('Waga', parsed.waga, waga, setWaga); else nowePodswietlone.add('waga');
+        if (parsed.miejscowosc) zastap('Miejscowość', parsed.miejscowosc, miejscowosc, setMiejscowosc); else nowePodswietlone.add('miejscowosc');
+        if (parsed.wojewodztwo) zastap('Województwo', parsed.wojewodztwo, wojewodztwo, setWojewodztwo); else nowePodswietlone.add('wojewodztwo');
         if (parsed.material) {
             zastap('Kategoria', parsed.material, material, setMaterial);
             const found = KATEGORIE_Z_BDO.find(k => k.nazwa === parsed.material);
             if (found) setAutoBdo(found.bdo);
         } else nowePodswietlone.add('material');
-
-        if (parsed.title) zastap('Tytuł', parsed.title, title, setTitle);
-        else nowePodswietlone.add('title');
-
+        if (parsed.title) zastap('Tytuł', parsed.title, title, setTitle); else nowePodswietlone.add('title');
         if (parsed.typOferty) setTypOferty(parsed.typOferty);
         if (parsed.supplyFreq) setSupplyFreq(parsed.supplyFreq);
         if (parsed.cena) localStorage.setItem('magic_cena', String(parsed.cena));
@@ -356,12 +349,7 @@ export default function DodajOferteKrok1() {
         const nowyTytul = parsed.title || title;
         const nowyMaterial = parsed.material || material;
         const nowaLok = [parsed.miejscowosc || miejscowosc, parsed.wojewodztwo || wojewodztwo].filter(Boolean).join(', ');
-        const opis = [
-            nowyTytul || nowyMaterial,
-            nowyMaterial && nowyMaterial !== nowyTytul ? `Kategoria: ${nowyMaterial}` : '',
-            (parsed.waga || waga) ? `Waga: ${parsed.waga || waga} ton` : '',
-            nowaLok ? `Lokalizacja: ${nowaLok}` : '',
-        ].filter(Boolean).join('\n');
+        const opis = [nowyTytul || nowyMaterial, nowyMaterial && nowyMaterial !== nowyTytul ? `Kategoria: ${nowyMaterial}` : '', (parsed.waga || waga) ? `Waga: ${parsed.waga || waga} ton` : '', nowaLok ? `Lokalizacja: ${nowaLok}` : ''].filter(Boolean).join('\n');
         setSeoOpis(opis);
         localStorage.setItem('magic_opis', opis);
         const slugBase = [nowyTytul || nowyMaterial, parsed.miejscowosc || miejscowosc].filter(Boolean).join(' ');
@@ -393,7 +381,6 @@ export default function DodajOferteKrok1() {
                 title: sanitizeText(title),
                 material: sanitizeText(material),
                 waga: parseFloat(waga) || 0,
-                // ROZDZIELONE: lokalizacja = miasto, wojewodztwo = województwo
                 lokalizacja: sanitizeText(miejscowosc),
                 wojewodztwo: sanitizeText(wojewodztwo),
                 telefon: sanitizeText(telefon),
@@ -447,20 +434,14 @@ export default function DodajOferteKrok1() {
                                     {jestIOS ? 'Dyktuj przez klawiaturę' : 'Wystaw ofertę głosem'}
                                 </h2>
                                 <p className="text-slate-300 text-xs font-medium leading-relaxed">
-                                    {jestIOS
-                                        ? 'Kliknij → dotknij pola tekstowego → naciśnij 🎤 na klawiaturze → dyktuj.'
-                                        : 'Kliknij, powiedz co masz, miasto i telefon — AI wypełni resztę.'}
+                                    {jestIOS ? 'Kliknij → dotknij pola tekstowego → naciśnij 🎤 na klawiaturze → dyktuj.' : 'Kliknij, powiedz co masz, miasto i telefon — AI wypełni resztę.'}
                                 </p>
                             </div>
                             <div className="shrink-0 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="9 18 15 12 9 6" />
-                                </svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                             </div>
                         </div>
-                        <p className="relative mt-4 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
-                            lub wklej tekst z Facebooka / WhatsApp
-                        </p>
+                        <p className="relative mt-4 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">lub wklej tekst z Facebooka / WhatsApp</p>
                     </button>
                 )}
 
@@ -468,10 +449,7 @@ export default function DodajOferteKrok1() {
                 {magicOtwarte && (
                     <div className="border-2 border-blue-400 rounded-[28px] overflow-hidden shadow-lg mb-6">
                         <div className="bg-blue-600 px-5 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-white">
-                                <Sparkles size={16} />
-                                <span className="font-black text-xs uppercase tracking-widest">Magic Box — AI</span>
-                            </div>
+                            <div className="flex items-center gap-2 text-white"><Sparkles size={16} /><span className="font-black text-xs uppercase tracking-widest">Magic Box — AI</span></div>
                             <div className="flex items-center gap-2">
                                 {wspieraMikrofon && !jestIOS && (
                                     <button type="button" onClick={startMikrofon}
@@ -480,9 +458,7 @@ export default function DodajOferteKrok1() {
                                         <span className="hidden sm:inline">{nasluchuje ? 'Słucham...' : 'Dyktuj'}</span>
                                     </button>
                                 )}
-                                <button type="button" onClick={() => { setMagicOtwarte(false); setNasluchuje(false); recognitionRef.current?.stop(); }} className="text-blue-200 hover:text-white ml-1">
-                                    <X size={18} />
-                                </button>
+                                <button type="button" onClick={() => { setMagicOtwarte(false); setNasluchuje(false); recognitionRef.current?.stop(); }} className="text-blue-200 hover:text-white ml-1"><X size={18} /></button>
                             </div>
                         </div>
                         <div className="p-4 bg-white">
@@ -497,20 +473,13 @@ export default function DodajOferteKrok1() {
                                     <span className="text-2xl shrink-0">🎤</span>
                                     <div>
                                         <p className="text-blue-800 text-xs font-black uppercase tracking-widest mb-1">Dyktowanie na iPhone</p>
-                                        <p className="text-blue-700 text-[12px] font-medium leading-relaxed">
-                                            <strong>1.</strong> Dotknij pola poniżej<br />
-                                            <strong>2.</strong> Naciśnij ikonę 🎤 na klawiaturze<br />
-                                            <strong>3.</strong> Dyktuj po polsku
-                                        </p>
+                                        <p className="text-blue-700 text-[12px] font-medium leading-relaxed"><strong>1.</strong> Dotknij pola poniżej<br /><strong>2.</strong> Naciśnij ikonę 🎤 na klawiaturze<br /><strong>3.</strong> Dyktuj po polsku</p>
                                     </div>
                                 </div>
                             )}
-                            <textarea
-                                className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-[20px] font-medium text-slate-700 min-h-[110px] resize-none outline-none focus:border-blue-400 transition-colors text-sm placeholder:text-slate-400"
+                            <textarea className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-[20px] font-medium text-slate-700 min-h-[110px] resize-none outline-none focus:border-blue-400 transition-colors text-sm placeholder:text-slate-400"
                                 placeholder={jestIOS ? 'Dotknij tutaj → naciśnij 🎤 na klawiaturze i dyktuj...' : 'Wpisz lub powiedz: Sprzedam 24 tony PP czarny, Łódź, tel. 676 787 678'}
-                                value={magicTekst} onChange={e => setMagicTekst(e.target.value)}
-                                lang="pl" autoCorrect="on" autoCapitalize="sentences"
-                            />
+                                value={magicTekst} onChange={e => setMagicTekst(e.target.value)} lang="pl" autoCorrect="on" autoCapitalize="sentences" />
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {[
                                     { label: 'Sprzedam...', tekst: 'Sprzedam 24 tony regranulatu PP czarny, cena 2500 zł/t, tel. 600 700 800, śląskie.' },
@@ -518,9 +487,7 @@ export default function DodajOferteKrok1() {
                                     { label: 'Oddam...', tekst: 'Oddam za darmo strzepy foliowe, odbiór własny. Tel. 400 300 200. Kraków.' },
                                 ].map((s, i) => (
                                     <button key={i} type="button" onClick={() => setMagicTekst(s.tekst)}
-                                        className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded-full transition-all active:scale-95">
-                                        {s.label}
-                                    </button>
+                                        className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded-full transition-all active:scale-95">{s.label}</button>
                                 ))}
                             </div>
                             <button type="button" onClick={handleAnalizuj} disabled={!magicTekst.trim()}
@@ -533,8 +500,7 @@ export default function DodajOferteKrok1() {
                                         <Sparkles size={14} className="text-emerald-600" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Opis SEO wygenerowany</span>
                                     </div>
-                                    <textarea className="w-full p-4 bg-white text-slate-700 font-medium text-sm min-h-[100px] resize-none outline-none"
-                                        value={seoOpis} onChange={e => setSeoOpis(e.target.value)} />
+                                    <textarea className="w-full p-4 bg-white text-slate-700 font-medium text-sm min-h-[100px] resize-none outline-none" value={seoOpis} onChange={e => setSeoOpis(e.target.value)} />
                                 </div>
                             )}
                         </div>
@@ -602,34 +568,57 @@ export default function DodajOferteKrok1() {
                         </div>
                     </div>
 
-                    {/* WOJEWÓDZTWO — select */}
+                    {/* LOKALIZACJA — jeden select z zasięgiem + województwami */}
                     <div>
                         <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
-                            <Globe size={11} /> Województwo <span className="text-red-500">*</span>
+                            <Globe size={11} /> Zasięg / Województwo <span className="text-red-500">*</span>
                         </label>
-                        <select required
+                        <select
+                            required
                             className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('wojewodztwo')}`}
-                            value={wojewodztwo}
-                            onChange={e => { setWojewodztwo(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('wojewodztwo'); return n; }); }}>
-                            <option value="">Wybierz województwo...</option>
-                            {WOJEWODZTWA.map(w => <option key={w} value={w}>{w}</option>)}
+                            value={getSelectValue(miejscowosc, wojewodztwo)}
+                            onChange={e => handleLokalizacjaChange(e.target.value)}
+                        >
+                            <option value="">Wybierz zasięg lub województwo...</option>
+                            {/* Specjalne opcje zasięgu */}
+                            <optgroup label="── Zasięg ogólny ──">
+                                {ZASIEG_SPECJALNY.map(z => (
+                                    <option key={z.value} value={z.value}>{z.label}</option>
+                                ))}
+                            </optgroup>
+                            {/* Województwa */}
+                            <optgroup label="── Województwa ──">
+                                {WOJEWODZTWA.map(w => (
+                                    <option key={w} value={w}>{w.charAt(0).toUpperCase() + w.slice(1)}</option>
+                                ))}
+                            </optgroup>
                         </select>
+
+                        {/* Wizualna informacja o wybranym zasięgu ogólnym */}
+                        {jestZasiegOgolny && (
+                            <div className={`mt-2 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold ${miejscowosc === 'Europa / Zagranica' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
+                                {miejscowosc === 'Europa / Zagranica' ? <Plane size={14} /> : <Globe size={14} />}
+                                Ogłoszenie widoczne dla: <strong>{miejscowosc}</strong>
+                            </div>
+                        )}
                     </div>
 
-                    {/* MIEJSCOWOŚĆ — swobodne pole tekstowe */}
-                    <div>
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
-                            <MapPin size={11} /> Miejscowość
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="np. Toruń, Włocławek, Bydgoszcz..."
-                            className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('miejscowosc')}`}
-                            value={miejscowosc}
-                            onChange={e => { setMiejscowosc(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('miejscowosc'); return n; }); }}
-                        />
-                        <p className="text-[10px] text-slate-400 font-bold ml-5 mt-1">Opcjonalne — pomaga kupującym z sąsiedztwa</p>
-                    </div>
+                    {/* MIEJSCOWOŚĆ — ukryta gdy wybrany zasięg ogólny */}
+                    {!jestZasiegOgolny && (
+                        <div>
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
+                                <MapPin size={11} /> Miejscowość
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="np. Toruń, Bydgoszcz..."
+                                className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('miejscowosc')}`}
+                                value={miejscowosc}
+                                onChange={e => { setMiejscowosc(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('miejscowosc'); return n; }); }}
+                            />
+                            <p className="text-[10px] text-slate-400 font-bold ml-5 mt-1">Opcjonalne — pomaga kupującym z sąsiedztwa</p>
+                        </div>
+                    )}
 
                     {/* CZĘSTOTLIWOŚĆ */}
                     <div>
