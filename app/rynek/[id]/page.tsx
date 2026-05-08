@@ -73,7 +73,7 @@ function KalkulatorTransportu({ oferta }: { oferta: any }) {
                 </div>
             </div>
             <div className="flex gap-2 mb-3">
-                <input type="text" placeholder="Twoja miejscowość, np. Gdańsk"
+                <input type="text" placeholder="Podaj, np. Kraków"
                     value={mojaMiejscowosc} onChange={e => setMojaMiejscowosc(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleOblicz()}
                     className="flex-1 p-4 bg-slate-50 border-2 border-slate-200 focus:border-emerald-400 rounded-2xl outline-none font-bold text-slate-900 text-sm" />
@@ -188,8 +188,8 @@ type Priorytet = 'tenSamTelefon' | 'kategoria' | 'inne';
 
 const NAGLOWEK: Record<Priorytet, string> = {
     tenSamTelefon: 'Więcej od tego wystawcy',
-    kategoria:     'Podobne ogłoszenia',
-    inne:          'Może Cię zainteresować',
+    kategoria: 'Podobne ogłoszenia',
+    inne: 'Może Cię zainteresować',
 };
 
 // ── KLUCZOWA POPRAWKA: typ_oferty filtrowany we wszystkich priorytetach ──────
@@ -486,8 +486,8 @@ export default function SzczegolyOferty() {
     const maFirme = !!oferta.firma || maStrone;
     const nazwaWyswietlana = oferta.firma || urlSkrocony.split('/')[0];
 
-    const ab  = jestZapotrzebowanie ? 'bg-blue-600' : 'bg-slate-900';
-    const ah  = jestZapotrzebowanie ? 'hover:bg-blue-700' : 'hover:bg-slate-800';
+    const ab = jestZapotrzebowanie ? 'bg-blue-600' : 'bg-slate-900';
+    const ah = jestZapotrzebowanie ? 'hover:bg-blue-700' : 'hover:bg-slate-800';
     const abr = jestZapotrzebowanie ? 'bg-blue-600' : 'bg-emerald-600';
     const ahr = jestZapotrzebowanie ? 'hover:bg-blue-700' : 'hover:bg-emerald-700';
     const lokalizacjaWyswietlana = [oferta.lokalizacja, oferta.wojewodztwo].filter(Boolean).join(', ') || 'Polska';
