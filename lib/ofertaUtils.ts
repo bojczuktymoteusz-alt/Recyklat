@@ -19,22 +19,29 @@ export function getFallbackTitle(oferta: {
 }
 
 /**
- * Formatuje cenę do wyświetlenia. 0 lub -1 → "Do negocjacji"
+ * Formatuje cenę do wyświetlenia.
+ * null/undefined/ujemna → "Do negocjacji"
+ * 0 + isNowe=true  → "Za darmo"
+ * 0 + isNowe=false → "Do negocjacji" (stare ogłoszenia — powszechne 0 przed wdrożeniem)
+ * liczba > 0       → "500 zł / t" (lub inna jednostka)
  */
-export function formatCena(cena: number | null | undefined): string {
-    if (cena === null || cena === undefined || cena <= 0 || cena === -1) return 'Do negocjacji';
-    return `${cena} zł/t`;
+export function formatCena(
+    cena: number | null | undefined,
+    jednostka: string | null | undefined = 't',
+    isNowe: boolean = false
+): string {
+    if (cena === null || cena === undefined || cena < 0) return 'Do negocjacji';
+    if (cena === 0) return isNowe ? 'Za darmo' : 'Do negocjacji';
+    const jed = jednostka || 't';
+    return `${cena} zł / ${jed}`;
 }
 
 /**
  * Sprawdza czy tekst wygląda jak adres domenowy.
- * Rozpoznaje: interia.pl, www.firma.com, https://coś.eu, firma.com.pl itd.
- * Nie wymaga www ani protokołu.
  */
 export function wyglądaJakUrl(tekst: string | null | undefined): boolean {
     if (!tekst || !tekst.trim()) return false;
     const t = tekst.trim();
-    // Regex: opcjonalny protokół, opcjonalne www, segment nazwy, kropka, TLD (2-6 liter), opcjonalna ścieżka
     return /^(https?:\/\/)?(www\.)?[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,6})+([/?#].*)?$/.test(t);
 }
 
@@ -56,9 +63,6 @@ export function urlDoWyswietlenia(url: string | null | undefined): string {
     return url.trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '');
 }
 
-/**
- * Czy oferta jest aktywna
- */
 export function isAktywna(status: string | null | undefined): boolean {
     return !status || status === 'aktywna';
 }
@@ -73,4 +77,22 @@ export function isZagranica(lokalizacja: string | null | undefined): boolean {
     if (!lokalizacja) return false;
     const l = lokalizacja.toLowerCase();
     return l.includes('europa') || l.includes('zagranica');
+}
+
+/**
+ * Data graniczna wdrożenia funkcji "Za darmo".
+ * Ogłoszenia dodane PRZED tą datą z cena=0 → "Do negocjacji"
+ * Ogłoszenia dodane PO tej dacie z cena=0 → "Za darmo"
+ */
+export const DATA_WDROZENIA_ZA_DARMO = new Date('2026-05-11T00:00:00Z');
+
+export function formatCenaZDatata(
+    cena: number | null | undefined,
+    jednostka: string | null | undefined,
+    created_at: string | null | undefined
+): string {
+    const isNowe = created_at
+        ? new Date(created_at) >= DATA_WDROZENIA_ZA_DARMO
+        : false;
+    return formatCena(cena, jednostka, isNowe);
 }

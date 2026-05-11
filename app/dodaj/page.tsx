@@ -4,8 +4,9 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
-import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, ChevronDown, Mic, MicOff, Calendar, Keyboard, MapPin, Plane } from 'lucide-react';
+import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, Mic, MicOff, Calendar, Keyboard, MapPin, Plane } from 'lucide-react';
 import { sanitizeText } from '@/lib/security';
+import StepProgress from '@/app/components/StepProgress';
 
 const KATEGORIE_Z_BDO = [
     { nazwa: "Folia bezbarwna (LDPE / LLDPE)", bdo: "15 01 02" },
@@ -29,7 +30,6 @@ const WOJEWODZTWA = [
     "świętokrzyskie", "warmińsko-mazurskie", "wielkopolskie", "zachodniopomorskie"
 ];
 
-// Specjalne opcje zasięgu — wartości trafiają do pola lokalizacja
 const ZASIEG_SPECJALNY = [
     { value: '__cala_polska__', label: '🌐 Cała Polska', lokalizacja: 'Cała Polska', wojewodztwo: '' },
     { value: '__zagranica__',   label: '✈️ Europa / Zagranica', lokalizacja: 'Europa / Zagranica', wojewodztwo: '' },
@@ -86,15 +86,17 @@ function norm(s: string): string {
 const SLOWA_KLUCZE: { slowa: string[], kategoria: string }[] = [
     { slowa: ["folia stretch", "stretch", "agrofolia", "folia bezbarwna", "folia ldpe", "ldpe", "lldpe"], kategoria: "Folia bezbarwna (LDPE / LLDPE)" },
     { slowa: ["folia kolorowa", "folia rolnicza", "folia czarna", "folia mieszana"], kategoria: "Folia kolorowa / rolnicza" },
-    { slowa: ["opakowania pet", "butelka pet", "butelki pet", "platki pet"], kategoria: "Opakowania PET" },
+    { slowa: ["opakowania pet", "butelka pet", "butelki pet", "platki pet", "butelki plastik"], kategoria: "Opakowania PET" },
     { slowa: ["abs", "polistyren", "poliweglan", "poliamid", "tworzywa techniczne", "pc ", "pa ", "ps "], kategoria: "Tworzywa techniczne (ABS, PC, PS, PA)" },
-    { slowa: ["hdpe", "polietylen", "pp ", "polipropylen", "kanister", "bigbag", "regranulat", "przemial", "aglomerat", "recyklat", "tworzywa twarde", "aglo"], kategoria: "Tworzywa twarde (PP, PE, HDPE)" },
-    { slowa: ["kabel", "kable", "elektroodpad", "weee", "elektronika"], kategoria: "Elektroodpady (WEEE) / Kable" },
-    { slowa: ["karton", "kartony", "tektura", "makulatura"], kategoria: "Makulatura (Karton / Tektura)" },
-    { slowa: ["gazeta", "gazety", "papier mix"], kategoria: "Makulatura (Gazety / Mix)" },
-    { slowa: ["zlom stalowy", "zlom czarny", "zeliwo", "stal "], kategoria: "Złom stalowy i żeliwny" },
-    { slowa: ["miedz", "aluminium", "alu ", "puszki", "zlom kolorowy", "mosiadz"], kategoria: "Złom kolorowy (Al, Cu, inne)" },
-    { slowa: ["drewno", "paleta", "palety", "europaleta"], kategoria: "Drewno i Palety" },
+    { slowa: ["hdpe", "polietylen", "pp ", "polipropylen", "kanister", "bigbag", "regranulat", "re granulat", "przemial", "aglomerat", "recyklat", "tworzywa twarde", "aglo", "tworzywo", "granulat"], kategoria: "Tworzywa twarde (PP, PE, HDPE)" },
+    { slowa: ["kabel", "kable", "elektroodpad", "weee", "elektronika", "przewod"], kategoria: "Elektroodpady (WEEE) / Kable" },
+    // Makulatura — rozszerzona o wersje mówione: "makula", "makulat", "tektur", "karton"
+    { slowa: ["karton", "kartony", "tektura", "tektur", "makulatura", "makula", "makulat", "papier"], kategoria: "Makulatura (Karton / Tektura)" },
+    { slowa: ["gazeta", "gazety", "papier mix", "papier gazetowy"], kategoria: "Makulatura (Gazety / Mix)" },
+    // Złom — różne formy wymowy
+    { slowa: ["zlom stalowy", "zlom czarny", "zeliwo", "stal ", "nierdzewka", "inox", "blach"], kategoria: "Złom stalowy i żeliwny" },
+    { slowa: ["miedz", "aluminium", "alu ", "puszki", "zlom kolorowy", "mosiadz", "cynk", "olowiu", "olow", "zlom metali", "zlom kolor"], kategoria: "Złom kolorowy (Al, Cu, inne)" },
+    { slowa: ["drewno", "paleta", "palety", "europaleta", "epal", "deski"], kategoria: "Drewno i Palety" },
 ];
 
 const SLOWA_SPRZEDAM = ["sprzedam", "oferuje", "oddam", "dostepne", "sprzedaz"];
@@ -107,10 +109,101 @@ const SLOWA_CYKL: { slowa: string[], wartosc: SupplyFreq }[] = [
     { slowa: ['stala wspolpraca', 'dlugoterminowo', 'ciagla dostawa', 'regularnie', 'regularne odbiory', 'staly odbiorca', 'na stale'], wartosc: 'stala_wspolpraca' },
 ];
 
+// ─── Mapowanie polskich nazw jednostek → skróty bazy ──────────────────────
+// Obsługuje wersje mówione, pisane, wielką/małą literą
+const JEDNOSTKI_MAPA: { wzorce: string[], skrot: 'kg' | 't' | 'szt' }[] = [
+    {
+        skrot: 'kg',
+        wzorce: ['kilogram', 'kilogramy', 'kilogramow', 'kilo', 'kg'],
+    },
+    {
+        skrot: 't',
+        wzorce: ['tona', 'tony', 'ton', 'tone', 'tonn', 'tonne', ' t ', ' t,', ' t.', '/t'],
+    },
+    {
+        skrot: 'szt',
+        wzorce: ['sztuka', 'sztuki', 'sztuk', 'szt', 'piece', 'pieces', 'calosciowo', 'calosc', 'komplet'],
+    },
+];
+
+/**
+ * Wykrywa jednostkę z tekstu i zwraca skrót bazy ('t' | 'kg' | 'szt')
+ * Priorytet: najpierw szuka przy liczbie, potem w całym tekście
+ */
+function wykryjJednostke(tekst: string): 't' | 'kg' | 'szt' | null {
+    const t = norm(tekst) + ' '; // dodaj spację żeby wzorce z \b działały
+
+    // 1. Szukaj przy liczbie: "24 tony", "5kg", "100 szt"
+    const przyLiczbie = t.match(/\d[\s]*(ton[ay]?|tonn?e?|kg|kilogram[owy]*|kilo|szt[.uk]*|sztuk[ai]?|piece[s]?)\b/i);
+    if (przyLiczbie) {
+        const jed = norm(przyLiczbie[1]);
+        for (const { wzorce, skrot } of JEDNOSTKI_MAPA) {
+            if (wzorce.some(w => jed.includes(w) || w.includes(jed))) return skrot;
+        }
+    }
+
+    // 2. Szukaj jednostki ceny: "800 zł/t", "zł/kg", "zł/szt"
+    const przyCenie = t.match(/zl?[\/\s]+(t|kg|ton[ay]?|szt[.uk]*|sztuk[ai]?)\b/i);
+    if (przyCenie) {
+        const jed = norm(przyCenie[1]);
+        for (const { wzorce, skrot } of JEDNOSTKI_MAPA) {
+            if (wzorce.some(w => jed.includes(w) || w === jed)) return skrot;
+        }
+    }
+
+    // 3. Szukaj w całym tekście
+    for (const { wzorce, skrot } of JEDNOSTKI_MAPA) {
+        if (wzorce.some(w => t.includes(w))) return skrot;
+    }
+
+    return null;
+}
+
+/**
+ * Wykrywa ilość/wagę i normalizuje do wartości liczbowej.
+ * Przy kg → przelicza na tony jeśli jednostka = 't'
+ * Przy szt → zostawia jako ilość
+ */
+function wykryjIlosc(tekst: string, jednostka: 't' | 'kg' | 'szt' | null): string | null {
+    // Próba wyciągnięcia liczby przy jednostce
+    const wzorzec = /(\d+[\.,]?\d*)\s*(t\b|ton[ay]?\b|kg\b|kilogram[owy]*\b|szt[.uk]*\b|sztuk[ai]?\b)/i;
+    const m = tekst.match(wzorzec);
+    if (m) {
+        let val = parseFloat(m[1].replace(',', '.'));
+        const jedRaw = norm(m[2]);
+        // Jeśli wykryta jednostka to kg ale cena per tonę → przelicz
+        if (jedRaw === 'kg' && jednostka === 't') val = val / 1000;
+        return val.toString();
+    }
+
+    // Fallback: szukaj samej liczby w kontekście ilości
+    const sameLiczby = tekst.match(/(?:ok\.?|około|mam|posiadam|dostepne|ilosc)\s*[\:~]?\s*(\d+[\.,]?\d*)/i);
+    if (sameLiczby) return parseFloat(sameLiczby[1].replace(',', '.')).toString();
+
+    return null;
+}
+
 const formatujTelefon = (value: string) => {
-    const tylkoCyfry = value.replace(/\D/g, '').substring(0, 9);
-    const grupy = tylkoCyfry.match(/(\d{0,3})(\d{0,3})(\d{0,3})/);
-    return !grupy ? "" : [grupy[1], grupy[2], grupy[3]].filter(Boolean).join(' ').trim();
+    const maPlus = value.trimStart().startsWith('+');
+    const sameCyfry = value.replace(/\D/g, '');
+    if (!sameCyfry) return maPlus ? '+' : '';
+    if (maPlus) {
+        const kod = sameCyfry.slice(0, 2);
+        const numer = sameCyfry.slice(2, 14);
+        const grupy = numer.match(/.{1,3}/g) || [];
+        return `+${kod}${numer ? ' ' + grupy.join(' ') : ''}`;
+    }
+    if (sameCyfry.startsWith('00')) {
+        const cyfryPoPrefiks = sameCyfry.slice(2);
+        const kod = cyfryPoPrefiks.slice(0, 2);
+        const numer = cyfryPoPrefiks.slice(2, 14);
+        const grupy = numer.match(/.{1,3}/g) || [];
+        return `00${kod}${numer ? ' ' + grupy.join(' ') : ''}`;
+    }
+    const tylko9 = sameCyfry.slice(0, 9);
+    const g = tylko9.match(/(\d{0,3})(\d{0,3})(\d{0,3})/);
+    if (!g) return tylko9;
+    return [g[1], g[2], g[3]].filter(Boolean).join(' ').trim();
 };
 
 function slugify(text: string): string {
@@ -119,10 +212,18 @@ function slugify(text: string): string {
 }
 
 interface ParsedData {
-    telefon?: string; waga?: string; cena?: number | null;
-    miejscowosc?: string; wojewodztwo?: string; material?: string;
-    autoBdo?: string; title?: string; typOferty?: 'sprzedam' | 'kupie';
-    website_url?: string; supplyFreq?: SupplyFreq;
+    telefon?: string;
+    waga?: string;
+    jednostka?: 't' | 'kg' | 'szt';
+    cena?: number | null;
+    miejscowosc?: string;
+    wojewodztwo?: string;
+    material?: string;
+    autoBdo?: string;
+    title?: string;
+    typOferty?: 'sprzedam' | 'kupie';
+    website_url?: string;
+    supplyFreq?: SupplyFreq;
 }
 
 const URL_REGEX = /(?:https?:\/\/|www\.)\S+|\S+\.(?:pl|com|eu|net|org|biz|info)\S*/gi;
@@ -131,104 +232,54 @@ function parsujTekst(tekst: string): ParsedData {
     const wynik: ParsedData = {};
     const t = norm(tekst);
 
+    // TELEFON
     const telFmt = tekst.match(/(\+48[\s-]?)?\d{3}[\s-]\d{3}[\s-]\d{3}/);
-    if (telFmt) {
-        const c = telFmt[0].replace(/\D/g, '').slice(-9);
-        if (c.length === 9) wynik.telefon = c.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
-    }
-    if (!wynik.telefon) {
-        const bloki = tekst.replace(/\D/g, ' ').split(/\s+/).filter(b => b.length === 9);
-        if (bloki.length > 0) wynik.telefon = bloki[0].replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
-    }
-    if (!wynik.telefon) {
-        const m = tekst.match(/\b(\d[\s\-]?){8}\d\b/);
-        if (m) {
-            const c = m[0].replace(/\D/g, '').slice(-9);
-            if (c.length === 9) wynik.telefon = c.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
-        }
-    }
+    if (telFmt) { const c = telFmt[0].replace(/\D/g, '').slice(-9); if (c.length === 9) wynik.telefon = c.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3'); }
+    if (!wynik.telefon) { const bloki = tekst.replace(/\D/g, ' ').split(/\s+/).filter(b => b.length === 9); if (bloki.length > 0) wynik.telefon = bloki[0].replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3'); }
+    if (!wynik.telefon) { const m = tekst.match(/\b(\d[\s\-]?){8}\d\b/); if (m) { const c = m[0].replace(/\D/g, '').slice(-9); if (c.length === 9) wynik.telefon = c.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3'); } }
 
-    const wagaMatch = tekst.match(/(\d+[\.,]?\d*)\s*(t\b|ton\b|tony\b|kg\b)/i);
-    if (wagaMatch) {
-        let val = parseFloat(wagaMatch[1].replace(',', '.'));
-        if (wagaMatch[2].toLowerCase() === 'kg') val = val / 1000;
-        wynik.waga = val.toString();
-    }
+    // JEDNOSTKA — wykrywana PRZED wagą, żeby wiedzieć jak przeliczać
+    const jednostkaWykryta = wykryjJednostke(tekst);
+    if (jednostkaWykryta) wynik.jednostka = jednostkaWykryta;
 
-    const negFrazy = ['do ustalenia', 'do negocjacji', 'negocjacja', 'do uzgodnienia', 'cena umowna', 'bez ceny'];
+    // WAGA / ILOŚĆ — z uwzględnieniem jednostki
+    const iloscWykryta = wykryjIlosc(tekst, jednostkaWykryta);
+    if (iloscWykryta) wynik.waga = iloscWykryta;
+
+    // CENA
+    const negFrazy = ['do ustalenia', 'do negocjacji', 'negocjacja', 'do uzgodnienia', 'cena umowna', 'bez ceny', 'za darmo', 'gratis', 'oddam', 'oddamy'];
     if (!negFrazy.some(f => t.includes(f))) {
         const cenaMatch = tekst.match(/(\d+[\.,]?\d*)\s*(?:zł|pln|zl)/i);
         if (cenaMatch) wynik.cena = parseFloat(cenaMatch[1].replace(',', '.'));
     }
 
+    // URL
     const urlMatch = tekst.match(/(?:https?:\/\/|www\.)[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]?(?:\.[a-zA-Z]{2,6})+(?:[/?#][^\s]*)?\b/i);
-    if (urlMatch) {
-        let url = urlMatch[0];
-        if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-        wynik.website_url = url;
+    if (urlMatch) { let url = urlMatch[0]; if (!/^https?:\/\//i.test(url)) url = 'https://' + url; wynik.website_url = url; }
+
+    // LOKALIZACJA
+    if (t.includes('cala polska') || t.includes('caly kraj') || t.includes('ogolnopolski')) { wynik.miejscowosc = 'Cała Polska'; wynik.wojewodztwo = ''; }
+    else if (t.includes('europa') || t.includes('zagranica') || t.includes('eksport')) { wynik.miejscowosc = 'Europa / Zagranica'; wynik.wojewodztwo = ''; }
+    else {
+        for (const [asciiKey, plNazwa] of Object.entries(WOJEWODZTWA_ASCII)) { if (t.includes(asciiKey)) { wynik.wojewodztwo = plNazwa; break; } }
+        for (const [miastoKey, wojKey] of Object.entries(MIASTA_WOJEWODZTWA)) { if (t.includes(miastoKey)) { wynik.miejscowosc = MIASTA_NAZWY_PL[miastoKey] || miastoKey; if (!wynik.wojewodztwo) wynik.wojewodztwo = WOJEWODZTWA_ASCII[wojKey] || wojKey; break; } }
     }
 
-    if (t.includes('cala polska') || t.includes('caly kraj') || t.includes('ogolnopolski')) {
-        wynik.miejscowosc = 'Cała Polska';
-        wynik.wojewodztwo = '';
-    } else if (t.includes('europa') || t.includes('zagranica') || t.includes('eksport')) {
-        wynik.miejscowosc = 'Europa / Zagranica';
-        wynik.wojewodztwo = '';
-    } else {
-        for (const [asciiKey, plNazwa] of Object.entries(WOJEWODZTWA_ASCII)) {
-            if (t.includes(asciiKey)) { wynik.wojewodztwo = plNazwa; break; }
-        }
-        for (const [miastoKey, wojKey] of Object.entries(MIASTA_WOJEWODZTWA)) {
-            if (t.includes(miastoKey)) {
-                wynik.miejscowosc = MIASTA_NAZWY_PL[miastoKey] || miastoKey;
-                if (!wynik.wojewodztwo) wynik.wojewodztwo = WOJEWODZTWA_ASCII[wojKey] || wojKey;
-                break;
-            }
-        }
-    }
+    // KATEGORIA
+    for (const { slowa, kategoria } of SLOWA_KLUCZE) { if (slowa.some(s => t.includes(s))) { const found = KATEGORIE_Z_BDO.find(k => norm(k.nazwa).includes(norm(kategoria).split(' ')[0])); wynik.material = found?.nazwa || kategoria; if (found) wynik.autoBdo = found.bdo; break; } }
 
-    for (const { slowa, kategoria } of SLOWA_KLUCZE) {
-        if (slowa.some(s => t.includes(s))) {
-            const found = KATEGORIE_Z_BDO.find(k => norm(k.nazwa).includes(norm(kategoria).split(' ')[0]));
-            wynik.material = found?.nazwa || kategoria;
-            if (found) wynik.autoBdo = found.bdo;
-            break;
-        }
-    }
+    // TYP OFERTY
+    if (SLOWA_KUPIE.some(s => t.includes(s))) wynik.typOferty = 'kupie'; else if (SLOWA_SPRZEDAM.some(s => t.includes(s))) wynik.typOferty = 'sprzedam';
 
-    if (SLOWA_KUPIE.some(s => t.includes(s))) wynik.typOferty = 'kupie';
-    else if (SLOWA_SPRZEDAM.some(s => t.includes(s))) wynik.typOferty = 'sprzedam';
+    // CYKL
+    for (const { slowa, wartosc } of SLOWA_CYKL) { if (slowa.some(s => t.includes(s))) { wynik.supplyFreq = wartosc; break; } }
 
-    for (const { slowa, wartosc } of SLOWA_CYKL) {
-        if (slowa.some(s => t.includes(s))) { wynik.supplyFreq = wartosc; break; }
-    }
-
-    const ZBEDNE_TYTUL = ['sprzedam', 'kupie', 'oferuje', 'oferujemy', 'zapraszamy', 'oddam',
-        'firma', 'przedsiebiorstwo', 'spolka', 'oferta', 'ogloszenie',
-        'tel', 'telefon', 'kontakt', 'dzwon', 'ilosc', 'ilo', 'cena', 'cene'];
+    // TYTUŁ
+    const ZBEDNE_TYTUL = ['sprzedam', 'kupie', 'oferuje', 'oferujemy', 'zapraszamy', 'oddam', 'firma', 'przedsiebiorstwo', 'spolka', 'oferta', 'ogloszenie', 'tel', 'telefon', 'kontakt', 'dzwon', 'ilosc', 'ilo', 'cena', 'cene'];
     const tekstBezUrl = tekst.replace(URL_REGEX, '').replace(/\s+/g, ' ').trim();
-    const surowiecMatch = tekstBezUrl.match(
-        /(regranulat|re\s*granulat|przemial|aglomerat|folia|zlom|makulatura|karton|drewno|kabel|platki|butelk|kanister|recyklat|aglo)[\s\w\-\/]{0,50}/i
-    );
-    if (surowiecMatch) {
-        let tyt = surowiecMatch[0].replace(/[\.,!?;:]+$/, '').replace(/(?:tel\.?|telefon|kontakt|dzwon|ilo[sś][cć]?|\d{9})[^\w].*$/i, '').trim();
-        const tytN = norm(tyt);
-        for (const fraza of ZBEDNE_TYTUL) {
-            if (tytN.includes(fraza)) tyt = tyt.replace(new RegExp('(?:^|\\s)' + fraza + '(?:\\s|$)', 'gi'), ' ');
-        }
-        tyt = tyt.replace(/\s+/g, ' ').trim().substring(0, 55);
-        if (tyt.length > 3) wynik.title = tyt.charAt(0).toUpperCase() + tyt.slice(1);
-    }
-    if (!wynik.title || wynik.title.length < 4) {
-        let linia = tekstBezUrl.split('\n')[0].trim();
-        linia = linia.replace(/\b(?:z|ze)\s+\w+(?:a|y|i|u|ów|em)\b/gi, '');
-        const liniaN = norm(linia);
-        for (const fraza of ZBEDNE_TYTUL) {
-            if (liniaN.includes(fraza)) linia = linia.replace(new RegExp('(?:^|\\s)' + fraza + '(?:\\s|$)', 'gi'), ' ');
-        }
-        linia = linia.replace(/\s+/g, ' ').trim();
-        if (linia.length > 3) wynik.title = linia.charAt(0).toUpperCase() + linia.slice(1).substring(0, 55);
-    }
+    const surowiecMatch = tekstBezUrl.match(/(regranulat|re\s*granulat|przemial|aglomerat|folia|zlom|makulatura|karton|drewno|kabel|platki|butelk|kanister|recyklat|aglo)[\s\w\-\/]{0,50}/i);
+    if (surowiecMatch) { let tyt = surowiecMatch[0].replace(/[\.,!?;:]+$/, '').replace(/(?:tel\.?|telefon|kontakt|dzwon|ilo[sś][cć]?|\d{9})[^\w].*$/i, '').trim(); const tytN = norm(tyt); for (const fraza of ZBEDNE_TYTUL) { if (tytN.includes(fraza)) tyt = tyt.replace(new RegExp('(?:^|\\s)' + fraza + '(?:\\s|$)', 'gi'), ' '); } tyt = tyt.replace(/\s+/g, ' ').trim().substring(0, 55); if (tyt.length > 3) wynik.title = tyt.charAt(0).toUpperCase() + tyt.slice(1); }
+    if (!wynik.title || wynik.title.length < 4) { let linia = tekstBezUrl.split('\n')[0].trim(); linia = linia.replace(/\b(?:z|ze)\s+\w+(?:a|y|i|u|ów|em)\b/gi, ''); const liniaN = norm(linia); for (const fraza of ZBEDNE_TYTUL) { if (liniaN.includes(fraza)) linia = linia.replace(new RegExp('(?:^|\\s)' + fraza + '(?:\\s|$)', 'gi'), ' '); } linia = linia.replace(/\s+/g, ' ').trim(); if (linia.length > 3) wynik.title = linia.charAt(0).toUpperCase() + linia.slice(1).substring(0, 55); }
 
     return wynik;
 }
@@ -238,7 +289,6 @@ function czyiOS(): boolean {
     return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
 
-// Zwraca wartość selectu dla aktualnych stanów lokalizacja/województwo
 function getSelectValue(miejscowosc: string, wojewodztwo: string): string {
     if (miejscowosc === 'Cała Polska') return '__cala_polska__';
     if (miejscowosc === 'Europa / Zagranica') return '__zagranica__';
@@ -273,17 +323,13 @@ export default function DodajOferteKrok1() {
 
     const zdjecieRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<any>(null);
-
-    // Czy wybrana opcja to zasięg ogólny (ukrywa pole miejscowości)
     const jestZasiegOgolny = miejscowosc === 'Cała Polska' || miejscowosc === 'Europa / Zagranica';
 
     useEffect(() => {
         setIsCheckingAuth(false);
         const ios = czyiOS();
         setJestIOS(ios);
-        if (!ios && typeof window !== 'undefined') {
-            setWspieraMikrofon('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
-        }
+        if (!ios && typeof window !== 'undefined') setWspieraMikrofon('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
     }, []);
 
     const startMikrofon = () => {
@@ -303,17 +349,10 @@ export default function DodajOferteKrok1() {
 
     const handleHeroClick = () => { setMagicOtwarte(true); if (!jestIOS) startMikrofon(); };
 
-    // Obsługa zmiany selekta lokalizacji
     const handleLokalizacjaChange = (val: string) => {
         const specjalna = ZASIEG_SPECJALNY.find(z => z.value === val);
-        if (specjalna) {
-            setMiejscowosc(specjalna.lokalizacja);
-            setWojewodztwo(specjalna.wojewodztwo);
-        } else {
-            // Wybrano województwo — czyść zasięg ogólny z miejscowości jeśli był
-            if (jestZasiegOgolny) setMiejscowosc('');
-            setWojewodztwo(val);
-        }
+        if (specjalna) { setMiejscowosc(specjalna.lokalizacja); setWojewodztwo(specjalna.wojewodztwo); }
+        else { if (jestZasiegOgolny) setMiejscowosc(''); setWojewodztwo(val); }
         setPodswietlone(p => { const n = new Set(p); n.delete('wojewodztwo'); return n; });
     };
 
@@ -324,9 +363,7 @@ export default function DodajOferteKrok1() {
 
         const zastap = (pole: string, nowaWartosc: string, obecnaWartosc: string, setter: (v: string) => void) => {
             if (!nowaWartosc) return;
-            if (obecnaWartosc && obecnaWartosc !== nowaWartosc) {
-                if (!confirm(`Pole "${pole}" ma już wartość "${obecnaWartosc}". Zastąpić?`)) return;
-            }
+            if (obecnaWartosc && obecnaWartosc !== nowaWartosc) { if (!confirm(`Pole "${pole}" ma już wartość "${obecnaWartosc}". Zastąpić?`)) return; }
             setter(nowaWartosc);
         };
 
@@ -334,22 +371,28 @@ export default function DodajOferteKrok1() {
         if (parsed.waga) zastap('Waga', parsed.waga, waga, setWaga); else nowePodswietlone.add('waga');
         if (parsed.miejscowosc) zastap('Miejscowość', parsed.miejscowosc, miejscowosc, setMiejscowosc); else nowePodswietlone.add('miejscowosc');
         if (parsed.wojewodztwo) zastap('Województwo', parsed.wojewodztwo, wojewodztwo, setWojewodztwo); else nowePodswietlone.add('wojewodztwo');
-        if (parsed.material) {
-            zastap('Kategoria', parsed.material, material, setMaterial);
-            const found = KATEGORIE_Z_BDO.find(k => k.nazwa === parsed.material);
-            if (found) setAutoBdo(found.bdo);
-        } else nowePodswietlone.add('material');
+        if (parsed.material) { zastap('Kategoria', parsed.material, material, setMaterial); const found = KATEGORIE_Z_BDO.find(k => k.nazwa === parsed.material); if (found) setAutoBdo(found.bdo); } else nowePodswietlone.add('material');
         if (parsed.title) zastap('Tytuł', parsed.title, title, setTitle); else nowePodswietlone.add('title');
         if (parsed.typOferty) setTypOferty(parsed.typOferty);
         if (parsed.supplyFreq) setSupplyFreq(parsed.supplyFreq);
-        if (parsed.cena) localStorage.setItem('magic_cena', String(parsed.cena));
+
+        // Przekaż jednostkę i cenę do kroku 2 przez localStorage
+        if (parsed.cena !== undefined && parsed.cena !== null) localStorage.setItem('magic_cena', String(parsed.cena));
+        if (parsed.jednostka) localStorage.setItem('magic_jednostka', parsed.jednostka);
         if (parsed.website_url) localStorage.setItem('magic_website_url', parsed.website_url);
+
         setPodswietlone(nowePodswietlone);
 
         const nowyTytul = parsed.title || title;
         const nowyMaterial = parsed.material || material;
         const nowaLok = [parsed.miejscowosc || miejscowosc, parsed.wojewodztwo || wojewodztwo].filter(Boolean).join(', ');
-        const opis = [nowyTytul || nowyMaterial, nowyMaterial && nowyMaterial !== nowyTytul ? `Kategoria: ${nowyMaterial}` : '', (parsed.waga || waga) ? `Waga: ${parsed.waga || waga} ton` : '', nowaLok ? `Lokalizacja: ${nowaLok}` : ''].filter(Boolean).join('\n');
+        const jedLabel = parsed.jednostka === 'kg' ? 'kg' : parsed.jednostka === 'szt' ? 'szt.' : 't';
+        const opis = [
+            nowyTytul || nowyMaterial,
+            nowyMaterial && nowyMaterial !== nowyTytul ? `Kategoria: ${nowyMaterial}` : '',
+            (parsed.waga || waga) ? `Ilość: ${parsed.waga || waga} ${jedLabel}` : '',
+            nowaLok ? `Lokalizacja: ${nowaLok}` : '',
+        ].filter(Boolean).join('\n');
         setSeoOpis(opis);
         localStorage.setItem('magic_opis', opis);
         const slugBase = [nowyTytul || nowyMaterial, parsed.miejscowosc || miejscowosc].filter(Boolean).join(' ');
@@ -391,10 +434,7 @@ export default function DodajOferteKrok1() {
             };
             localStorage.setItem('temp_offer', JSON.stringify(step1Data));
             router.push('/dodaj/parametry');
-        } catch (err: any) {
-            alert(err.message);
-            setLoading(false);
-        }
+        } catch (err: any) { alert(err.message); setLoading(false); }
     };
 
     if (isCheckingAuth) return null;
@@ -407,9 +447,11 @@ export default function DodajOferteKrok1() {
                     <input type="text" value={hp} onChange={e => setHp(e.target.value)} tabIndex={-1} autoComplete="off" />
                 </div>
 
+                <StepProgress krok={1} />
+
                 <div className="flex justify-between items-start mb-8">
                     <div>
-                        <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">Dodaj Ofertę</h1>
+                        <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">Dodaj Ogłoszenie</h1>
                         <div className="flex items-center gap-2">
                             <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">Krok 1</span>
                             <p className="text-sm font-extrabold text-slate-500 uppercase tracking-tight">Informacje podstawowe</p>
@@ -418,7 +460,6 @@ export default function DodajOferteKrok1() {
                     <Link href="/rynek" className="bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 p-3 rounded-2xl transition-all font-black text-[10px] uppercase">Anuluj</Link>
                 </div>
 
-                {/* HERO */}
                 {!magicOtwarte && (
                     <button type="button" onClick={handleHeroClick}
                         className="w-full mb-6 group relative overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-900 to-blue-900 p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-2xl">
@@ -430,12 +471,8 @@ export default function DodajOferteKrok1() {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] mb-1">✦ Nowość — AI asystent</p>
-                                <h2 className="text-xl font-black text-white uppercase tracking-tight leading-tight mb-1">
-                                    {jestIOS ? 'Dyktuj przez klawiaturę' : 'Wystaw ofertę głosem'}
-                                </h2>
-                                <p className="text-slate-300 text-xs font-medium leading-relaxed">
-                                    {jestIOS ? 'Kliknij → dotknij pola tekstowego → naciśnij 🎤 na klawiaturze → dyktuj.' : 'Kliknij, powiedz co masz, miasto i telefon — AI wypełni resztę.'}
-                                </p>
+                                <h2 className="text-xl font-black text-white uppercase tracking-tight leading-tight mb-1">{jestIOS ? 'Dyktuj przez klawiaturę' : 'Opisz głosem'}</h2>
+                                <p className="text-slate-300 text-xs font-medium leading-relaxed">{jestIOS ? 'Kliknij → dotknij pola tekstowego → naciśnij 🎤 na klawiaturze → dyktuj.' : 'Powiedz co masz, ilość, miasto i telefon — AI wypełni resztę.'}</p>
                             </div>
                             <div className="shrink-0 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
@@ -445,7 +482,6 @@ export default function DodajOferteKrok1() {
                     </button>
                 )}
 
-                {/* MAGIC BOX */}
                 {magicOtwarte && (
                     <div className="border-2 border-blue-400 rounded-[28px] overflow-hidden shadow-lg mb-6">
                         <div className="bg-blue-600 px-5 py-3 flex items-center justify-between">
@@ -462,207 +498,101 @@ export default function DodajOferteKrok1() {
                             </div>
                         </div>
                         <div className="p-4 bg-white">
-                            {nasluchuje && (
-                                <div className="flex items-center gap-2 mb-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
-                                    <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shrink-0" />
-                                    <span className="text-red-600 text-xs font-black uppercase tracking-widest">Słucham... powiedz co masz, miasto i telefon</span>
-                                </div>
-                            )}
-                            {jestIOS && (
-                                <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-3">
-                                    <span className="text-2xl shrink-0">🎤</span>
-                                    <div>
-                                        <p className="text-blue-800 text-xs font-black uppercase tracking-widest mb-1">Dyktowanie na iPhone</p>
-                                        <p className="text-blue-700 text-[12px] font-medium leading-relaxed"><strong>1.</strong> Dotknij pola poniżej<br /><strong>2.</strong> Naciśnij ikonę 🎤 na klawiaturze<br /><strong>3.</strong> Dyktuj po polsku</p>
-                                    </div>
-                                </div>
-                            )}
+                            {nasluchuje && (<div className="flex items-center gap-2 mb-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5"><div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shrink-0" /><span className="text-red-600 text-xs font-black uppercase tracking-widest">Słucham... powiedz co masz, ilość, jednostkę i telefon</span></div>)}
+                            {jestIOS && (<div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-3"><span className="text-2xl shrink-0">🎤</span><div><p className="text-blue-800 text-xs font-black uppercase tracking-widest mb-1">Dyktowanie na iPhone</p><p className="text-blue-700 text-[12px] font-medium leading-relaxed"><strong>1.</strong> Dotknij pola poniżej<br /><strong>2.</strong> Naciśnij ikonę 🎤 na klawiaturze<br /><strong>3.</strong> Dyktuj po polsku</p></div></div>)}
                             <textarea className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-[20px] font-medium text-slate-700 min-h-[110px] resize-none outline-none focus:border-blue-400 transition-colors text-sm placeholder:text-slate-400"
-                                placeholder={jestIOS ? 'Dotknij tutaj → naciśnij 🎤 na klawiaturze i dyktuj...' : 'Wpisz lub powiedz: Sprzedam 24 tony PP czarny, Łódź, tel. 676 787 678'}
+                                placeholder={jestIOS ? 'Dotknij tutaj → naciśnij 🎤 i dyktuj...' : 'np: Sprzedam 500 kg kabla Cu, cena 30 zł/kg, Katowice, tel. 600 700 800'}
                                 value={magicTekst} onChange={e => setMagicTekst(e.target.value)} lang="pl" autoCorrect="on" autoCapitalize="sentences" />
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {[
-                                    { label: 'Sprzedam...', tekst: 'Sprzedam 24 tony regranulatu PP czarny, cena 2500 zł/t, tel. 600 700 800, śląskie.' },
-                                    { label: 'Kupię...', tekst: 'Kupię folię LDPE, ok. 5 ton/miesiąc. Tel. 500 100 200, Mazowieckie.' },
-                                    { label: 'Oddam...', tekst: 'Oddam za darmo strzepy foliowe, odbiór własny. Tel. 400 300 200. Kraków.' },
+                                    { label: 'Tony...', tekst: 'Sprzedam 24 tony regranulatu PP czarny, cena 2500 zł/t, tel. 600 700 800, śląskie.' },
+                                    { label: 'Kilogramy...', tekst: 'Sprzedam 500 kg kabla miedzianego, cena 30 zł/kg. Tel. 500 100 200, Katowice.' },
+                                    { label: 'Sztuki...', tekst: 'Oddam 50 szt. palet drewnianych, odbiór własny. Tel. 400 300 200. Kraków.' },
                                 ].map((s, i) => (
-                                    <button key={i} type="button" onClick={() => setMagicTekst(s.tekst)}
-                                        className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded-full transition-all active:scale-95">{s.label}</button>
+                                    <button key={i} type="button" onClick={() => setMagicTekst(s.tekst)} className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded-full transition-all active:scale-95">{s.label}</button>
                                 ))}
                             </div>
-                            <button type="button" onClick={handleAnalizuj} disabled={!magicTekst.trim()}
-                                className="mt-3 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white py-3 rounded-[18px] font-black text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95">
-                                <Sparkles size={16} /> Analizuj i wypełnij pola
-                            </button>
-                            {seoWygenerowane && (
-                                <div className="mt-4 border-2 border-emerald-400 rounded-[20px] overflow-hidden">
-                                    <div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-200">
-                                        <Sparkles size={14} className="text-emerald-600" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Opis SEO wygenerowany</span>
-                                    </div>
-                                    <textarea className="w-full p-4 bg-white text-slate-700 font-medium text-sm min-h-[100px] resize-none outline-none" value={seoOpis} onChange={e => setSeoOpis(e.target.value)} />
-                                </div>
-                            )}
+                            <button type="button" onClick={handleAnalizuj} disabled={!magicTekst.trim()} className="mt-3 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white py-3 rounded-[18px] font-black text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95"><Sparkles size={16} /> Analizuj i wypełnij pola</button>
+                            {seoWygenerowane && (<div className="mt-4 border-2 border-emerald-400 rounded-[20px] overflow-hidden"><div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-200"><Sparkles size={14} className="text-emerald-600" /><span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Opis wygenerowany</span></div><textarea className="w-full p-4 bg-white text-slate-700 font-medium text-sm min-h-[100px] resize-none outline-none" value={seoOpis} onChange={e => setSeoOpis(e.target.value)} /></div>)}
                         </div>
                     </div>
                 )}
 
                 <form onSubmit={handleDalej} className="space-y-6">
-                    {/* TYP OFERTY */}
                     <div className="grid grid-cols-2 gap-3 bg-slate-100 p-2 rounded-[28px]">
-                        <button type="button" onClick={() => setTypOferty('sprzedam')}
-                            className={`py-4 rounded-[20px] text-sm font-black uppercase flex items-center justify-center gap-3 transition-all ${typOferty === 'sprzedam' ? 'bg-white text-emerald-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}>
-                            <ShoppingBag size={20} /> Sprzedam
-                        </button>
-                        <button type="button" onClick={() => setTypOferty('kupie')}
-                            className={`py-4 rounded-[20px] text-sm font-black uppercase flex items-center justify-center gap-3 transition-all ${typOferty === 'kupie' ? 'bg-white text-blue-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}>
-                            <ArrowDownToLine size={20} /> Kupię
-                        </button>
+                        <button type="button" onClick={() => setTypOferty('sprzedam')} className={`py-4 rounded-[20px] text-sm font-black uppercase flex items-center justify-center gap-3 transition-all ${typOferty === 'sprzedam' ? 'bg-white text-emerald-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}><ShoppingBag size={20} /> Oferuję</button>
+                        <button type="button" onClick={() => setTypOferty('kupie')} className={`py-4 rounded-[20px] text-sm font-black uppercase flex items-center justify-center gap-3 transition-all ${typOferty === 'kupie' ? 'bg-white text-blue-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}><ArrowDownToLine size={20} /> Poszukuję</button>
                     </div>
 
-                    {/* TYTUŁ */}
                     <div>
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
-                            Tytuł ogłoszenia <span className="text-red-500">*</span>
-                            {podswietlone.has('title') && (
-                                <span className="relative flex items-center">
-                                    <button type="button" onMouseEnter={() => setTooltipVisible('title')} onMouseLeave={() => setTooltipVisible(null)} className="text-yellow-500"><Lightbulb size={14} /></button>
-                                    {tooltipVisible === 'title' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl">Uzupełnij tytuł — ogłoszenia z tytułem mają 2x większą oglądalność!</span>}
-                                </span>
-                            )}
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">Tytuł ogłoszenia <span className="text-red-500">*</span>
+                            {podswietlone.has('title') && (<span className="relative flex items-center"><button type="button" onMouseEnter={() => setTooltipVisible('title')} onMouseLeave={() => setTooltipVisible(null)} className="text-yellow-500"><Lightbulb size={14} /></button>{tooltipVisible === 'title' && <span className="absolute left-5 top-0 z-50 w-52 bg-slate-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-xl">Uzupełnij tytuł — 2x więcej wyświetleń!</span>}</span>)}
                         </label>
-                        <input required type="text" placeholder="np. Regranulat LDPE jasny"
-                            className={`w-full p-5 border-2 rounded-[24px] font-bold focus:border-blue-500 outline-none transition-colors ${getFieldClass('title')}`}
-                            value={title} onChange={e => { setTitle(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('title'); return n; }); }} />
+                        <input required type="text" placeholder="np. Regranulat LDPE jasny" className={`w-full p-5 border-2 rounded-[24px] font-bold focus:border-blue-500 outline-none transition-colors ${getFieldClass('title')}`} value={title} onChange={e => { setTitle(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('title'); return n; }); }} />
                     </div>
 
-                    {/* KATEGORIA */}
                     <div>
                         <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">Kategoria surowca <span className="text-red-500">*</span></label>
-                        <select required className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('material')}`}
-                            value={material}
-                            onChange={e => {
-                                setMaterial(e.target.value);
-                                const found = KATEGORIE_Z_BDO.find(k => k.nazwa === e.target.value);
-                                if (found) setAutoBdo(found.bdo);
-                                setPodswietlone(p => { const n = new Set(p); n.delete('material'); return n; });
-                            }}>
+                        <select required className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('material')}`} value={material} onChange={e => { setMaterial(e.target.value); const found = KATEGORIE_Z_BDO.find(k => k.nazwa === e.target.value); if (found) setAutoBdo(found.bdo); setPodswietlone(p => { const n = new Set(p); n.delete('material'); return n; }); }}>
                             <option value="">Wybierz kategorię...</option>
                             {KATEGORIE_Z_BDO.map(k => <option key={k.nazwa} value={k.nazwa}>{k.nazwa}</option>)}
                         </select>
                     </div>
 
-                    {/* WAGA I TELEFON */}
                     <div className="grid grid-cols-2 gap-6">
                         <div>
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">Waga (tony)</label>
-                            <input type="number" placeholder="np. 24"
-                                className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('waga')}`}
-                                value={waga} onChange={e => { setWaga(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('waga'); return n; }); }} />
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">Ilość</label>
+                            <input type="number" placeholder="np. 24" className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('waga')}`} value={waga} onChange={e => { setWaga(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('waga'); return n; }); }} />
                         </div>
                         <div>
                             <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 block">Telefon <span className="text-red-500">*</span></label>
-                            <input required type="tel" placeholder="000 000 000"
-                                className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('telefon')}`}
-                                value={telefon} onChange={e => { setTelefon(formatujTelefon(e.target.value)); setPodswietlone(p => { const n = new Set(p); n.delete('telefon'); return n; }); }} />
+                            <input required type="tel" placeholder="600 700 800" className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('telefon')}`} value={telefon} onChange={e => { setTelefon(e.target.value.replace(/[^\d\s\-+]/g, '').substring(0, 20)); setPodswietlone(p => { const n = new Set(p); n.delete('telefon'); return n; }); }} />
                         </div>
                     </div>
 
-                    {/* LOKALIZACJA — jeden select z zasięgiem + województwami */}
                     <div>
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
-                            <Globe size={11} /> Zasięg / Województwo <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            required
-                            className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('wojewodztwo')}`}
-                            value={getSelectValue(miejscowosc, wojewodztwo)}
-                            onChange={e => handleLokalizacjaChange(e.target.value)}
-                        >
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2"><Globe size={11} /> Zasięg / Województwo <span className="text-red-500">*</span></label>
+                        <select required className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('wojewodztwo')}`} value={getSelectValue(miejscowosc, wojewodztwo)} onChange={e => handleLokalizacjaChange(e.target.value)}>
                             <option value="">Wybierz zasięg lub województwo...</option>
-                            {/* Specjalne opcje zasięgu */}
-                            <optgroup label="── Zasięg ogólny ──">
-                                {ZASIEG_SPECJALNY.map(z => (
-                                    <option key={z.value} value={z.value}>{z.label}</option>
-                                ))}
-                            </optgroup>
-                            {/* Województwa */}
-                            <optgroup label="── Województwa ──">
-                                {WOJEWODZTWA.map(w => (
-                                    <option key={w} value={w}>{w.charAt(0).toUpperCase() + w.slice(1)}</option>
-                                ))}
-                            </optgroup>
+                            <optgroup label="── Zasięg ogólny ──">{ZASIEG_SPECJALNY.map(z => <option key={z.value} value={z.value}>{z.label}</option>)}</optgroup>
+                            <optgroup label="── Województwa ──">{WOJEWODZTWA.map(w => <option key={w} value={w}>{w.charAt(0).toUpperCase() + w.slice(1)}</option>)}</optgroup>
                         </select>
-
-                        {/* Wizualna informacja o wybranym zasięgu ogólnym */}
                         {jestZasiegOgolny && (
                             <div className={`mt-2 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold ${miejscowosc === 'Europa / Zagranica' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
-                                {miejscowosc === 'Europa / Zagranica' ? <Plane size={14} /> : <Globe size={14} />}
-                                Ogłoszenie widoczne dla: <strong>{miejscowosc}</strong>
+                                {miejscowosc === 'Europa / Zagranica' ? <Plane size={14} /> : <Globe size={14} />} Widoczne dla: <strong>{miejscowosc}</strong>
                             </div>
                         )}
                     </div>
 
-                    {/* MIEJSCOWOŚĆ — ukryta gdy wybrany zasięg ogólny */}
                     {!jestZasiegOgolny && (
                         <div>
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2">
-                                <MapPin size={11} /> Miejscowość
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="np. Toruń, Bydgoszcz..."
-                                className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('miejscowosc')}`}
-                                value={miejscowosc}
-                                onChange={e => { setMiejscowosc(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('miejscowosc'); return n; }); }}
-                            />
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2"><MapPin size={11} /> Miejscowość</label>
+                            <input type="text" placeholder="np. Toruń, Bydgoszcz..." className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${getFieldClass('miejscowosc')}`} value={miejscowosc} onChange={e => { setMiejscowosc(e.target.value); setPodswietlone(p => { const n = new Set(p); n.delete('miejscowosc'); return n; }); }} />
                             <p className="text-[10px] text-slate-400 font-bold ml-5 mt-1">Opcjonalne — pomaga kupującym z sąsiedztwa</p>
                         </div>
                     )}
 
-                    {/* CZĘSTOTLIWOŚĆ */}
                     <div>
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-2 flex items-center gap-2">
-                            <Calendar size={12} /> Częstotliwość sprzedaży
-                        </label>
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-2 flex items-center gap-2"><Calendar size={12} /> Częstotliwość</label>
                         <div className="grid grid-cols-2 gap-2">
-                            {([
-                                { v: 'jednorazowo', label: 'Jednorazowo', icon: '1×' },
-                                { v: 'co_tydzien', label: 'Co tydzień', icon: '7d' },
-                                { v: 'co_miesiac', label: 'Co miesiąc', icon: '30d' },
-                                { v: 'stala_wspolpraca', label: 'Stała współpraca', icon: '∞' },
-                            ] as const).map(opt => (
-                                <button key={opt.v} type="button" onClick={() => setSupplyFreq(opt.v)}
-                                    className={`flex items-center gap-2 p-3 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all ${supplyFreq === opt.v ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
-                                    <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm font-black ${supplyFreq === opt.v ? 'bg-white/20' : 'bg-slate-200 text-slate-500'}`}>{opt.icon}</span>
-                                    {opt.label}
+                            {([{ v: 'jednorazowo', label: 'Jednorazowo', icon: '1×' }, { v: 'co_tydzien', label: 'Co tydzień', icon: '7d' }, { v: 'co_miesiac', label: 'Co miesiąc', icon: '30d' }, { v: 'stala_wspolpraca', label: 'Stała współpraca', icon: '∞' }] as const).map(opt => (
+                                <button key={opt.v} type="button" onClick={() => setSupplyFreq(opt.v)} className={`flex items-center gap-2 p-3 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all ${supplyFreq === opt.v ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                                    <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm font-black ${supplyFreq === opt.v ? 'bg-white/20' : 'bg-slate-200 text-slate-500'}`}>{opt.icon}</span>{opt.label}
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* ZDJĘCIE */}
-                    <div ref={zdjecieRef} onClick={() => document.getElementById('fileInput')?.click()}
-                        className="border-4 border-dashed rounded-[40px] p-10 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                        <input type="file" id="fileInput" className="hidden" accept="image/*" onChange={e => {
-                            const f = e.target.files?.[0];
-                            if (f) { setFile(f); setPreview(URL.createObjectURL(f)); }
-                        }} />
+                    <div ref={zdjecieRef} onClick={() => document.getElementById('fileInput')?.click()} className="border-4 border-dashed rounded-[40px] p-10 text-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                        <input type="file" id="fileInput" className="hidden" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setPreview(URL.createObjectURL(f)); } }} />
                         {preview ? (
-                            <div className="relative inline-block">
-                                <img src={preview} className="h-40 mx-auto rounded-2xl shadow-lg" alt="Podgląd" />
-                                <div className="absolute -top-2 -right-2 bg-blue-600 text-white p-1 rounded-full"><CheckCircle size={16} /></div>
-                            </div>
+                            <div className="relative inline-block"><img src={preview} className="h-40 mx-auto rounded-2xl shadow-lg" alt="Podgląd" /><div className="absolute -top-2 -right-2 bg-blue-600 text-white p-1 rounded-full"><CheckCircle size={16} /></div></div>
                         ) : (
-                            <div className="flex flex-col items-center gap-2">
-                                <ImagePlus size={40} className="text-slate-300" />
-                                <p className="font-black text-slate-400 uppercase text-sm">Kliknij, aby dodać zdjęcie</p>
-                            </div>
+                            <div className="flex flex-col items-center gap-2"><ImagePlus size={40} className="text-slate-300" /><p className="font-black text-slate-400 uppercase text-sm">Kliknij, aby dodać zdjęcie</p></div>
                         )}
                     </div>
 
-                    <button type="submit" disabled={loading}
-                        className="w-full bg-slate-900 text-white py-8 rounded-[32px] font-black text-2xl uppercase flex items-center justify-center gap-4 hover:bg-blue-600 transition-all shadow-xl active:scale-95 disabled:opacity-50 mt-4">
+                    <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-8 rounded-[32px] font-black text-2xl uppercase flex items-center justify-center gap-4 hover:bg-blue-600 transition-all shadow-xl active:scale-95 disabled:opacity-50 mt-4">
                         {loading ? 'Przetwarzanie...' : 'Dalej do parametrów'}
                         <CheckCircle size={28} />
                     </button>

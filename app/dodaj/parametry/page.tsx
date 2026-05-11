@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { sanitizeText } from "@/lib/security";
-import { CheckCircle, ShoppingBag, ArrowDownToLine, Info, Truck, Award } from "lucide-react";
+import { CheckCircle, Truck, Award } from "lucide-react";
 
 interface Step1Data {
     typ_oferty?: string;
@@ -23,6 +23,7 @@ interface Step1Data {
 interface FormData {
     bdo: string;
     cena: string;
+    jednostka: string;
     email: string;
     impurity: string;
     form: string;
@@ -44,6 +45,7 @@ export default function ParametryDetailsPage() {
     const [formData, setFormData] = useState<FormData>({
         bdo: "",
         cena: "",
+        jednostka: "t",
         email: "",
         impurity: "",
         form: "",
@@ -59,48 +61,23 @@ export default function ParametryDetailsPage() {
 
     useEffect(() => {
         const savedData = localStorage.getItem("temp_offer");
-        if (!savedData) {
-            router.push("/dodaj");
-            return;
-        }
-
+        if (!savedData) { router.push("/dodaj"); return; }
         try {
             const parsedData: Step1Data = JSON.parse(savedData);
             setStep1Data(parsedData);
-            if (parsedData.bdo_code) {
-                setFormData(prev => ({ ...prev, bdo: parsedData.bdo_code || "" }));
-            }
-            // Odbierz cenę z Magic Box
+            if (parsedData.bdo_code) setFormData(prev => ({ ...prev, bdo: parsedData.bdo_code || "" }));
             const magicCena = localStorage.getItem('magic_cena');
-            if (magicCena) {
-                setFormData(prev => ({ ...prev, cena: magicCena }));
-                localStorage.removeItem('magic_cena');
-            }
-            // Odbierz opis SEO z Magic Box + ustaw tracking
+            if (magicCena) { setFormData(prev => ({ ...prev, cena: magicCena })); localStorage.removeItem('magic_cena'); }
             const magicOpis = localStorage.getItem('magic_opis');
-            if (magicOpis) {
-                setFormData(prev => ({ ...prev, description: magicOpis, magic_box_used: true }));
-                localStorage.removeItem('magic_opis');
-            }
+            if (magicOpis) { setFormData(prev => ({ ...prev, description: magicOpis, magic_box_used: true })); localStorage.removeItem('magic_opis'); }
             const magicWebsite = localStorage.getItem('magic_website_url');
-            if (magicWebsite) {
-                setFormData(prev => ({ ...prev, website_url: magicWebsite }));
-                localStorage.removeItem('magic_website_url');
-            }
-            // Tracking przez krok 1 (jeśli magic box użyty bez opisu)
-            if (parsedData.magic_box_used) {
-                setFormData(prev => ({ ...prev, magic_box_used: true }));
-            }
-        } catch (e) {
-            router.push("/dodaj");
-        }
+            if (magicWebsite) { setFormData(prev => ({ ...prev, website_url: magicWebsite })); localStorage.removeItem('magic_website_url'); }
+            if (parsedData.magic_box_used) setFormData(prev => ({ ...prev, magic_box_used: true }));
+        } catch (e) { router.push("/dodaj"); }
     }, [router]);
 
     const handleChange = (key: keyof FormData, value: any) => {
-        setFormData(prev => ({
-            ...prev,
-            [key]: value
-        }));
+        setFormData(prev => ({ ...prev, [key]: value }));
     };
 
     const handleBdoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,12 +86,18 @@ export default function ParametryDetailsPage() {
         handleChange("bdo", formatted);
     };
 
+    // Auto-dopisuje https:// jeśli brak protokołu
+    const handleWebsiteBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+        const val = e.target.value.trim();
+        if (val && !/^https?:\/\//i.test(val)) {
+            handleChange('website_url', 'https://' + val);
+        }
+    };
+
     const toggleListSelection = (field: 'certs' | 'logistics', item: string) => {
         setFormData(prev => {
             const list = prev[field];
-            const newList = list.includes(item)
-                ? list.filter(i => i !== item)
-                : [...list, item];
+            const newList = list.includes(item) ? list.filter(i => i !== item) : [...list, item];
             return { ...prev, [field]: newList };
         });
     };
@@ -127,9 +110,13 @@ export default function ParametryDetailsPage() {
         const safePrice = parseFloat(formData.cena.replace(',', '.')) || 0;
         const safeImpurity = formData.impurity ? parseFloat(formData.impurity) : null;
         const safeWeight = parseFloat(String(step1Data.waga).replace(',', '.')) || 0;
-
-        // 👇 NOWE: GENERUJEMY UNIKALNY TOKEN DLA TEGO OGŁOSZENIA
         const wygenerowanyToken = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+
+        // Upewnij się że website_url ma protokół przed zapisem
+        let websiteUrl = sanitizeText(formData.website_url) || null;
+        if (websiteUrl && !/^https?:\/\//i.test(websiteUrl)) {
+            websiteUrl = 'https://' + websiteUrl;
+        }
 
         const finalOffer = {
             typ_oferty: step1Data.typ_oferty || 'sprzedam',
@@ -149,8 +136,9 @@ export default function ParametryDetailsPage() {
             logistics: formData.logistics.join(", ") || null,
             pickup_hours: sanitizeText(formData.pickupHours) || null,
             opis: sanitizeText(formData.description) || null,
+            jednostka: sanitizeText(formData.jednostka) || 't',
             firma: sanitizeText(formData.firma) || null,
-            website_url: sanitizeText(formData.website_url) || null,
+            website_url: websiteUrl,
             supply_frequency: step1Data.supply_frequency || 'jednorazowo',
             status: 'aktywna',
             manage_token: wygenerowanyToken,
@@ -166,13 +154,11 @@ export default function ParametryDetailsPage() {
         } else {
             if (data && data.length > 0) {
                 const noweId = data[0].id;
-                const suroweDane = localStorage.getItem('moje_oferty');
-                const zapisaneOferty = suroweDane ? JSON.parse(suroweDane) : [];
+                const zapisaneOferty = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
                 if (!zapisaneOferty.includes(noweId)) {
                     zapisaneOferty.push(noweId);
                     localStorage.setItem('moje_oferty', JSON.stringify(zapisaneOferty));
                 }
-                // Zapisujemy token powiązany z id oferty
                 try {
                     const tokenMap = JSON.parse(localStorage.getItem('oferty_tokeny') || '{}');
                     tokenMap[noweId] = wygenerowanyToken;
@@ -180,10 +166,7 @@ export default function ParametryDetailsPage() {
                 } catch { }
             }
             localStorage.removeItem("temp_offer");
-
-            // Przekazujemy token do ekranu sukcesu
             localStorage.setItem("ostatni_token", wygenerowanyToken);
-
             router.push("/dodano");
         }
     };
@@ -196,7 +179,6 @@ export default function ParametryDetailsPage() {
         <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-8 font-sans">
             <div className="max-w-xl w-full bg-white rounded-[40px] shadow-2xl p-8 md:p-12 border-4 border-white">
 
-                {/* NAGŁÓWEK - MIĘSISTY JAK W KROKU 1 */}
                 <div className="flex justify-between items-start mb-10">
                     <div>
                         <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">
@@ -216,31 +198,52 @@ export default function ParametryDetailsPage() {
 
                 <form onSubmit={handleFinalSubmit} className="space-y-8">
 
+                    {/* BDO + CENA */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">Kod BDO</label>
-                            <input
-                                type="text" placeholder="np. 15 01 01"
+                            <input type="text" placeholder="np. 15 01 01"
                                 className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg tracking-widest shadow-sm transition-all"
-                                value={formData.bdo} onChange={handleBdoChange}
-                            />
+                                value={formData.bdo} onChange={handleBdoChange} />
                         </div>
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                {jestKupno ? "Budżet (zł/t)" : "Cena (zł/t)"}
+                                {jestKupno ? "Budżet" : "Cena"}
                                 <span className="ml-1 text-slate-400 text-[10px] font-bold normal-case">(opcjonalne)</span>
                             </label>
-                            <div className="relative">
+                            {/* Pole ceny + dropdown jednostki jako jedna spójna grupa */}
+                            <div className="flex rounded-[24px] overflow-hidden border-2 border-slate-200 focus-within:border-blue-600 transition-all bg-slate-50 shadow-sm">
                                 <input
-                                    type="number" placeholder="0 = negocjacje"
-                                    value={formData.cena} onChange={(e) => handleChange('cena', e.target.value)}
-                                    className="w-full p-5 pr-14 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg shadow-sm transition-all"
+                                    type="number"
+                                    placeholder={formData.cena === '' ? 'Puste = negocjacje' : ''}
+                                    value={formData.cena}
+                                    onChange={(e) => handleChange('cena', e.target.value)}
+                                    className="flex-1 p-5 bg-transparent outline-none font-bold text-slate-900 text-lg min-w-0"
                                 />
-                                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">zł/t</span>
+                                {/* Jednostka — aktywna tylko gdy cena > 0 */}
+                                <select
+                                    value={formData.jednostka}
+                                    onChange={(e) => handleChange('jednostka', e.target.value)}
+                                    disabled={formData.cena === '' || Number(formData.cena) <= 0}
+                                    className="bg-slate-800 text-white font-black text-sm px-4 outline-none cursor-pointer disabled:bg-slate-300 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <option value="t">zł / t</option>
+                                    <option value="kg">zł / kg</option>
+                                    <option value="szt.">zł / szt.</option>
+                                    <option value="całość">zł całość</option>
+                                </select>
                             </div>
+                            {/* Podpowiedź zależna od wartości */}
+                            <p className="text-[11px] font-bold ml-2 
+                                {formData.cena === '' ? 'text-slate-400' : Number(formData.cena) === 0 ? 'text-emerald-600' : 'text-slate-400'}">
+                                {formData.cena === '' && 'Zostaw puste → „Do negocjacji”'}
+                                {formData.cena !== '' && Number(formData.cena) === 0 && '✅ Wyświetli się: „Za darmo”'}
+                                {formData.cena !== '' && Number(formData.cena) > 0 && `Wyświetli się: ${formData.cena} zł / ${formData.jednostka}`}
+                            </p>
                         </div>
                     </div>
 
+                    {/* ZANIECZYSZCZENIE + EMAIL */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">
@@ -248,10 +251,8 @@ export default function ParametryDetailsPage() {
                                 <span className="ml-1 text-slate-400 text-[10px] font-bold normal-case">(opcjonalne)</span>
                             </label>
                             <div className="relative">
-                                <select
-                                    value={formData.impurity} onChange={(e) => handleChange('impurity', e.target.value)}
-                                    className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-base appearance-none cursor-pointer shadow-sm transition-all"
-                                >
+                                <select value={formData.impurity} onChange={(e) => handleChange('impurity', e.target.value)}
+                                    className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-base appearance-none cursor-pointer shadow-sm transition-all">
                                     <option value="" disabled>Wybierz...</option>
                                     <option value="0">0% (Idealny)</option>
                                     <option value="2">Do 2% (Bardzo czysty)</option>
@@ -265,24 +266,20 @@ export default function ParametryDetailsPage() {
                         </div>
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">E-mail (kontakt)</label>
-                            <input
-                                type="email" placeholder="biuro@firma.pl"
+                            <input type="email" placeholder="biuro@firma.pl"
                                 className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg shadow-sm transition-all"
-                                value={formData.email} onChange={(e) => handleChange('email', e.target.value)}
-                            />
+                                value={formData.email} onChange={(e) => handleChange('email', e.target.value)} />
                         </div>
                     </div>
 
+                    {/* POSTAĆ SUROWCA */}
                     <div className="space-y-2">
                         <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                            Postać surowca
-                            <span className="ml-1 text-slate-400 text-[10px] font-bold normal-case">(opcjonalne)</span>
+                            Postać surowca <span className="ml-1 text-slate-400 text-[10px] font-bold normal-case">(opcjonalne)</span>
                         </label>
                         <div className="relative">
-                            <select
-                                value={formData.form} onChange={(e) => handleChange('form', e.target.value)}
-                                className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg appearance-none cursor-pointer shadow-sm transition-all"
-                            >
+                            <select value={formData.form} onChange={(e) => handleChange('form', e.target.value)}
+                                className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg appearance-none cursor-pointer shadow-sm transition-all">
                                 <option value="" disabled>Wybierz formę...</option>
                                 <option value="Bela">Bela</option>
                                 <option value="Luzem">Luzem</option>
@@ -296,19 +293,13 @@ export default function ParametryDetailsPage() {
                         </div>
                     </div>
 
-                    {/* DOKUMENTACJA - MOCNIEJSZE BUTTONY */}
+                    {/* CERTYFIKATY */}
                     <div className="space-y-3">
                         <label className="block text-sm font-black text-slate-900 uppercase ml-1">Dokumentacja / Certyfikaty</label>
                         <div className="flex flex-wrap gap-3">
                             {["KPO (Karta Przekazania Odpadu)", "Certyfikat pochodzenia", "Analiza składu", "Zdjęcia towaru"].map(cert => (
-                                <button
-                                    key={cert} type="button"
-                                    onClick={() => toggleListSelection('certs', cert)}
-                                    className={`px-5 py-3 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all border-2 flex items-center gap-2 ${formData.certs.includes(cert)
-                                        ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200"
-                                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
-                                        }`}
-                                >
+                                <button key={cert} type="button" onClick={() => toggleListSelection('certs', cert)}
+                                    className={`px-5 py-3 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all border-2 flex items-center gap-2 ${formData.certs.includes(cert) ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"}`}>
                                     <Award size={16} className={formData.certs.includes(cert) ? "text-blue-200" : "text-slate-400"} />
                                     {cert}
                                 </button>
@@ -316,87 +307,67 @@ export default function ParametryDetailsPage() {
                         </div>
                     </div>
 
-                    {/* LOGISTYKA - MOCNIEJSZE BUTTONY */}
+                    {/* LOGISTYKA */}
                     <div className="space-y-3">
                         <label className="block text-sm font-black text-slate-900 uppercase ml-1">Logistyka i Transport</label>
                         <div className="flex flex-wrap gap-3">
                             {["Transport sprzedającego", "Odbiór własny", "Wymagana rampa", "Wymagana winda"].map(opt => (
-                                <button
-                                    key={opt} type="button"
-                                    onClick={() => toggleListSelection('logistics', opt)}
-                                    className={`px-5 py-3 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all border-2 flex items-center gap-2 ${formData.logistics.includes(opt)
-                                        ? "bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-300"
-                                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
-                                        }`}
-                                >
-                                    <Truck size={16} className={formData.logistics.includes(opt) ? "text-slate-400" : "text-slate-400"} />
+                                <button key={opt} type="button" onClick={() => toggleListSelection('logistics', opt)}
+                                    className={`px-5 py-3 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all border-2 flex items-center gap-2 ${formData.logistics.includes(opt) ? "bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-300" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"}`}>
+                                    <Truck size={16} className="text-slate-400" />
                                     {opt}
                                 </button>
                             ))}
                         </div>
                     </div>
 
+                    {/* GODZINY + FIRMA */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">Godziny odbioru</label>
-                            <input
-                                type="text" placeholder="np. 8:00 - 16:00"
+                            <input type="text" placeholder="np. 8:00 - 16:00"
                                 className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 transition-all text-lg shadow-sm"
-                                value={formData.pickupHours} onChange={(e) => handleChange('pickupHours', e.target.value)}
-                            />
+                                value={formData.pickupHours} onChange={(e) => handleChange('pickupHours', e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">
-                                Firma / Wystawca
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="np. Adam Nowak"
-                                value={formData.firma}
-                                onChange={(e) => handleChange('firma', e.target.value)}
-                                className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 transition-all text-lg shadow-sm"
-                            />
+                            <label className="block text-sm font-black text-slate-900 uppercase ml-1">Firma / Wystawca</label>
+                            <input type="text" placeholder="np. Adam Nowak"
+                                value={formData.firma} onChange={(e) => handleChange('firma', e.target.value)}
+                                className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 transition-all text-lg shadow-sm" />
                         </div>
                     </div>
 
-                    {/* STRONA WWW */}
+                    {/* STRONA WWW — type="text", auto https:// na onBlur */}
                     <div className="space-y-2">
                         <label className="block text-sm font-black text-slate-900 uppercase ml-1">
                             Strona WWW firmy
                             <span className="ml-1 text-slate-400 text-[10px] font-bold normal-case">(opcjonalnie)</span>
                         </label>
                         <input
-                            type="url"
-                            placeholder="np. https://twojafirma.pl"
+                            type="text"
+                            placeholder="np. nazwa.pl lub www.firma.pl"
                             value={formData.website_url}
                             onChange={(e) => handleChange('website_url', e.target.value)}
+                            onBlur={handleWebsiteBlur}
                             className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 transition-all text-lg shadow-sm"
                         />
-                        <p className="text-slate-400 text-[11px] font-bold ml-2 leading-relaxed">
-                            Jeśli podasz adres, nazwa Twojej firmy stanie się klikalnym linkiem promującym Twoją markę.
+                        <p className="text-slate-400 text-[11px] font-bold ml-2">
+                            Wpisz sam adres, np. <span className="text-slate-600 font-black">nazwa.pl</span> — system dopisze https:// automatycznie.
                         </p>
                     </div>
 
+                    {/* OPIS */}
                     <div className="space-y-2">
                         <label className="block text-sm font-black text-slate-900 uppercase ml-1">Dodatkowy Opis</label>
                         <textarea
                             className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[32px] outline-none font-bold text-slate-900 min-h-[160px] resize-none transition-all placeholder:text-slate-400 shadow-sm text-lg"
                             placeholder="Szczegóły oferty, parametry..."
-                            value={formData.description}
-                            onChange={(e) => handleChange('description', e.target.value)}
-                        />
+                            value={formData.description} onChange={(e) => handleChange('description', e.target.value)} />
                     </div>
 
-                    {/* PRZYCISK FINALNY */}
                     <div className="pt-6">
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className={`w-full py-8 rounded-[32px] text-white font-black text-2xl uppercase tracking-tighter transition-all flex items-center justify-center gap-4 group shadow-2xl ${loading
-                                ? "bg-slate-300 cursor-not-allowed text-slate-500"
-                                : "bg-emerald-600 hover:bg-emerald-500 hover:-translate-y-1 active:scale-[0.98] active:translate-y-0"
-                                }`}
-                        >
+                        <button type="submit" disabled={loading}
+                            className={`w-full py-8 rounded-[32px] text-white font-black text-2xl uppercase tracking-tighter transition-all flex items-center justify-center gap-4 group shadow-2xl ${loading ? "bg-slate-300 cursor-not-allowed text-slate-500" : "bg-emerald-600 hover:bg-emerald-500 hover:-translate-y-1 active:scale-[0.98] active:translate-y-0"}`}>
                             {loading ? "Przetwarzanie..." : "Dodaj ogłoszenie do bazy"}
                             {!loading && <CheckCircle size={28} className="text-emerald-200 group-hover:text-white transition-colors" />}
                         </button>

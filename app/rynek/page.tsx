@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Recycle, MapPin, Search, Package, ChevronDown, TrendingUp, Clock, Globe, Plane, RefreshCw
 } from 'lucide-react';
-import { getFallbackTitle, formatCena } from '@/lib/ofertaUtils';
+import { getFallbackTitle, formatCenaZDatata } from '@/lib/ofertaUtils';
 
 interface Oferta {
     id: number;
@@ -15,6 +15,7 @@ interface Oferta {
     form?: string;
     waga: number;
     cena: number;
+    jednostka?: string;
     lokalizacja: string;
     wojewodztwo?: string;
     zdjecie_url?: string;
@@ -32,13 +33,13 @@ const SUPPLY_BADGE: Record<string, { label: string; color: string }> = {
 };
 
 const KATEGORIE = [
-    { nazwa: "Wszystko", ikona: "🌐" },
-    { nazwa: "Folia",    ikona: "🧻" },
-    { nazwa: "Tworzywa", ikona: "♻️" },
+    { nazwa: "Wszystko",   ikona: "🌐" },
+    { nazwa: "Folia",      ikona: "🧻" },
+    { nazwa: "Tworzywa",   ikona: "♻️" },
     { nazwa: "Makulatura", ikona: "📄" },
-    { nazwa: "Złom",    ikona: "🔩" },
-    { nazwa: "Drewno",  ikona: "🟫" },
-    { nazwa: "Inne",    ikona: "❓" }
+    { nazwa: "Złom",       ikona: "🔩" },
+    { nazwa: "Drewno",     ikona: "🟫" },
+    { nazwa: "Inne",       ikona: "❓" }
 ];
 
 const getIcon = (material: string) => {
@@ -58,9 +59,6 @@ const WSZYSTKIE_WOJEWODZTWA = [
     "świętokrzyskie", "warmińsko-mazurskie", "wielkopolskie", "zachodniopomorskie"
 ];
 
-const getPlaceholder = (typ_oferty?: string) =>
-    typ_oferty === 'kupie' ? '/placeholder-kupie.jpg' : '/placeholder-sprzedam.jpg';
-
 const isOgolnopolska = (lok?: string) => {
     if (!lok) return false;
     const l = lok.toLowerCase();
@@ -69,8 +67,7 @@ const isOgolnopolska = (lok?: string) => {
 
 const isZagranica = (lok?: string) => {
     if (!lok) return false;
-    const l = lok.toLowerCase();
-    return l.includes('europa') || l.includes('zagranica');
+    return lok.toLowerCase().includes('europa') || lok.toLowerCase().includes('zagranica');
 };
 
 const normalizuj = (s: string): string =>
@@ -82,11 +79,70 @@ const wykryjWojewodztwo = (fraza: string): string | null => {
     return WSZYSTKIE_WOJEWODZTWA.find(w => normalizuj(w).startsWith(f)) || null;
 };
 
+// ─── SVG Placeholder — generowany inline, bez JPG ────────────────────────────
+function PlaceholderSVG({ typ }: { typ?: string }) {
+    const isKupie = typ === 'kupie';
+    const bg      = isKupie ? '#1e40af' : '#064e3b';
+    const accent  = isKupie ? '#60a5fa' : '#34d399';
+    const label   = isKupie ? 'SZUKAM' : 'OFERTA';
+
+    return (
+        <svg
+            viewBox="0 0 400 300"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-full h-full"
+            aria-hidden="true"
+        >
+            {/* Tło */}
+            <rect width="400" height="300" fill={bg} />
+            {/* Siatka dekoracyjna */}
+            {[0,1,2,3,4].map(i => (
+                <line key={`h${i}`} x1="0" y1={i * 60} x2="400" y2={i * 60} stroke={accent} strokeOpacity="0.08" strokeWidth="1"/>
+            ))}
+            {[0,1,2,3,4,5,6].map(i => (
+                <line key={`v${i}`} x1={i * 70} y1="0" x2={i * 70} y2="300" stroke={accent} strokeOpacity="0.08" strokeWidth="1"/>
+            ))}
+            {/* Kółko tła ikony */}
+            <circle cx="200" cy="130" r="60" fill={accent} fillOpacity="0.12" />
+            <circle cx="200" cy="130" r="45" fill={accent} fillOpacity="0.15" />
+
+            {/* Ikona — strzałka w górę dla OFERTA, lupa dla SZUKAM */}
+            {isKupie ? (
+                /* Lupa */
+                <g stroke={accent} strokeWidth="8" strokeLinecap="round" fill="none">
+                    <circle cx="193" cy="122" r="24" />
+                    <line x1="210" y1="140" x2="226" y2="156" />
+                </g>
+            ) : (
+                /* Strzałka w górę */
+                <g stroke={accent} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                    <line x1="200" y1="158" x2="200" y2="102" />
+                    <polyline points="178,124 200,102 222,124" />
+                </g>
+            )}
+
+            {/* Etykieta */}
+            <rect x="140" y="200" width="120" height="32" rx="16" fill={accent} fillOpacity="0.18" />
+            <text
+                x="200" y="221"
+                textAnchor="middle"
+                fontFamily="system-ui, sans-serif"
+                fontWeight="900"
+                fontSize="13"
+                letterSpacing="3"
+                fill={accent}
+            >
+                {label}
+            </text>
+
+            {/* Znak recyklingu w rogu */}
+            <text x="370" y="280" textAnchor="end" fontSize="28" opacity="0.15" fill={accent}>♻</text>
+        </svg>
+    );
+}
+
 const ITEMS_PER_PAGE = 12;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Właściwy komponent — używa useSearchParams, musi być w <Suspense>
-// ─────────────────────────────────────────────────────────────────────────────
 function RynekInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -109,10 +165,10 @@ function RynekInner() {
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
     const [dropdownOpen, setDropdownOpen] = useState(false);
 
-    const dropdownRef = React.useRef<HTMLDivElement>(null);
-    const kategorieRef = React.useRef<HTMLDivElement>(null);
+    const dropdownRef   = React.useRef<HTMLDivElement>(null);
+    const kategorieRef  = React.useRef<HTMLDivElement>(null);
 
-    // Synchronizacja stan → URL
+    // Stan → URL
     useEffect(() => {
         const params = new URLSearchParams();
         if (szukanaFraza)                 params.set('q',    szukanaFraza);
@@ -124,7 +180,6 @@ function RynekInner() {
         router.replace(qs ? `/rynek?${qs}` : '/rynek', { scroll: false });
     }, [szukanaFraza, aktywnyFiltr, typFiltr, sortowanie, wybrane]); // eslint-disable-line
 
-    // Zamknij dropdown po kliknięciu poza
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
@@ -134,14 +189,13 @@ function RynekInner() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Pobierz oferty
     useEffect(() => {
         (async () => {
             try {
                 setLoading(true);
                 const { data, error } = await supabase
                     .from('oferty')
-                    .select('id, title, material, form, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia, supply_frequency')
+                    .select('id, title, material, form, waga, cena, jednostka, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia, supply_frequency')
                     .eq('status', 'aktywna')
                     .order('wyswietlenia', { ascending: false, nullsFirst: false })
                     .order('created_at',   { ascending: false });
@@ -155,7 +209,6 @@ function RynekInner() {
         })();
     }, []);
 
-    // Filtrowanie klienckie
     useEffect(() => {
         let wynik = [...wszystkieOferty];
         const fraza = szukanaFraza.toLowerCase().trim();
@@ -185,7 +238,7 @@ function RynekInner() {
             });
         }
         if (fraza) {
-            const fNorm      = normalizuj(fraza);
+            const fNorm = normalizuj(fraza);
             const wykryteWoj = wykryjWojewodztwo(fraza);
             if (wykryteWoj) {
                 const wNorm = normalizuj(wykryteWoj);
@@ -252,7 +305,7 @@ function RynekInner() {
                 </div>
             </div>
 
-            {/* HEADER + WYSZUKIWARKA */}
+            {/* HEADER */}
             <div className="bg-slate-900 py-12 px-4 shadow-xl">
                 <div className="max-w-4xl mx-auto text-center">
                     <h1 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight">
@@ -262,8 +315,18 @@ function RynekInner() {
                         <div className="bg-slate-800 p-1 rounded-2xl flex gap-1">
                             {(['wszystkie', 'sprzedam', 'kupie'] as const).map(t => (
                                 <button key={t} onClick={() => setTypFiltr(t)}
-                                    className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${typFiltr === t ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
-                                    {t === 'wszystkie' ? 'Wszystkie' : t === 'sprzedam' ? 'Sprzedam' : 'Kupię'}
+                                    className={`flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${typFiltr === t ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
+                                    {t === 'sprzedam' && (
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                            <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+                                        </svg>
+                                    )}
+                                    {t === 'kupie' && (
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                        </svg>
+                                    )}
+                                    {t === 'wszystkie' ? 'Wszystkie' : t === 'sprzedam' ? 'Oferty' : 'Popyt'}
                                 </button>
                             ))}
                         </div>
@@ -278,7 +341,6 @@ function RynekInner() {
                                 className="w-full pl-11 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 outline-none"
                             />
                         </div>
-
                         <div ref={dropdownRef} className="relative shrink-0">
                             <button type="button" onClick={() => setDropdownOpen(o => !o)}
                                 className={`h-full flex items-center gap-2 px-4 py-4 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
@@ -300,12 +362,7 @@ function RynekInner() {
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-xs uppercase tracking-widest transition-all ${wybrane.length === 0 ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
                                             <Globe size={14} /> Cała Polska
                                         </button>
-                                        <button
-                                            onClick={() => {
-                                                const val = 'Europa / Zagranica';
-                                                setWybrane(prev => prev.includes(val) ? prev.filter(w => w !== val) : [val]);
-                                                setDropdownOpen(false);
-                                            }}
+                                        <button onClick={() => { const val = 'Europa / Zagranica'; setWybrane(prev => prev.includes(val) ? prev.filter(w => w !== val) : [val]); setDropdownOpen(false); }}
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-black text-xs uppercase tracking-widest transition-all ${wybrane.includes('Europa / Zagranica') ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
                                             <Plane size={14} /> Europa / Zagranica
                                         </button>
@@ -314,8 +371,7 @@ function RynekInner() {
                                         {WSZYSTKIE_WOJEWODZTWA.map(woj => {
                                             const zaznaczone = wybrane.includes(woj);
                                             return (
-                                                <button key={woj}
-                                                    onClick={() => toggleWojewodztwo(woj, zaznaczone)}
+                                                <button key={woj} onClick={() => toggleWojewodztwo(woj, zaznaczone)}
                                                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-bold text-xs capitalize transition-all ${zaznaczone ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}>
                                                     <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${zaznaczone ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
                                                         {zaznaczone && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
@@ -380,24 +436,55 @@ function RynekInner() {
                                 const displayTitle = getFallbackTitle({ title: o.title, material: o.material, form: o.form, lokalizacja: o.lokalizacja });
                                 const ogolnopolska = isOgolnopolska(o.lokalizacja);
                                 const zagranica    = isZagranica(o.lokalizacja);
+                                const cenaStr      = formatCenaZDatata(o.cena, o.jednostka, o.created_at);
+
                                 return (
                                     <Link href={`/rynek/${o.id}`} key={o.id}
                                         className="group bg-white rounded-[32px] ring-1 ring-slate-100 shadow-sm hover:shadow-2xl hover:ring-blue-100 transition-all duration-300 flex flex-col overflow-hidden isolate active:scale-[0.98]">
+
+                                        {/* ZDJĘCIE / PLACEHOLDER SVG */}
                                         <div className="aspect-[4/3] relative overflow-hidden bg-slate-50 isolate">
-                                            <img
-                                                src={o.zdjecie_url || getPlaceholder(o.typ_oferty)}
-                                                alt={displayTitle}
-                                                loading="lazy"
-                                                onError={e => {
-                                                    const img = e.currentTarget;
-                                                    if (!img.src.includes('/placeholder-')) img.src = getPlaceholder(o.typ_oferty);
-                                                }}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                                            />
-                                            <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+                                            {o.zdjecie_url ? (
+                                                <img
+                                                    src={o.zdjecie_url}
+                                                    alt={displayTitle}
+                                                    loading="lazy"
+                                                    onError={e => {
+                                                        // przy błędzie — ukryj img i pokaż SVG
+                                                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                        const next = e.currentTarget.nextElementSibling as HTMLElement;
+                                                        if (next) next.style.display = 'block';
+                                                    }}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                                                />
+                                            ) : null}
+                                            {/* SVG placeholder — widoczny gdy brak zdjęcia lub błąd ładowania */}
+                                            <div
+                                                className="w-full h-full"
+                                                style={{ display: o.zdjecie_url ? 'none' : 'block' }}
+                                            >
+                                                <PlaceholderSVG typ={o.typ_oferty} />
+                                            </div>
+
+                                            {/* Badże */}
+                                            <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
                                                 <div className="flex flex-col gap-1.5">
-                                                    <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
-                                                        {o.typ_oferty === 'kupie' ? 'Kupię' : 'Sprzedam'}
+                                                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
+                                                        {o.typ_oferty === 'kupie' ? (
+                                                            <>
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                                                </svg>
+                                                                Popyt
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+                                                                </svg>
+                                                                Oferta
+                                                            </>
+                                                        )}
                                                     </div>
                                                     {o.supply_frequency && SUPPLY_BADGE[o.supply_frequency] && (
                                                         <div className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${SUPPLY_BADGE[o.supply_frequency].color}`}>
@@ -411,6 +498,8 @@ function RynekInner() {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* DANE */}
                                         <div className="p-6 flex flex-col flex-1">
                                             <h3 className="text-lg font-black text-slate-900 line-clamp-2 uppercase mb-2 group-hover:text-blue-600 transition-colors">
                                                 {displayTitle}
@@ -427,7 +516,7 @@ function RynekInner() {
                                             <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-4">
                                                 <div>
                                                     <span className="text-[10px] font-black text-slate-400 uppercase">Cena ok.</span>
-                                                    <div className="text-xl font-black text-slate-900 tracking-tighter">{formatCena(o.cena)}</div>
+                                                    <div className="text-xl font-black text-slate-900 tracking-tighter">{cenaStr}</div>
                                                 </div>
                                                 <div className="text-right">
                                                     <span className="text-[10px] font-black text-slate-400 uppercase">Ilość</span>
@@ -439,6 +528,7 @@ function RynekInner() {
                                 );
                             })}
                         </div>
+
                         {filtrowaneOferty.length > visibleCount && (
                             <div className="mt-12 flex justify-center">
                                 <button onClick={() => setVisibleCount(prev => prev + 12)}
@@ -471,9 +561,6 @@ function RynekInner() {
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Eksport domyślny — owijamy w Suspense wymagany przez useSearchParams
-// ─────────────────────────────────────────────────────────────────────────────
 export default function Rynek() {
     return (
         <Suspense fallback={
