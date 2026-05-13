@@ -65,9 +65,9 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-6 py-6 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="bg-blue-600 p-2 rounded-xl group-hover:bg-slate-900 transition-colors shadow-md">
-              <Recycle className="w-6 h-6 text-white" />
+              <Recycle className="w-5 h-5 text-white" />
             </div>
-            <span className="font-black tracking-tighter uppercase text-2xl text-slate-900 group-hover:text-blue-600 transition-colors">
+            <span className="font-black tracking-tighter uppercase text-xl md:text-2xl text-slate-900 group-hover:text-blue-600 transition-colors">
               Recyklat
             </span>
           </Link>
@@ -78,24 +78,24 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="relative pt-20 pb-24 overflow-hidden border-b border-slate-50">
+      <section className="relative pt-4 md:pt-16 pb-20 overflow-hidden border-b border-slate-50">
         <div className="max-w-5xl mx-auto px-6 relative z-10">
-          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest mb-8">
+          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 md:mb-8">
             <TrendingUp size={14} /> System Obiegu Zamkniętego B2B
           </div>
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter uppercase leading-[0.9] mb-8">
+          <h1 className="text-4xl md:text-6xl xl:text-8xl font-black tracking-tighter uppercase leading-tight md:leading-[0.9] mb-6 md:mb-8">
             Zmień odpady <br />
             <span className="text-blue-600">w kapitał</span>
           </h1>
-          <p className="text-xl text-slate-500 font-medium max-w-xl mb-12 leading-relaxed">
+          <p className="text-sm md:text-xl text-slate-500 font-medium max-w-xl mb-6 md:mb-12 leading-normal md:leading-relaxed">
             Najszybsza giełda surowców wtórnych. W 100% polska platforma. Kupuj, sprzedawaj i zgłaszaj zapotrzebowanie w 30 sekund.
           </p>
 
-          <div className="flex flex-col md:flex-row gap-4 mb-16">
-            <Link href="/dodaj" className="bg-slate-900 text-white px-10 py-6 rounded-[24px] font-black text-xl uppercase tracking-tighter hover:bg-blue-600 transition-all shadow-2xl hover:-translate-y-1 text-center">
+          <div className="flex flex-col sm:flex-row gap-3 mb-8 md:mb-16">
+            <Link href="/dodaj" className="w-full sm:w-auto bg-slate-900 text-white px-6 py-4 sm:px-8 sm:py-5 rounded-[24px] font-black text-base sm:text-xl uppercase tracking-tighter hover:bg-blue-600 transition-all shadow-2xl hover:-translate-y-1 text-center">
               DODAJ OGŁOSZENIE
             </Link>
-            <Link href="/rynek" className="bg-white border-2 border-slate-200 px-10 py-6 rounded-[24px] font-black text-xl uppercase tracking-tighter hover:border-slate-900 transition-all text-center">
+            <Link href="/rynek" className="w-full sm:w-auto bg-white border-2 border-slate-200 px-6 py-4 sm:px-8 sm:py-5 rounded-[24px] font-black text-base sm:text-xl uppercase tracking-tighter hover:border-slate-900 transition-all text-center">
               PRZEGLĄDAJ GIEŁDĘ
             </Link>
           </div>
