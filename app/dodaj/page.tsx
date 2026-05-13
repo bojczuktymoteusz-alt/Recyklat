@@ -265,12 +265,6 @@ function czyiOS(): boolean {
     return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
 
-function getSelectValue(miejscowosc: string, wojewodztwo: string): string {
-    if (miejscowosc==='Cała Polska') return '__cala_polska__';
-    if (miejscowosc==='Europa / Zagranica') return '__zagranica__';
-    return wojewodztwo;
-}
-
 export default function DodajOferteKrok1() {
     const router = useRouter();
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -279,7 +273,7 @@ export default function DodajOferteKrok1() {
     const [material, setMaterial] = useState('');
     const [waga, setWaga] = useState('');
     const [miejscowosc, setMiejscowosc] = useState('');
-    const [wojewodztwo, setWojewodztwo] = useState('');
+    const [wojewodztwo, setWojewodztwo] = useState<string[]>([]);
     const [telefon, setTelefon] = useState('');
     const [autoBdo, setAutoBdo] = useState('');
     const [file, setFile] = useState<File|null>(null);
@@ -323,10 +317,11 @@ export default function DodajOferteKrok1() {
 
     const handleHeroClick = () => { setMagicOtwarte(true); if (!jestIOS) startMikrofon(); };
 
-    const handleLokalizacjaChange = (val: string) => {
-        const sp=ZASIEG_SPECJALNY.find(z=>z.value===val);
-        if (sp) { setMiejscowosc(sp.lokalizacja); setWojewodztwo(sp.wojewodztwo); }
-        else { if (jestZasiegOgolny) setMiejscowosc(''); setWojewodztwo(val); }
+    const handleLokalizacjaChange = (value: string) => {
+        setWojewodztwo(prev => {
+            const next = prev.includes(value) ? prev.filter(x => x !== value) : [...prev, value];
+            return next;
+        });
         setPodswietlone(p=>{const n=new Set(p);n.delete('wojewodztwo');return n;});
     };
 
@@ -342,7 +337,17 @@ export default function DodajOferteKrok1() {
         if (parsed.telefon) zastap('Telefon',parsed.telefon,telefon,setTelefon); else nowe.add('telefon');
         if (parsed.waga) zastap('Waga',parsed.waga,waga,setWaga); else nowe.add('waga');
         if (parsed.miejscowosc) zastap('Miejscowość',parsed.miejscowosc,miejscowosc,setMiejscowosc); else nowe.add('miejscowosc');
-        if (parsed.wojewodztwo) zastap('Województwo',parsed.wojewodztwo,wojewodztwo,setWojewodztwo); else nowe.add('wojewodztwo');
+        if (parsed.wojewodztwo) {
+            const currentWoj = wojewodztwo.join(', ');
+            if (currentWoj && currentWoj !== parsed.wojewodztwo) {
+                if (!confirm(`Pole "Województwo" ma już "${currentWoj}". Zastąpić?`)) return;
+            }
+            setWojewodztwo([parsed.wojewodztwo]);
+        } else if (parsed.miejscowosc === 'Cała Polska') {
+            setWojewodztwo(prev => prev.includes('__cala_polska__') ? prev : [...prev, '__cala_polska__']);
+        } else if (parsed.miejscowosc === 'Europa / Zagranica') {
+            setWojewodztwo(prev => prev.includes('__zagranica__') ? prev : [...prev, '__zagranica__']);
+        } else nowe.add('wojewodztwo');
         if (parsed.material) { zastap('Kategoria',parsed.material,material,setMaterial); const f=KATEGORIE_Z_BDO.find(k=>k.nazwa===parsed.material); if (f) setAutoBdo(f.bdo); } else nowe.add('material');
         if (parsed.title) zastap('Tytuł',parsed.title,title,setTitle); else nowe.add('title');
         if (parsed.typOferty) setTypOferty(parsed.typOferty);
@@ -379,7 +384,11 @@ export default function DodajOferteKrok1() {
         try {
             let url='';
             if (file) url=await uploadImage(file);
-            localStorage.setItem('temp_offer',JSON.stringify({typ_oferty:typOferty,title:sanitizeText(title),material:sanitizeText(material),waga:parseFloat(waga)||0,lokalizacja:sanitizeText(miejscowosc),wojewodztwo:sanitizeText(wojewodztwo),telefon:sanitizeText(telefon),zdjecie_url:url,bdo_code:autoBdo,magic_box_used:seoWygenerowane,supply_frequency:supplyFreq}));
+            const wojewodztwoValue = wojewodztwo
+                .map(v => ZASIEG_SPECJALNY.find(z => z.value === v)?.lokalizacja || v)
+                .filter(Boolean)
+                .join(', ');
+            localStorage.setItem('temp_offer',JSON.stringify({typ_oferty:typOferty,title:sanitizeText(title),material:sanitizeText(material),waga:parseFloat(waga)||0,lokalizacja:sanitizeText(miejscowosc),wojewodztwo:sanitizeText(wojewodztwoValue),telefon:sanitizeText(telefon),zdjecie_url:url,bdo_code:autoBdo,magic_box_used:seoWygenerowane,supply_frequency:supplyFreq}));
             router.push('/dodaj/parametry');
         } catch(err:any) { alert(err.message); setLoading(false); }
     };
@@ -509,17 +518,29 @@ export default function DodajOferteKrok1() {
                     </div>
 
                     <div>
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-1 flex items-center gap-2"><Globe size={11}/> Zasięg / Województwo <span className="text-red-500">*</span></label>
-                        <select required className={`w-full p-5 border-2 rounded-[24px] font-bold outline-none focus:border-blue-500 transition-colors ${gfc('wojewodztwo')}`} value={getSelectValue(miejscowosc,wojewodztwo)} onChange={e=>handleLokalizacjaChange(e.target.value)}>
-                            <option value="">Wybierz zasięg lub województwo...</option>
-                            <optgroup label="── Zasięg ogólny ──">{ZASIEG_SPECJALNY.map(z=><option key={z.value} value={z.value}>{z.label}</option>)}</optgroup>
-                            <optgroup label="── Województwa ──">{WOJEWODZTWA.map(w=><option key={w} value={w}>{w.charAt(0).toUpperCase()+w.slice(1)}</option>)}</optgroup>
-                        </select>
-                        {jestZasiegOgolny&&(
-                            <div className={`mt-2 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold ${miejscowosc==='Europa / Zagranica'?'bg-emerald-50 text-emerald-700 border border-emerald-200':'bg-blue-50 text-blue-700 border border-blue-200'}`}>
-                                {miejscowosc==='Europa / Zagranica'?<Plane size={14}/>:<Globe size={14}/>} Widoczne dla: <strong>{miejscowosc}</strong>
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-3 flex items-center gap-2"><Globe size={11}/> Zasięg / Województwo <span className="text-red-500">*</span></label>
+                        <div className={`w-full p-5 border-2 rounded-[24px] bg-white ${gfc('wojewodztwo')} transition-colors`}> 
+                            <div className="flex flex-wrap gap-2">
+                                {ZASIEG_SPECJALNY.map(z => {
+                                    const active = wojewodztwo.includes(z.value);
+                                    return (
+                                        <button key={z.value} type="button" onClick={() => handleLokalizacjaChange(z.value)} className={`flex-grow min-h-[44px] rounded-full px-4 py-3 text-sm font-bold transition ${active ? 'bg-blue-600 text-white border-transparent' : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300'}`}>
+                                            {z.label}
+                                        </button>
+                                    );
+                                })}
+                                {WOJEWODZTWA.map(w => {
+                                    const value = w;
+                                    const active = wojewodztwo.includes(value);
+                                    return (
+                                        <button key={value} type="button" onClick={() => handleLokalizacjaChange(value)} className={`flex-grow min-h-[44px] rounded-full px-4 py-3 text-sm font-bold transition ${active ? 'bg-blue-600 text-white border-transparent' : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300'}`}>
+                                            {value.charAt(0).toUpperCase()+value.slice(1)}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        )}
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold ml-5 mt-2">Kliknij w kafelek, aby zaznaczyć/odznaczyć. Możesz wybrać wiele pozycji.</p>
                     </div>
 
                     {!jestZasiegOgolny&&(
