@@ -141,7 +141,7 @@ export default function ParametryDetailsPage() {
             jednostka: sanitizeText(formData.jednostka) || 't',
             firma: sanitizeText(formData.firma) || null,
             website_url: websiteUrl,
-            supply_frequency: step1Data.supply_frequency || 'jednorazowo',
+            supply_frequency: step1Data.supply_frequency || null,
             status: 'aktywna',
             manage_token: wygenerowanyToken,
             magic_box_used: formData.magic_box_used,

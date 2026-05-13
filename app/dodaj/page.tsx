@@ -286,7 +286,7 @@ export default function DodajOferteKrok1() {
     const [seoOpis, setSeoOpis] = useState('');
     const [seoWygenerowane, setSeoWygenerowane] = useState(false);
     const [tooltipVisible, setTooltipVisible] = useState<string|null>(null);
-    const [supplyFreq, setSupplyFreq] = useState<SupplyFreq>('jednorazowo');
+    const [supplyFreq, setSupplyFreq] = useState<SupplyFreq|null>(null);
     const [nasluchuje, setNasluchuje] = useState(false);
     const [wspieraMikrofon, setWspieraMikrofon] = useState(false);
     const [jestIOS, setJestIOS] = useState(false);
@@ -555,7 +555,7 @@ export default function DodajOferteKrok1() {
                         <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-2 flex items-center gap-2"><Calendar size={12}/> Częstotliwość</label>
                         <div className="grid grid-cols-2 gap-2">
                             {([{v:'jednorazowo',label:'Jednorazowo',icon:'1×'},{v:'co_tydzien',label:'Co tydzień',icon:'7d'},{v:'co_miesiac',label:'Co miesiąc',icon:'30d'},{v:'stala_wspolpraca',label:'Stała współpraca',icon:'∞'}] as const).map(opt=>(
-                                <button key={opt.v} type="button" onClick={()=>setSupplyFreq(opt.v)} className={`flex items-center gap-2 p-3 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all ${supplyFreq===opt.v?'bg-emerald-600 border-emerald-600 text-white shadow-md':'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                                <button key={opt.v} type="button" onClick={()=>setSupplyFreq(prev => prev===opt.v ? null : opt.v)} className={`flex items-center gap-2 p-3 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all ${supplyFreq===opt.v?'bg-emerald-600 border-emerald-600 text-white shadow-md':'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
                                     <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm font-black ${supplyFreq===opt.v?'bg-white/20':'bg-slate-200 text-slate-500'}`}>{opt.icon}</span>{opt.label}
                                 </button>
                             ))}

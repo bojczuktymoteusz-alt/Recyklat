@@ -13,6 +13,13 @@ import { wyglądaJakUrl, fixUrl, urlDoWyswietlenia, formatCena } from '@/lib/ofe
 const SPALANIE = 33;
 const CENA_ON_DOMYSLNA = 6.5;
 
+const SUPPLY_BADGE: Record<string, { label: string; color: string }> = {
+    jednorazowo: { label: 'Jednorazowo', color: 'bg-slate-200 text-slate-700' },
+    co_tydzien: { label: 'Co tydzień', color: 'bg-emerald-600 text-white' },
+    co_miesiac: { label: 'Co miesiąc', color: 'bg-emerald-700 text-white' },
+    stala_wspolpraca: { label: 'Stała współpraca', color: 'bg-blue-600 text-white' },
+};
+
 function obliczKosztPaliwa(dystansKm: number, cenaPaliwa: number) {
     return Math.round((dystansKm / 100) * SPALANIE * cenaPaliwa);
 }
@@ -409,7 +416,7 @@ export default function SzczegolyOferty() {
             if (!id) return;
             const { data, error } = await supabase
                 .from('oferty')
-                .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, telefon, email, zdjecie_url, created_at, status, typ_oferty, bdo_code, impurity, form, certificates, logistics, pickup_hours, opis, firma, website_url, wyswietlenia, category, material_type, color, param_mfi')
+                .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, telefon, email, zdjecie_url, created_at, status, typ_oferty, bdo_code, impurity, form, certificates, logistics, pickup_hours, opis, firma, website_url, wyswietlenia, category, material_type, color, param_mfi, supply_frequency')
                 .eq('id', id).single();
             if (error) { router.push('/rynek'); return; }
             if (data) {
@@ -551,6 +558,11 @@ export default function SzczegolyOferty() {
                                 <span className={`px-5 py-3 rounded-2xl text-2xl font-black ${jestZapotrzebowanie ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
                                     {formatCena(oferta.cena, 't', true)}
                                 </span>
+                                {oferta.supply_frequency && SUPPLY_BADGE[oferta.supply_frequency] && (
+                                    <span className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${SUPPLY_BADGE[oferta.supply_frequency].color}`}>
+                                        {SUPPLY_BADGE[oferta.supply_frequency].label}
+                                    </span>
+                                )}
                             </div>
                             <div className="flex items-start gap-3 pt-4 border-t">
                                 <MapPin size={24} className="text-blue-500 shrink-0 mt-0.5" />
