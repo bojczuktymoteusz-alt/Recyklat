@@ -151,9 +151,10 @@ function RynekInner() {
     const [filtrowaneOferty, setFiltrowaneOferty] = useState<Oferta[]>([]);
     const [aktywnyFiltr, setAktywnyFiltr] = useState(() => searchParams.get('kat') || 'Wszystko');
     const [szukanaFraza, setSzukanaFraza] = useState(() => searchParams.get('q') || '');
-    const [typFiltr, setTypFiltr] = useState<'wszystkie' | 'sprzedam' | 'kupie'>(
-        () => (searchParams.get('typ') as any) || 'wszystkie'
-    );
+    const [typFiltr, setTypFiltr] = useState<'sprzedam' | 'kupie'>(() => {
+        const param = searchParams.get('typ');
+        return param === 'sprzedam' || param === 'kupie' ? param : 'kupie';
+    });
     const [sortowanie, setSortowanie] = useState<'popularne' | 'najnowsze'>(
         () => (searchParams.get('sort') as any) || 'popularne'
     );
@@ -171,11 +172,11 @@ function RynekInner() {
     // Stan → URL
     useEffect(() => {
         const params = new URLSearchParams();
-        if (szukanaFraza)                 params.set('q',    szukanaFraza);
-        if (aktywnyFiltr !== 'Wszystko')  params.set('kat',  aktywnyFiltr);
-        if (typFiltr     !== 'wszystkie') params.set('typ',  typFiltr);
-        if (sortowanie   !== 'popularne') params.set('sort', sortowanie);
-        if (wybrane.length > 0)           params.set('woj',  wybrane.join(','));
+        if (szukanaFraza)                params.set('q',    szukanaFraza);
+        if (aktywnyFiltr !== 'Wszystko') params.set('kat',  aktywnyFiltr);
+        params.set('typ', typFiltr);
+        if (sortowanie !== 'popularne')  params.set('sort', sortowanie);
+        if (wybrane.length > 0)          params.set('woj',  wybrane.join(','));
         const qs = params.toString();
         router.replace(qs ? `/rynek?${qs}` : '/rynek', { scroll: false });
     }, [szukanaFraza, aktywnyFiltr, typFiltr, sortowanie, wybrane]); // eslint-disable-line
@@ -213,11 +214,9 @@ function RynekInner() {
         let wynik = [...wszystkieOferty];
         const fraza = szukanaFraza.toLowerCase().trim();
 
-        if (typFiltr !== 'wszystkie') {
-            wynik = wynik.filter(o =>
-                o.typ_oferty === typFiltr || (!o.typ_oferty && typFiltr === 'sprzedam')
-            );
-        }
+        wynik = wynik.filter(o =>
+            o.typ_oferty === typFiltr || (!o.typ_oferty && typFiltr === 'sprzedam')
+        );
         if (aktywnyFiltr !== 'Wszystko') {
             wynik = wynik.filter(o => {
                 const mat = (o.material || '').toLowerCase();
@@ -312,10 +311,10 @@ function RynekInner() {
                         Rynek Odpadów <span className="text-blue-500">Recyklingowych</span>
                     </h1>
                     <div className="flex justify-center mb-8">
-                        <div className="bg-slate-800 p-1 rounded-2xl flex gap-1">
-                            {(['wszystkie', 'sprzedam', 'kupie'] as const).map(t => (
+                        <div className="bg-slate-800 p-1 rounded-2xl flex gap-2">
+                            {(['sprzedam', 'kupie'] as const).map(t => (
                                 <button key={t} onClick={() => setTypFiltr(t)}
-                                    className={`flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${typFiltr === t ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
+                                    className={`flex-1 inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold uppercase tracking-widest transition-all ${typFiltr === t ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
                                     {t === 'sprzedam' && (
                                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                             <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
@@ -326,7 +325,7 @@ function RynekInner() {
                                             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                                         </svg>
                                     )}
-                                    {t === 'wszystkie' ? 'Wszystkie' : t === 'sprzedam' ? 'Oferty' : 'Popyt'}
+                                    {t === 'sprzedam' ? 'Oferty' : 'Popyt'}
                                 </button>
                             ))}
                         </div>
@@ -544,7 +543,7 @@ function RynekInner() {
                             <Search size={40} />
                         </div>
                         <h2 className="text-xl font-black text-slate-900 uppercase">Brak wyników</h2>
-                        <button onClick={() => { setAktywnyFiltr('Wszystko'); setSzukanaFraza(''); setWybrane([]); setTypFiltr('wszystkie'); }}
+                        <button onClick={() => { setAktywnyFiltr('Wszystko'); setSzukanaFraza(''); setWybrane([]); setTypFiltr('kupie'); }}
                             className="mt-4 text-blue-600 font-bold text-xs uppercase hover:underline">
                             Wyczyść wszystkie filtry
                         </button>
