@@ -107,7 +107,9 @@ export default function ParametryDetailsPage() {
         if (!step1Data) return;
         setLoading(true);
 
-        const safePrice = parseFloat(formData.cena.replace(',', '.')) || 0;
+        // Puste pole → null, "0" → 0, liczby dodatnie → liczba
+        const trimmedCena = formData.cena.trim();
+        const safePrice = trimmedCena ? parseFloat(trimmedCena.replace(',', '.')) : null;
         const safeImpurity = formData.impurity ? parseFloat(formData.impurity) : null;
         const safeWeight = parseFloat(String(step1Data.waga).replace(',', '.')) || 0;
         const wygenerowanyToken = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
@@ -127,7 +129,7 @@ export default function ParametryDetailsPage() {
             wojewodztwo: sanitizeText(step1Data.wojewodztwo),
             telefon: sanitizeText(step1Data.telefon).replace(/\s/g, ''),
             zdjecie_url: step1Data.zdjecie_url,
-            cena: safePrice || 0,
+            cena: safePrice,
             email: sanitizeText(formData.email) || null,
             bdo_code: sanitizeText(formData.bdo).replace(/\s/g, '') || null,
             impurity: safeImpurity,

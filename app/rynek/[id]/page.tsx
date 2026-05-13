@@ -8,7 +8,7 @@ import {
     ChevronRight, Fuel, Calculator, Send, Globe, Navigation
 } from 'lucide-react';
 import Link from 'next/link';
-import { wyglądaJakUrl, fixUrl, urlDoWyswietlenia } from '@/lib/ofertaUtils';
+import { wyglądaJakUrl, fixUrl, urlDoWyswietlenia, formatCena } from '@/lib/ofertaUtils';
 
 const SPALANIE = 33;
 const CENA_ON_DOMYSLNA = 6.5;
@@ -247,7 +247,7 @@ function getIcon(material: string): string {
 
 function KafelekPodobnej({ o, userLat, userLon }: { o: PodobnaOferta; userLat: number | null; userLon: number | null }) {
     const tytul = o.title || o.material;
-    const cena = o.cena > 0 ? `${o.cena} zł/t` : 'Negocj.';
+    const cena = formatCena(o.cena, 't', true);
     const lokStr = [o.lokalizacja, o.wojewodztwo].filter(Boolean).join(', ') || 'Polska';
     const isOgolnopolska = (o.lokalizacja || '').toLowerCase().includes('polska');
     const placeholder = o.typ_oferty === 'kupie' ? '/placeholder-kupie.jpg' : '/placeholder-sprzedam.jpg';
@@ -549,7 +549,7 @@ export default function SzczegolyOferty() {
                             <h1 className="text-2xl md:text-3xl font-black tracking-tighter uppercase text-slate-900 leading-none">{wyswietlanyTytul}</h1>
                             <div className="flex flex-wrap gap-3 items-center pt-2">
                                 <span className={`px-5 py-3 rounded-2xl text-2xl font-black ${jestZapotrzebowanie ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
-                                    {oferta.cena > 0 ? `${oferta.cena} zł / t` : 'Cena do negocjacji'}
+                                    {formatCena(oferta.cena, 't', true)}
                                 </span>
                             </div>
                             <div className="flex items-start gap-3 pt-4 border-t">

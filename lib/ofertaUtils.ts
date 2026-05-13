@@ -21,19 +21,27 @@ export function getFallbackTitle(oferta: {
 /**
  * Formatuje cenę do wyświetlenia.
  * null/undefined/ujemna → "Do negocjacji"
- * 0 + isNowe=true  → "Za darmo"
- * 0 + isNowe=false → "Do negocjacji" (stare ogłoszenia — powszechne 0 przed wdrożeniem)
- * liczba > 0       → "500 zł / t" (lub inna jednostka)
+ * 0                     → "Za darmo" (zawsze, dla każdego ogłoszenia)
+ * liczba > 0            → "500 zł / t" (lub inna jednostka)
  */
 export function formatCena(
-    cena: number | null | undefined,
+    cena: number | null | undefined | string,
     jednostka: string | null | undefined = 't',
     isNowe: boolean = false
 ): string {
-    if (cena === null || cena === undefined || cena < 0) return 'Do negocjacji';
-    if (cena === 0) return isNowe ? 'Za darmo' : 'Do negocjacji';
+    // Konwertuj do liczby (obsługa stringów z bazy danych)
+    let cenaNumer: number | null = null;
+    if (typeof cena === 'string') {
+        const trimmed = cena.trim();
+        cenaNumer = trimmed === '' ? null : parseFloat(trimmed);
+    } else if (typeof cena === 'number') {
+        cenaNumer = cena;
+    }
+    
+    if (cenaNumer === null || isNaN(cenaNumer) || cenaNumer < 0) return 'Do negocjacji';
+    if (cenaNumer === 0) return 'Za darmo';
     const jed = jednostka || 't';
-    return `${cena} zł / ${jed}`;
+    return `${cenaNumer} zł / ${jed}`;
 }
 
 /**
