@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
 import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, Mic, MicOff, Calendar, Keyboard, MapPin, Plane } from 'lucide-react';
 import { sanitizeText } from '@/lib/security';
@@ -267,8 +267,7 @@ function czyiOS(): boolean {
 
 export default function DodajOferteKrok1() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const editId = searchParams?.get('edit');
+    const [editId, setEditId] = useState<string | null>(null);
     const editMode = !!editId;
     
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -304,11 +303,16 @@ export default function DodajOferteKrok1() {
         const ios=czyiOS(); setJestIOS(ios);
         if (!ios&&typeof window!=='undefined') setWspieraMikrofon('webkitSpeechRecognition' in window||'SpeechRecognition' in window);
 
-        // Jeśli jest parametr edit - załaduj dane ogłoszenia z bazy
-        if (editId) {
-            loadEditData(editId);
+        // Jeśli jest parametr edit - wczytaj go z URL i załaduj dane ogłoszenia
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const urlEditId = params.get('edit');
+            if (urlEditId) {
+                setEditId(urlEditId);
+                loadEditData(urlEditId);
+            }
         }
-    }, [editId]);
+    }, []);
 
     async function loadEditData(ofertaId: string) {
         try {
@@ -336,7 +340,7 @@ export default function DodajOferteKrok1() {
 
             // Ustawiam województwa
             if (data.wojewodztwo) {
-                const woj = data.wojewodztwo.split(',').map(w => w.trim());
+                const woj = data.wojewodztwo.split(',').map((w: string) => w.trim());
                 setWojewodztwo(woj);
             }
 

@@ -66,7 +66,6 @@ export default function ParametryDetailsPage() {
         try {
             const parsedData: Step1Data = JSON.parse(savedData);
             setStep1Data(parsedData);
-            if (parsedData.bdo_code) setFormData(prev => ({ ...prev, bdo: parsedData.bdo_code || "" }));
             const magicCena = localStorage.getItem('magic_cena');
             if (magicCena) { setFormData(prev => ({ ...prev, cena: magicCena })); localStorage.removeItem('magic_cena'); }
             const magicOpis = localStorage.getItem('magic_opis');
@@ -238,7 +237,7 @@ export default function ParametryDetailsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="block text-sm font-black text-slate-900 uppercase ml-1">Kod BDO</label>
-                            <input type="text" placeholder="np. 15 01 01"
+                            <input type="text" placeholder="np. 15 01 01" autoComplete="off"
                                 className="w-full p-5 bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-[24px] outline-none font-bold text-slate-900 text-lg tracking-widest shadow-sm transition-all"
                                 value={formData.bdo} onChange={handleBdoChange} />
                         </div>
