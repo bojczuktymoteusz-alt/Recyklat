@@ -434,14 +434,7 @@ function RynekInner() {
                         {KATEGORIE.map(kat => (
                             <button key={kat.nazwa} onClick={() => setAktywnyFiltr(kat.nazwa)}
                                 className={`flex-shrink-0 w-[32%] min-w-[32%] sm:w-auto sm:min-w-[auto] flex items-center justify-center gap-2 px-4 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}>
-                                {kat.nazwa === 'Wszystko' ? kat.nazwa : (
-                                    <>
-                                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${aktywnyFiltr === kat.nazwa ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-900'}`}>
-                                            {kat.ikona}
-                                        </span>
-                                        {kat.nazwa}
-                                    </>
-                                )}
+                                {kat.nazwa === 'Wszystko' ? kat.nazwa : <><span>{kat.ikona}</span>{kat.nazwa}</>}
                             </button>
                         ))}
                     </div>
