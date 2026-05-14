@@ -434,7 +434,7 @@ function RynekInner() {
                         {KATEGORIE.map(kat => (
                             <button key={kat.nazwa} onClick={() => setAktywnyFiltr(kat.nazwa)}
                                 className={`flex-shrink-0 w-[32%] min-w-[32%] sm:w-auto sm:min-w-[auto] flex items-center gap-2 px-4 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}>
-                                <span>{kat.ikona}</span>{kat.nazwa}
+                                {kat.nazwa === 'Wszystko' ? kat.nazwa : <><span>{kat.ikona}</span>{kat.nazwa}</>}
                             </button>
                         ))}
                     </div>
