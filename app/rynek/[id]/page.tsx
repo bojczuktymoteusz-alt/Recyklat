@@ -376,6 +376,9 @@ export default function SzczegolyOferty() {
     const [loading, setLoading] = useState(true);
     const [czyToMoje, setCzyToMoje] = useState(false);
     const [numerOdkryty, setNumerOdkryty] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
+    const [showToast, setShowToast] = useState(false);
+    const toastTimerRef = useRef<number | null>(null);
 
     const logClick = (ofertaId: number) => {
         fetch('/api/log-click', {
@@ -410,6 +413,27 @@ export default function SzczegolyOferty() {
         };
         handleViews();
     }, [id]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const storedToast = window.sessionStorage.getItem('ofertaToast');
+        if (!storedToast) return;
+
+        window.sessionStorage.removeItem('ofertaToast');
+        setToastMessage(storedToast);
+        setShowToast(true);
+        toastTimerRef.current = window.setTimeout(() => {
+            setShowToast(false);
+            toastTimerRef.current = null;
+        }, 3000);
+
+        return () => {
+            if (toastTimerRef.current) {
+                window.clearTimeout(toastTimerRef.current);
+                toastTimerRef.current = null;
+            }
+        };
+    }, []);
 
     useEffect(() => {
         async function fetchOferta() {
@@ -501,9 +525,16 @@ export default function SzczegolyOferty() {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col relative">
+            {showToast && (
+                <div className="fixed left-1/2 top-24 z-50 -translate-x-1/2 px-4 sm:px-0">
+                    <div className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-3 text-sm font-black uppercase tracking-widest text-white shadow-2xl shadow-emerald-500/30">
+                        {toastMessage}
+                    </div>
+                </div>
+            )}
             <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <button onClick={() => router.back()}
+                    <button onClick={() => router.push('/rynek')}
                         className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-bold uppercase text-xs tracking-widest">
                         <ArrowLeft size={18} /><span>Powrót</span>
                     </button>

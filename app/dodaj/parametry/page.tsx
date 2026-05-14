@@ -172,20 +172,22 @@ export default function ParametryDetailsPage() {
             setLoading(false);
             alert("Błąd zapisu: " + error.message);
         } else {
+            let ofertaId: number | null = null;
             if (data && data.length > 0) {
-                const ofertaId = data[0].id;
+                const ofertaIdNumber = data[0].id;
+                ofertaId = ofertaIdNumber;
                 const ofertaToken = data[0].manage_token;
 
                 if (!step1Data.editId) {
                     // Nowa oferta - dodaj do localStorage
                     const zapisaneOferty = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
-                    if (!zapisaneOferty.includes(ofertaId)) {
-                        zapisaneOferty.push(ofertaId);
+                    if (!zapisaneOferty.includes(ofertaIdNumber)) {
+                        zapisaneOferty.push(ofertaIdNumber);
                         localStorage.setItem('moje_oferty', JSON.stringify(zapisaneOferty));
                     }
                     try {
                         const tokenMap = JSON.parse(localStorage.getItem('oferty_tokeny') || '{}');
-                        tokenMap[ofertaId] = ofertaToken;
+                        tokenMap[ofertaIdNumber] = ofertaToken;
                         localStorage.setItem('oferty_tokeny', JSON.stringify(tokenMap));
                     } catch { }
                     localStorage.setItem("ostatni_token", ofertaToken);
@@ -194,12 +196,11 @@ export default function ParametryDetailsPage() {
             
             localStorage.removeItem("temp_offer");
             
-            // Jeśli edycja - wróć do zakładki ofert/popytu na giełdzie; jeśli nowa - wróć do /dodano
-            if (step1Data.editId) {
-                const redirectType = step1Data.typ_oferty === 'kupie' ? 'kupie' : 'sprzedam';
+            // Jeśli edycja - wróć do szczegółów oferty; jeśli nowa - wróć do /dodano
+            if (step1Data.editId && ofertaId !== null) {
                 const message = step1Data.typ_oferty === 'kupie' ? 'Popyt został zaktualizowany.' : 'Oferta została zaktualizowana.';
-                sessionStorage.setItem('rynekToast', message);
-                router.push(`/rynek?typ=${redirectType}`);
+                sessionStorage.setItem('ofertaToast', message);
+                router.push(`/rynek/${ofertaId}`);
             } else {
                 router.push("/dodano");
             }
