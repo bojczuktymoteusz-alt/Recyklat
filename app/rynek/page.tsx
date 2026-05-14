@@ -35,21 +35,23 @@ const SUPPLY_BADGE: Record<string, { label: string; color: string }> = {
 const KATEGORIE = [
     { nazwa: "Wszystko",   ikona: "🌐" },
     { nazwa: "Folia",      ikona: "🧻" },
-    { nazwa: "Tworzywa",   ikona: "♻️" },
-    { nazwa: "Makulatura", ikona: "📄" },
+    { nazwa: "Plastik",    ikona: "♻️" }, // Zmienione z Tworzywa
+    { nazwa: "Karton",     ikona: "📦" }, // Zmienione z Makulatura + lepsza ikona paczki
     { nazwa: "Złom",       ikona: "🔩" },
-    { nazwa: "Drewno",     ikona: "🟫" },
+    { nazwa: "Drewno",     ikona: "🪵" }, // Zmieniłem ikonę na kłodę, bardziej czytelna
     { nazwa: "Inne",       ikona: "❓" }
 ];
 
 const getIcon = (material: string) => {
     const m = material.toLowerCase();
     if (m.includes('folia')) return '🧻';
-    if (m.includes('tworzywa') || m.includes('pet')) return '♻️';
-    if (m.includes('makulatura') || m.includes('karton')) return '📄';
+    // Dodajemy 'plastik' do warunku, żeby ikona wskakiwała poprawnie
+    if (m.includes('tworzywa') || m.includes('pet') || m.includes('plastik')) return '♻️';
+    // Dodajemy 'karton' i 'papier' dla bezpieczeństwa
+    if (m.includes('makulatura') || m.includes('karton') || m.includes('papier')) return '📦';
     if (m.includes('złom')) return '🔩';
     if (m.includes('drewno')) return '🪵';
-    return '📦';
+    return '📦'; 
 };
 
 const WSZYSTKIE_WOJEWODZTWA = [
