@@ -165,6 +165,9 @@ function RynekInner() {
     const [loading, setLoading] = useState(true);
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
+    const [showToast, setShowToast] = useState(false);
+    const toastTimerRef = React.useRef<number | null>(null);
 
     const dropdownRef   = React.useRef<HTMLDivElement>(null);
     const kategorieRef  = React.useRef<HTMLDivElement>(null);
@@ -208,6 +211,28 @@ function RynekInner() {
                 setLoading(false);
             }
         })();
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const storedToast = window.sessionStorage.getItem('rynekToast');
+        if (!storedToast) return;
+
+        window.sessionStorage.removeItem('rynekToast');
+        setToastMessage(storedToast);
+        setShowToast(true);
+        toastTimerRef.current = window.setTimeout(() => {
+            setShowToast(false);
+            toastTimerRef.current = null;
+        }, 4000);
+
+        return () => {
+            if (toastTimerRef.current) {
+                window.clearTimeout(toastTimerRef.current);
+                toastTimerRef.current = null;
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -307,6 +332,13 @@ function RynekInner() {
             {/* HEADER */}
             <div className="bg-slate-900 py-12 px-4 shadow-xl">
                 <div className="max-w-4xl mx-auto text-center">
+                    {showToast && (
+                        <div className="fixed left-1/2 top-28 z-50 -translate-x-1/2 px-4 sm:px-0">
+                            <div className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-3 text-sm font-black uppercase tracking-widest text-white shadow-2xl shadow-emerald-500/30">
+                                {toastMessage}
+                            </div>
+                        </div>
+                    )}
                     <h1 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight">
                         Rynek Odpadów <span className="text-blue-500">Recyklingowych</span>
                     </h1>
@@ -334,7 +366,7 @@ function RynekInner() {
                     <div className="relative max-w-2xl mx-auto flex gap-2">
                         <div className="relative flex-1">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                            <input type="text" placeholder="Wyszukaj materiał, surowiec..."
+                            <input type="text" placeholder="Materiał, miasto itp."
                                 value={szukanaFraza}
                                 onChange={e => setSzukanaFraza(e.target.value)}
                                 className="w-full pl-11 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 outline-none"

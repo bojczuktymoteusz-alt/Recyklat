@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
     Trash2, CheckCircle, ArrowLeft, Package, AlertTriangle,
-    ShieldAlert, MapPin, Tag, Key, Link2, Copy, Star, Send
+    ShieldAlert, MapPin, Tag, Key, Link2, Copy, Star, Send, Edit3
 } from 'lucide-react';
 
 export default function ZarzadzajOferta() {
@@ -57,7 +57,8 @@ export default function ZarzadzajOferta() {
     }
 
     const kopiujLinkEdycja = () => {
-        navigator.clipboard.writeText(`${baseUrl}/zarzadzaj/${token}`);
+        if (!oferta) return;
+        navigator.clipboard.writeText(`${baseUrl}/dodaj?edit=${oferta.id}`);
         setSkopiowanoEdycja(true);
         setTimeout(() => setSkopiowanoEdycja(false), 2500);
     };
@@ -238,7 +239,7 @@ export default function ZarzadzajOferta() {
                             <p className="font-black text-slate-900 text-sm">
                                 {skopiowanoEdycja ? '✓ Skopiowano!' : '🔑 Zapisz link do EDYCJI (dla Ciebie)'}
                             </p>
-                            <p className="text-slate-400 text-[10px] font-bold truncate">{baseUrl}/zarzadzaj/{token.substring(0, 16)}...</p>
+                            <p className="text-slate-400 text-[10px] font-bold truncate">{baseUrl}/dodaj?edit={oferta.id}</p>
                         </div>
                         <Copy size={16} className="text-slate-400 shrink-0" />
                     </button>
@@ -269,12 +270,20 @@ export default function ZarzadzajOferta() {
                     <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Zarządzaj statusem</h2>
                     <div className="flex flex-col sm:flex-row gap-3">
                         {!jestSprzedane && (
-                            <button
-                                onClick={oznaczJakoSprzedane}
-                                className="flex-1 flex items-center justify-center gap-3 bg-emerald-500 text-white p-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-emerald-100 hover:bg-emerald-600 active:scale-95 transition-all text-sm"
-                            >
-                                <CheckCircle size={20} /> Oznacz jako Sprzedane
-                            </button>
+                            <>
+                                <Link
+                                    href={`/dodaj?edit=${oferta.id}`}
+                                    className="flex-1 flex items-center justify-center gap-3 bg-blue-500 text-white p-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-600 active:scale-95 transition-all text-sm"
+                                >
+                                    <Edit3 size={20} /> Edytuj Ogłoszenie
+                                </Link>
+                                <button
+                                    onClick={oznaczJakoSprzedane}
+                                    className="flex-1 flex items-center justify-center gap-3 bg-emerald-500 text-white p-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-emerald-100 hover:bg-emerald-600 active:scale-95 transition-all text-sm"
+                                >
+                                    <CheckCircle size={20} /> Oznacz jako Sprzedane
+                                </button>
+                            </>
                         )}
                         <button
                             onClick={usunOgłoszenie}

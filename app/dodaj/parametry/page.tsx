@@ -18,6 +18,7 @@ interface Step1Data {
     bdo_code?: string;
     magic_box_used?: boolean;
     supply_frequency?: string;
+    editId?: string;
 }
 
 interface FormData {
@@ -142,34 +143,67 @@ export default function ParametryDetailsPage() {
             firma: sanitizeText(formData.firma) || null,
             website_url: websiteUrl,
             supply_frequency: step1Data.supply_frequency || null,
-            status: 'aktywna',
-            manage_token: wygenerowanyToken,
             magic_box_used: formData.magic_box_used,
-            created_at: new Date().toISOString(),
         };
 
-        const { data, error } = await supabase.from('oferty').insert([finalOffer]).select();
+        let error, data;
+        
+        // Jeśli jest edycja - UPDATE, w przeciwnym razie INSERT
+        if (step1Data.editId) {
+            const { error: updateError, data: updateData } = await supabase
+                .from('oferty')
+                .update(finalOffer)
+                .eq('id', step1Data.editId)
+                .select();
+            error = updateError;
+            data = updateData;
+        } else {
+            const finalOfferWithMeta = {
+                ...finalOffer,
+                status: 'aktywna',
+                manage_token: wygenerowanyToken,
+                created_at: new Date().toISOString(),
+            };
+            const { error: insertError, data: insertData } = await supabase.from('oferty').insert([finalOfferWithMeta]).select();
+            error = insertError;
+            data = insertData;
+        }
 
         if (error) {
             setLoading(false);
             alert("Błąd zapisu: " + error.message);
         } else {
             if (data && data.length > 0) {
-                const noweId = data[0].id;
-                const zapisaneOferty = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
-                if (!zapisaneOferty.includes(noweId)) {
-                    zapisaneOferty.push(noweId);
-                    localStorage.setItem('moje_oferty', JSON.stringify(zapisaneOferty));
+                const ofertaId = data[0].id;
+                const ofertaToken = data[0].manage_token;
+
+                if (!step1Data.editId) {
+                    // Nowa oferta - dodaj do localStorage
+                    const zapisaneOferty = JSON.parse(localStorage.getItem('moje_oferty') || '[]');
+                    if (!zapisaneOferty.includes(ofertaId)) {
+                        zapisaneOferty.push(ofertaId);
+                        localStorage.setItem('moje_oferty', JSON.stringify(zapisaneOferty));
+                    }
+                    try {
+                        const tokenMap = JSON.parse(localStorage.getItem('oferty_tokeny') || '{}');
+                        tokenMap[ofertaId] = ofertaToken;
+                        localStorage.setItem('oferty_tokeny', JSON.stringify(tokenMap));
+                    } catch { }
+                    localStorage.setItem("ostatni_token", ofertaToken);
                 }
-                try {
-                    const tokenMap = JSON.parse(localStorage.getItem('oferty_tokeny') || '{}');
-                    tokenMap[noweId] = wygenerowanyToken;
-                    localStorage.setItem('oferty_tokeny', JSON.stringify(tokenMap));
-                } catch { }
             }
+            
             localStorage.removeItem("temp_offer");
-            localStorage.setItem("ostatni_token", wygenerowanyToken);
-            router.push("/dodano");
+            
+            // Jeśli edycja - wróć do zakładki ofert/popytu na giełdzie; jeśli nowa - wróć do /dodano
+            if (step1Data.editId) {
+                const redirectType = step1Data.typ_oferty === 'kupie' ? 'kupie' : 'sprzedam';
+                const message = step1Data.typ_oferty === 'kupie' ? 'Popyt został zaktualizowany.' : 'Oferta została zaktualizowana.';
+                sessionStorage.setItem('rynekToast', message);
+                router.push(`/rynek?typ=${redirectType}`);
+            } else {
+                router.push("/dodano");
+            }
         }
     };
 
@@ -184,12 +218,12 @@ export default function ParametryDetailsPage() {
                 <div className="flex justify-between items-start mb-10">
                     <div>
                         <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">
-                            {jestKupno ? "Wymagania" : "Parametry"}
+                            {step1Data?.editId ? "Edytuj Ofertę" : (jestKupno ? "Wymagania" : "Parametry")}
                         </h1>
                         <div className="flex items-center gap-2">
                             <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">Krok 2</span>
                             <p className="text-sm font-extrabold text-slate-500 uppercase tracking-tight">
-                                {jestKupno ? "Szczegóły zapotrzebowania" : "Szczegóły techniczne"}
+                                {step1Data?.editId ? "Zmień szczegóły" : (jestKupno ? "Szczegóły zapotrzebowania" : "Szczegóły techniczne")}
                             </p>
                         </div>
                     </div>
@@ -370,7 +404,7 @@ export default function ParametryDetailsPage() {
                     <div className="pt-6">
                         <button type="submit" disabled={loading}
                             className={`w-full py-8 rounded-[32px] text-white font-black text-2xl uppercase tracking-tighter transition-all flex items-center justify-center gap-4 group shadow-2xl ${loading ? "bg-slate-300 cursor-not-allowed text-slate-500" : "bg-emerald-600 hover:bg-emerald-500 hover:-translate-y-1 active:scale-[0.98] active:translate-y-0"}`}>
-                            {loading ? "Przetwarzanie..." : "Dodaj ogłoszenie do bazy"}
+                            {loading ? "Przetwarzanie..." : step1Data?.editId ? "Zapisz zmiany" : "Dodaj ogłoszenie do bazy"}
                             {!loading && <CheckCircle size={28} className="text-emerald-200 group-hover:text-white transition-colors" />}
                         </button>
                     </div>

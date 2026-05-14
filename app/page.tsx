@@ -88,8 +88,9 @@ export default function Home() {
             <span className="text-blue-600">w kapitał</span>
           </h1>
           <p className="text-sm md:text-xl text-slate-500 font-medium max-w-xl mb-6 md:mb-12 leading-normal md:leading-relaxed">
-            Najszybsza giełda surowców wtórnych. W 100% polska platforma. Kupuj, sprzedawaj i zgłaszaj zapotrzebowanie w 30 sekund.
-          </p>
+  {"Najszybsza giełda surowców wtórnych. W\u00A0100% polska platforma. Kupuj, sprzedawaj i\u00A0zgłaszaj zapotrzebowanie w\u00A030\u00A0sekund."}
+</p>
+          
 
           <div className="flex flex-col sm:flex-row gap-3 mb-8 md:mb-16">
             <Link href="/dodaj" className="w-full sm:w-auto bg-slate-900 text-white px-6 py-4 sm:px-8 sm:py-5 rounded-[24px] font-black text-base sm:text-xl uppercase tracking-tighter hover:bg-blue-600 transition-all shadow-2xl hover:-translate-y-1 text-center">

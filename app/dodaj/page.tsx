@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
 import { CheckCircle, ShoppingBag, ArrowDownToLine, ImagePlus, Sparkles, Lightbulb, X, Globe, Mic, MicOff, Calendar, Keyboard, MapPin, Plane } from 'lucide-react';
 import { sanitizeText } from '@/lib/security';
@@ -267,6 +267,10 @@ function czyiOS(): boolean {
 
 export default function DodajOferteKrok1() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const editId = searchParams?.get('edit');
+    const editMode = !!editId;
+    
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
     const [typOferty, setTypOferty] = useState<'sprzedam'|'kupie'>('sprzedam');
     const [title, setTitle] = useState('');
@@ -299,7 +303,52 @@ export default function DodajOferteKrok1() {
         setIsCheckingAuth(false);
         const ios=czyiOS(); setJestIOS(ios);
         if (!ios&&typeof window!=='undefined') setWspieraMikrofon('webkitSpeechRecognition' in window||'SpeechRecognition' in window);
-    }, []);
+
+        // Jeśli jest parametr edit - załaduj dane ogłoszenia z bazy
+        if (editId) {
+            loadEditData(editId);
+        }
+    }, [editId]);
+
+    async function loadEditData(ofertaId: string) {
+        try {
+            const { data, error } = await supabase
+                .from('oferty')
+                .select('*')
+                .eq('id', ofertaId)
+                .single();
+            
+            if (error || !data) {
+                alert('Nie znaleziono ogłoszenia do edycji.');
+                router.push('/rynek');
+                return;
+            }
+
+            // Pre-fillować formularz danymi z bazy
+            setTypOferty(data.typ_oferty || 'sprzedam');
+            setTitle(data.title || '');
+            setMaterial(data.material || '');
+            setWaga(data.waga?.toString() || '');
+            setMiejscowosc(data.lokalizacja || '');
+            setTelefon(data.telefon || '');
+            setAutoBdo(data.bdo_code || '');
+            setSupplyFreq(data.supply_frequency || null);
+
+            // Ustawiam województwa
+            if (data.wojewodztwo) {
+                const woj = data.wojewodztwo.split(',').map(w => w.trim());
+                setWojewodztwo(woj);
+            }
+
+            // Załaduj zdjęcie jeśli istnieje
+            if (data.zdjecie_url) {
+                setPreview(data.zdjecie_url);
+            }
+        } catch (err) {
+            console.error('Błąd ładowania danych:', err);
+            alert('Błąd ładowania danych ogłoszenia.');
+        }
+    }
 
     const startMikrofon = () => {
         if (!wspieraMikrofon||jestIOS) return;
@@ -382,13 +431,19 @@ export default function DodajOferteKrok1() {
         if (hp!=='') { router.push('/rynek'); return; }
         setLoading(true);
         try {
-            let url='';
-            if (file) url=await uploadImage(file);
+            let url = '';
+            if (file) {
+                url = await uploadImage(file);
+            } else if (preview) {
+                url = preview;
+            }
             const wojewodztwoValue = wojewodztwo
                 .map(v => ZASIEG_SPECJALNY.find(z => z.value === v)?.lokalizacja || v)
                 .filter(Boolean)
                 .join(', ');
-            localStorage.setItem('temp_offer',JSON.stringify({typ_oferty:typOferty,title:sanitizeText(title),material:sanitizeText(material),waga:parseFloat(waga)||0,lokalizacja:sanitizeText(miejscowosc),wojewodztwo:sanitizeText(wojewodztwoValue),telefon:sanitizeText(telefon),zdjecie_url:url,bdo_code:autoBdo,magic_box_used:seoWygenerowane,supply_frequency:supplyFreq}));
+            const tempData: any = {typ_oferty:typOferty,title:sanitizeText(title),material:sanitizeText(material),waga:parseFloat(waga)||0,lokalizacja:sanitizeText(miejscowosc),wojewodztwo:sanitizeText(wojewodztwoValue),telefon:sanitizeText(telefon),zdjecie_url:url,bdo_code:autoBdo,magic_box_used:seoWygenerowane,supply_frequency:supplyFreq};
+            if (editId) { tempData.editId = editId; }
+            localStorage.setItem('temp_offer',JSON.stringify(tempData));
             router.push('/dodaj/parametry');
         } catch(err:any) { alert(err.message); setLoading(false); }
     };
@@ -406,7 +461,7 @@ export default function DodajOferteKrok1() {
 
                 <div className="flex justify-between items-start mb-8">
                     <div>
-                        <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">Dodaj Ogłoszenie</h1>
+                        <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">{editMode ? 'Edytuj Ogłoszenie' : 'Dodaj Ogłoszenie'}</h1>
                         <div className="flex items-center gap-2">
                             <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">Krok 1</span>
                             <p className="text-sm font-extrabold text-slate-500 uppercase tracking-tight">Informacje podstawowe</p>
@@ -572,7 +627,7 @@ export default function DodajOferteKrok1() {
                     </div>
 
                     <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-8 rounded-[32px] font-black text-2xl uppercase flex items-center justify-center gap-4 hover:bg-blue-600 transition-all shadow-xl active:scale-95 disabled:opacity-50 mt-4">
-                        {loading?'Przetwarzanie...':'Dalej do parametrów'}
+                        {loading?'Przetwarzanie...':editMode?'Zapisz zmiany':'Dalej do parametrów'}
                         <CheckCircle size={28}/>
                     </button>
                 </form>
