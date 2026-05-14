@@ -429,13 +429,20 @@ function RynekInner() {
 
             {/* KATEGORIE */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
-                <div ref={kategorieRef} className="bg-white p-2 rounded-3xl shadow-xl border border-gray-100 flex gap-2 overflow-x-auto no-scrollbar">
-                    {KATEGORIE.map(kat => (
-                        <button key={kat.nazwa} onClick={() => setAktywnyFiltr(kat.nazwa)}
-                            className={`flex-shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}>
-                            <span>{kat.ikona}</span>{kat.nazwa}
-                        </button>
-                    ))}
+                <div className="relative">
+                    <div ref={kategorieRef} className="bg-white p-2 rounded-3xl shadow-xl border border-gray-100 flex gap-2 overflow-x-auto scrolling-touch pr-4">
+                        {KATEGORIE.map(kat => (
+                            <button key={kat.nazwa} onClick={() => setAktywnyFiltr(kat.nazwa)}
+                                className={`flex-shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}>
+                                <span>{kat.ikona}</span>{kat.nazwa}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="pointer-events-none absolute right-0 top-0 h-full w-14 bg-gradient-to-l from-white/95 to-transparent" />
+                    <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex md:hidden items-center gap-2 rounded-full bg-slate-900/85 px-3 py-2 text-[10px] uppercase tracking-widest text-white font-black">
+                        <span>Przesuń</span>
+                        <span className="text-sm">→</span>
+                    </div>
                 </div>
             </div>
 
