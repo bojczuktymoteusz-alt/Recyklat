@@ -45,7 +45,6 @@ const KATEGORIE = [
 const getIcon = (material: string) => {
     const m = material.toLowerCase();
     if (m.includes('folia')) return '🧻';
-    // Ten warunek jest super, bo "wyłapie" i plastik, i tworzywa, i PET
     if (m.includes('tworzywa') || m.includes('pet') || m.includes('plastik')) return '♻️';
     if (m.includes('makulatura') || m.includes('karton') || m.includes('papier')) return '📦';
     if (m.includes('złom')) return '🔩';
