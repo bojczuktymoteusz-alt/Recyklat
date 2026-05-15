@@ -120,10 +120,16 @@ export default function ParametryDetailsPage() {
             websiteUrl = 'https://' + websiteUrl;
         }
 
+        // Mapuj "Karton / Papier" na "Karton" dla bazy
+        let materialForDB = sanitizeText(step1Data.material);
+        if (materialForDB === "Karton / Papier") {
+            materialForDB = "Karton";
+        }
+
         const finalOffer = {
             typ_oferty: step1Data.typ_oferty || 'sprzedam',
             title: sanitizeText(step1Data.title),
-            material: sanitizeText(step1Data.material),
+            material: materialForDB,
             waga: safeWeight,
             lokalizacja: sanitizeText(step1Data.lokalizacja),
             wojewodztwo: sanitizeText(step1Data.wojewodztwo),

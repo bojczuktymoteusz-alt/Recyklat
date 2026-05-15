@@ -35,19 +35,18 @@ const SUPPLY_BADGE: Record<string, { label: string; color: string }> = {
 const KATEGORIE = [
     { nazwa: "Wszystko",   ikona: "🌐" },
     { nazwa: "Folia",      ikona: "🧻" },
-    { nazwa: "Plastik",    ikona: "♻️" }, // Zmienione z Tworzywa
-    { nazwa: "Karton",     ikona: "📦" }, // Zmienione z Makulatura + lepsza ikona paczki
+    { nazwa: "Tworzywa",   ikona: "♻️" }, // Wracamy do profesjonalnej nazwy
+    { nazwa: "Karton",     ikona: "📦" }, // Zostawiamy Karton (oszczędność miejsca)
     { nazwa: "Złom",       ikona: "🔩" },
-    { nazwa: "Drewno",     ikona: "🪵" }, // Zmieniłem ikonę na kłodę, bardziej czytelna
+    { nazwa: "Drewno",     ikona: "🪵" },
     { nazwa: "Inne",       ikona: "❓" }
 ];
 
 const getIcon = (material: string) => {
     const m = material.toLowerCase();
     if (m.includes('folia')) return '🧻';
-    // Dodajemy 'plastik' do warunku, żeby ikona wskakiwała poprawnie
+    // Ten warunek jest super, bo "wyłapie" i plastik, i tworzywa, i PET
     if (m.includes('tworzywa') || m.includes('pet') || m.includes('plastik')) return '♻️';
-    // Dodajemy 'karton' i 'papier' dla bezpieczeństwa
     if (m.includes('makulatura') || m.includes('karton') || m.includes('papier')) return '📦';
     if (m.includes('złom')) return '🔩';
     if (m.includes('drewno')) return '🪵';
