@@ -38,7 +38,7 @@ const KATEGORIE = [
     { nazwa: "Tworzywa",   ikona: "♻️" }, // Wracamy do profesjonalnej nazwy
     { nazwa: "Karton",     ikona: "📦" }, // Zostawiamy Karton (oszczędność miejsca)
     { nazwa: "Złom",       ikona: "🔩" },
-    { nazwa: "Drewno",     ikona: "🪵" },
+    { nazwa: "Drewno",     ikona: "/drewno.png" },
     { nazwa: "Inne",       ikona: "❓" }
 ];
 
@@ -434,7 +434,18 @@ function RynekInner() {
                         {KATEGORIE.map(kat => (
                             <button key={kat.nazwa} onClick={() => setAktywnyFiltr(kat.nazwa)}
                                 className={`flex-shrink-0 min-w-max flex items-center justify-start gap-2 px-4 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest whitespace-nowrap ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}>
-                                {kat.nazwa === 'Wszystko' ? kat.nazwa : <><span className="flex-shrink-0">{kat.ikona}</span>{kat.nazwa}</>}
+                                {kat.nazwa === 'Wszystko' ? kat.nazwa : (
+                                    <>
+                                        <span className="flex-shrink-0">
+                                            {kat.ikona.startsWith('/') ? (
+                                                <img src={kat.ikona} alt={`${kat.nazwa} icon`} className="w-8 h-8 -ml-1 object-contain flex-shrink-0" />
+                                            ) : (
+                                                kat.ikona
+                                            )}
+                                        </span>
+                                        {kat.nazwa}
+                                    </>
+                                )}
                             </button>
                         ))}
                     </div>
