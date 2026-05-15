@@ -431,7 +431,7 @@ function RynekInner() {
             {/* KATEGORIE */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
                 <div className="relative">
-                    <div ref={kategorieRef} className="bg-white p-2 rounded-3xl shadow-xl border border-gray-100 flex gap-2 overflow-x-auto scrolling-touch pr-4" style={{ scrollSnapType: 'none' }}>
+                    <div ref={kategorieRef} className="bg-white p-2 rounded-3xl shadow-xl border border-gray-100 flex gap-2 overflow-x-auto scrolling-touch pr-8" style={{ scrollSnapType: 'none' }}>
                         {KATEGORIE.map(kat => (
                             <button key={kat.nazwa} onClick={() => setAktywnyFiltr(kat.nazwa)}
                                 className={`flex-shrink-0 min-w-max flex items-center justify-start gap-2 px-4 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest whitespace-nowrap ${aktywnyFiltr === kat.nazwa ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}>
