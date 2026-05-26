@@ -176,8 +176,8 @@ export default function ZarzadzajOferta() {
 
                 {/* NAGŁÓWEK */}
                 <div className="flex items-center justify-between">
-                    <Link href={oferta.typ_oferty === 'kupie' ? '/rynek?typ=kupie' : '/rynek?typ=sprzedam'} className="flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors font-black text-[10px] uppercase tracking-[0.2em]">
-                        <ArrowLeft size={16} /> Wróć
+                    <Link href={oferta.typ_oferty === 'kupie' ? '/rynek?typ=kupie&sort=najnowsze' : '/rynek?typ=sprzedam&sort=najnowsze'} className="flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors font-black text-sm uppercase tracking-[0.2em]">
+                        <ArrowLeft size={20} /> Wróć
                     </Link>
                     <div className="flex items-center gap-2 text-red-500 bg-red-50 px-4 py-2 rounded-xl">
                         <ShieldAlert size={14} />
