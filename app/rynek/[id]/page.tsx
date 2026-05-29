@@ -595,7 +595,7 @@ export default function SzczegolyOferty() {
                                 className="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-800 text-xs font-black uppercase tracking-widest transition-colors px-3 py-1.5 rounded-xl"
                             >
                                 <span className="relative flex h-3 w-3 mr-1.5">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 [animation-duration:600ms]"></span>
                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                                 </span>
                                 Zobacz Podobne{podobneCount > 0 ? ` (${podobneCount})` : ''}
