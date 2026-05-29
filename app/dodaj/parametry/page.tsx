@@ -19,6 +19,7 @@ interface Step1Data {
     magic_box_used?: boolean;
     supply_frequency?: string;
     editId?: string;
+    zgodaSms?: boolean;
 }
 
 interface FormData {
@@ -197,6 +198,52 @@ export default function ParametryDetailsPage() {
                         localStorage.setItem('oferty_tokeny', JSON.stringify(tokenMap));
                     } catch { }
                     localStorage.setItem("ostatni_token", ofertaToken);
+                }
+
+                // Subskrypcja SMS — działa dla nowych ofert i edycji
+                const normalizeWoj = (s: string) =>
+                    s.toLowerCase()
+                        .replace(/ą/g, 'a').replace(/ć/g, 'c').replace(/ę/g, 'e')
+                        .replace(/ł/g, 'l').replace(/ń/g, 'n').replace(/ó/g, 'o')
+                        .replace(/ś/g, 's').replace(/ź/g, 'z').replace(/ż/g, 'z')
+                        .trim();
+
+                const phone = sanitizeText(step1Data.telefon).replace(/\s/g, '');
+                const wojParts = (step1Data.wojewodztwo || '').split(',').map(w => w.trim()).filter(Boolean);
+
+                if (step1Data.zgodaSms) {
+                    const subscriptionRows = wojParts
+                        .map(w => {
+                            const n = normalizeWoj(w);
+                            if (n.includes('europa') || n.includes('zagranica')) return null;
+                            return {
+                                phone,
+                                material_name: materialForDB,
+                                wojewodztwo: n.includes('cala') ? 'cala_polska' : n,
+                                typ_subskrybenta: step1Data.typ_oferty || 'sprzedam',
+                                zgoda_sms: true,
+                            };
+                        })
+                        .filter(Boolean);
+
+                    if (subscriptionRows.length > 0) {
+                        await supabase
+                            .from('sms_subscriptions')
+                            .upsert(subscriptionRows, {
+                                onConflict: 'phone,material_name,wojewodztwo,typ_subskrybenta',
+                                ignoreDuplicates: false,
+                            });
+                        localStorage.setItem(`sms_sub_${ofertaIdNumber}`, '1');
+                    }
+                } else if (step1Data.editId) {
+                    // Wypisanie — tylko przy edycji gdy checkbox był zaznaczony wcześniej
+                    await supabase
+                        .from('sms_subscriptions')
+                        .update({ zgoda_sms: false })
+                        .eq('phone', phone)
+                        .eq('material_name', materialForDB)
+                        .eq('typ_subskrybenta', step1Data.typ_oferty || 'sprzedam');
+                    localStorage.removeItem(`sms_sub_${ofertaIdNumber}`);
                 }
             }
             

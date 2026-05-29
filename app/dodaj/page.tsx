@@ -275,6 +275,7 @@ export default function DodajOferteKrok1() {
     const [waga, setWaga] = useState('');
     const [miejscowosc, setMiejscowosc] = useState('');
     const [wojewodztwo, setWojewodztwo] = useState<string[]>([]);
+    const [zgodaSms, setZgodaSms] = useState(false);
     const [telefon, setTelefon] = useState('');
     const [autoBdo, setAutoBdo] = useState('');
     const [file, setFile] = useState<File|null>(null);
@@ -346,6 +347,9 @@ export default function DodajOferteKrok1() {
             if (data.zdjecie_url) {
                 setPreview(data.zdjecie_url);
             }
+
+            // Prefill zgoda SMS z localStorage
+            setZgodaSms(localStorage.getItem(`sms_sub_${ofertaId}`) === '1');
         } catch (err) {
             console.error('Błąd ładowania danych:', err);
             alert('Błąd ładowania danych ogłoszenia.');
@@ -443,7 +447,7 @@ export default function DodajOferteKrok1() {
                 .map(v => ZASIEG_SPECJALNY.find(z => z.value === v)?.lokalizacja || v)
                 .filter(Boolean)
                 .join(', ');
-            const tempData: any = {typ_oferty:typOferty,title:sanitizeText(title),material:sanitizeText(material),waga:parseFloat(waga)||0,lokalizacja:sanitizeText(miejscowosc),wojewodztwo:sanitizeText(wojewodztwoValue),telefon:sanitizeText(telefon),zdjecie_url:url,bdo_code:autoBdo,magic_box_used:seoWygenerowane,supply_frequency:supplyFreq};
+            const tempData: any = {typ_oferty:typOferty,title:sanitizeText(title),material:sanitizeText(material),waga:parseFloat(waga)||0,lokalizacja:sanitizeText(miejscowosc),wojewodztwo:sanitizeText(wojewodztwoValue),telefon:sanitizeText(telefon),zdjecie_url:url,bdo_code:autoBdo,magic_box_used:seoWygenerowane,supply_frequency:supplyFreq,zgodaSms};
             if (editId) { tempData.editId = editId; }
             localStorage.setItem('temp_offer',JSON.stringify(tempData));
             router.push('/dodaj/parametry');
@@ -627,6 +631,37 @@ export default function DodajOferteKrok1() {
                             <div className="flex flex-col items-center gap-2"><ImagePlus size={40} className="text-slate-300"/><p className="font-black text-slate-400 uppercase text-sm">Kliknij, aby dodać zdjęcie</p></div>
                         )}
                     </div>
+
+                    <style>{`
+                        @keyframes sms-ping {
+                            0%, 100% { background-color: #cbd5e1; border-color: #94a3b8; }
+                            50%       { background-color: #3b82f6; border-color: #2563eb; }
+                        }
+                    `}</style>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={zgodaSms}
+                            onChange={e => setZgodaSms(e.target.checked)}
+                            className="sr-only"
+                        />
+                        <span
+                            className="mt-0.5 w-5 h-5 shrink-0 rounded-md border-2 flex items-center justify-center"
+                            style={zgodaSms
+                                ? { backgroundColor: '#2563eb', borderColor: '#2563eb' }
+                                : { animation: 'sms-ping 0.7s ease-in-out infinite' }
+                            }
+                        >
+                            {zgodaSms && (
+                                <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                                    <path d="M1 4L4 7.5L10 1" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            )}
+                        </span>
+                        <span className="text-sm text-slate-600 font-medium leading-snug">
+                            Chcę otrzymywać SMS gdy pojawi się pasująca oferta na Recyklat.pl. Numer podany w formularzu zostanie użyty wyłącznie w tym celu.
+                        </span>
+                    </label>
 
                     <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-8 rounded-[32px] font-black text-2xl uppercase flex items-center justify-center gap-4 hover:bg-blue-600 transition-all shadow-xl active:scale-95 disabled:opacity-50 mt-4">
                         {loading?'Przetwarzanie...':editMode?'Zapisz zmiany':'Dalej do parametrów'}
