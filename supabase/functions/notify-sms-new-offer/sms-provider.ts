@@ -1,39 +1,43 @@
 // =============================================================================
-// MODUŁ DOSTAWCY SMS
+// MODUŁ DOSTAWCY SMS — SMSPlanet (smsplanet.pl)
 //
-// Aby zmienić bramkę (Twilio, WhatsApp, inny provider):
-// podmień WYŁĄCZNIE ten plik. Sygnatura sendSMS pozostaje bez zmian.
+// Aby zmienić bramkę: podmień WYŁĄCZNIE ten plik.
+// Sygnatura sendSMS(to, message) pozostaje bez zmian.
+//
+// Wymagane zmienne środowiskowe w Supabase Edge Function Secrets:
+//   SMSPLANET_KEY      — klucz API z panelu SMSPlanet
+//   SMSPLANET_PASSWORD — hasło API z panelu SMSPlanet
 // =============================================================================
 
 export async function sendSMS(to: string, message: string): Promise<void> {
-  const token = Deno.env.get('SMSAPI_TOKEN')
-  if (!token) {
-    throw new Error('Brak zmiennej srodowiskowej SMSAPI_TOKEN')
+  const key = Deno.env.get('SMSPLANET_KEY')
+  const password = Deno.env.get('SMSPLANET_PASSWORD')
+
+  if (!key || !password) {
+    throw new Error('Brak zmiennych srodowiskowych SMSPLANET_KEY lub SMSPLANET_PASSWORD')
   }
 
   const body = new URLSearchParams({
-    to,
-    message,
+    key,
+    password,
     from: 'Recyklat',
-    format: 'json',
+    to,
+    msg: message,
   })
 
-  const response = await fetch('https://api.smsapi.pl/sms.do', {
+  const response = await fetch('https://api2.smsplanet.pl/sms', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
   })
 
   if (!response.ok) {
     const text = await response.text()
-    throw new Error(`SMSAPI HTTP ${response.status}: ${text}`)
+    throw new Error(`SMSPlanet HTTP ${response.status}: ${text}`)
   }
 
   const json = await response.json()
-  if (json.invalid_number || json.error) {
-    throw new Error(`SMSAPI blad logiczny: ${JSON.stringify(json)}`)
+  if (json.errorCode) {
+    throw new Error(`SMSPlanet blad: ${json.errorCode} — ${json.errorMsg ?? ''}`)
   }
 }
