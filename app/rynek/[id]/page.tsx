@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import {
     ArrowLeft, MapPin, Phone, Info, Truck, Building2,
     Clock, Mail, CheckCircle, FileText, Eye, ExternalLink,
-    ChevronRight, Fuel, Calculator, Send, Globe, Navigation
+    ChevronRight, ChevronDown, Fuel, Calculator, Send, Globe, Navigation
 } from 'lucide-react';
 import Link from 'next/link';
 import { wyglądaJakUrl, fixUrl, urlDoWyswietlenia, formatCena } from '@/lib/ofertaUtils';
@@ -307,7 +307,7 @@ function KafelekPodobnej({ o, userLat, userLon }: { o: PodobnaOferta; userLat: n
     );
 }
 
-function PodobneOgloszenia({ oferta }: { oferta: any }) {
+function PodobneOgloszenia({ oferta, onLoaded }: { oferta: any; onLoaded?: (count: number) => void }) {
     const [oferty, setOferty] = useState<PodobnaOferta[]>([]);
     const [priorytet, setPriorytet] = useState<Priorytet>('kategoria');
     const [loading, setLoading] = useState(true);
@@ -318,6 +318,7 @@ function PodobneOgloszenia({ oferta }: { oferta: any }) {
         if (!oferta?.id) return;
         pobierzPodobne(oferta).then(({ oferty: o, priorytet: p }) => {
             setOferty(o); setPriorytet(p); setLoading(false);
+            onLoaded?.(o.length);
         });
     }, [oferta?.id]);
 
@@ -342,7 +343,7 @@ function PodobneOgloszenia({ oferta }: { oferta: any }) {
     if (oferty.length === 0) return null;
 
     return (
-        <div className="mt-12">
+        <div className="mt-12" id="podobne-ogloszenia">
             <div className="flex items-center gap-3 mb-5">
                 <div className="flex-1 h-px bg-slate-200" />
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap flex items-center gap-1.5">
@@ -376,6 +377,7 @@ export default function SzczegolyOferty() {
     const [loading, setLoading] = useState(true);
     const [czyToMoje, setCzyToMoje] = useState(false);
     const [numerOdkryty, setNumerOdkryty] = useState(false);
+    const [podobneCount, setPodobneCount] = useState(0);
     const [toastMessage, setToastMessage] = useState('');
     const [showToast, setShowToast] = useState(false);
     const toastTimerRef = useRef<number | null>(null);
@@ -599,6 +601,23 @@ export default function SzczegolyOferty() {
                                 <MapPin size={24} className="text-blue-500 shrink-0 mt-0.5" />
                                 <span className="font-black text-xl uppercase text-slate-900 leading-tight">{lokalizacjaWyswietlana}</span>
                             </div>
+                            <div className="border-t border-slate-100 pt-3">
+                                <a
+                                    href="#podobne-ogloszenia"
+                                    onClick={e => {
+                                        e.preventDefault();
+                                        document.getElementById('podobne-ogloszenia')?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-800 text-xs font-black uppercase tracking-widest transition-colors px-3 py-1.5 rounded-xl"
+                                >
+                                    <span className="relative flex h-3 w-3 mr-1.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                    </span>
+                                    Zobacz Podobne{podobneCount > 0 ? ` (${podobneCount})` : ''}
+                                    <ChevronDown size={14} strokeWidth={3} />
+                                </a>
+                            </div>
                         </div>
 
                         {!jestSprzedane && <KalkulatorTransportu oferta={oferta} />}
@@ -660,7 +679,7 @@ export default function SzczegolyOferty() {
                     </div>
                 </div>
 
-                <PodobneOgloszenia oferta={oferta} />
+                <PodobneOgloszenia oferta={oferta} onLoaded={setPodobneCount} />
             </div>
 
             <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 z-50">
