@@ -632,12 +632,6 @@ export default function DodajOferteKrok1() {
                         )}
                     </div>
 
-                    <style>{`
-                        @keyframes sms-ping {
-                            0%, 100% { background-color: #cbd5e1; border-color: #94a3b8; }
-                            50%       { background-color: #3b82f6; border-color: #2563eb; }
-                        }
-                    `}</style>
                     <label className="flex items-start gap-3 cursor-pointer">
                         <input
                             type="checkbox"
