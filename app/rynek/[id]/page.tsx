@@ -586,6 +586,21 @@ export default function SzczegolyOferty() {
                         </div>
 
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm space-y-6">
+                            <a
+                                href="#podobne-ogloszenia"
+                                onClick={e => {
+                                    e.preventDefault();
+                                    document.getElementById('podobne-ogloszenia')?.scrollIntoView({ behavior: 'smooth' });
+                                }}
+                                className="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-800 text-xs font-black uppercase tracking-widest transition-colors px-3 py-1.5 rounded-xl"
+                            >
+                                <span className="relative flex h-3 w-3 mr-1.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                </span>
+                                Zobacz Podobne{podobneCount > 0 ? ` (${podobneCount})` : ''}
+                                <ChevronDown size={14} strokeWidth={3} />
+                            </a>
                             <h1 className="text-2xl md:text-3xl font-black tracking-tighter uppercase text-slate-900 leading-none">{wyswietlanyTytul}</h1>
                             <div className="flex flex-wrap gap-3 items-center pt-2">
                                 <span className={`px-5 py-3 rounded-2xl text-2xl font-black ${jestZapotrzebowanie ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
@@ -600,23 +615,6 @@ export default function SzczegolyOferty() {
                             <div className="flex items-start gap-3 pt-4 border-t">
                                 <MapPin size={24} className="text-blue-500 shrink-0 mt-0.5" />
                                 <span className="font-black text-xl uppercase text-slate-900 leading-tight">{lokalizacjaWyswietlana}</span>
-                            </div>
-                            <div className="border-t border-slate-100 pt-3">
-                                <a
-                                    href="#podobne-ogloszenia"
-                                    onClick={e => {
-                                        e.preventDefault();
-                                        document.getElementById('podobne-ogloszenia')?.scrollIntoView({ behavior: 'smooth' });
-                                    }}
-                                    className="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-800 text-xs font-black uppercase tracking-widest transition-colors px-3 py-1.5 rounded-xl"
-                                >
-                                    <span className="relative flex h-3 w-3 mr-1.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                                    </span>
-                                    Zobacz Podobne{podobneCount > 0 ? ` (${podobneCount})` : ''}
-                                    <ChevronDown size={14} strokeWidth={3} />
-                                </a>
                             </div>
                         </div>
 
