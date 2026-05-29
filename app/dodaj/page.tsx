@@ -653,7 +653,7 @@ export default function DodajOferteKrok1() {
                             )}
                         </span>
                         <span className="text-sm text-slate-600 font-medium leading-snug">
-                            Chcę otrzymywać SMS gdy pojawi się pasująca oferta na Recyklat.pl. Numer podany w formularzu zostanie użyty wyłącznie w tym celu.
+                            Chcę otrzymywać SMS wtedy, gdy pojawi się pasująca do mojej Oferta.
                         </span>
                     </label>
 
