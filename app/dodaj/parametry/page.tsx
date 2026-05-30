@@ -215,11 +215,11 @@ export default function ParametryDetailsPage() {
                     const subscriptionRows = wojParts
                         .map(w => {
                             const n = normalizeWoj(w);
-                            if (n.includes('europa') || n.includes('zagranica')) return null;
+                            if (n.includes('europa') || n.includes('zagranica') || n.includes('cala')) return null;
                             return {
                                 phone,
                                 material_name: materialForDB,
-                                wojewodztwo: n.includes('cala') ? 'cala_polska' : n,
+                                wojewodztwo: n,
                                 typ_subskrybenta: step1Data.typ_oferty || 'sprzedam',
                                 zgoda_sms: true,
                             };
@@ -457,8 +457,8 @@ export default function ParametryDetailsPage() {
                     <div className="pt-6">
                         <button type="submit" disabled={loading}
                             className={`w-full py-8 rounded-[32px] text-white font-black text-2xl uppercase tracking-tighter transition-all flex items-center justify-center gap-4 group shadow-2xl ${loading ? "bg-slate-300 cursor-not-allowed text-slate-500" : "bg-emerald-600 hover:bg-emerald-500 hover:-translate-y-1 active:scale-[0.98] active:translate-y-0"}`}>
-                            {loading ? "Przetwarzanie..." : step1Data?.editId ? "Zapisz zmiany" : "Dodaj ogłoszenie do bazy"}
-                            {!loading && <CheckCircle size={28} className="text-emerald-200 group-hover:text-white transition-colors" />}
+                            {loading ? "Przetwarzanie..." : step1Data?.editId ? "Zapisz zmiany" : "Dodaj anons"}
+                            {!loading && <CheckCircle size={28} className="text-emerald-200 group-hover:text-white transition-colors -mr-2" />}
                         </button>
                     </div>
 

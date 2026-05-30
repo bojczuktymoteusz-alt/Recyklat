@@ -10,17 +10,17 @@
 // =============================================================================
 
 export async function sendSMS(to: string, message: string): Promise<void> {
-  const key = Deno.env.get('SMSPLANET_KEY')
-  const password = Deno.env.get('SMSPLANET_PASSWORD')
+  const key = Deno.env.get('SMS_PLANET_API_KEY')
+  const password = Deno.env.get('SMS_PLANET_API_PASSWORD')
 
   if (!key || !password) {
-    throw new Error('Brak zmiennych srodowiskowych SMSPLANET_KEY lub SMSPLANET_PASSWORD')
+    throw new Error('Brak zmiennych srodowiskowych SMS_PLANET_API_KEY lub SMS_PLANET_API_PASSWORD')
   }
 
   const body = new URLSearchParams({
     key,
     password,
-    from: 'Recyklat',
+    from: 'Recyklat.pl',
     to,
     msg: message,
   })

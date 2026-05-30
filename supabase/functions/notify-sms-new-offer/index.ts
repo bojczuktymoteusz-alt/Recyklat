@@ -27,11 +27,56 @@ const NEIGHBORS: Record<string, string[]> = {
   'podkarpackie':        ['malopolskie', 'swietokrzyskie', 'lubelskie'],
   'podlaskie':           ['warminsko-mazurskie', 'mazowieckie', 'lubelskie'],
   'pomorskie':           ['zachodniopomorskie', 'kujawsko-pomorskie', 'warminsko-mazurskie', 'wielkopolskie'],
-  'slaskie':             ['dolnoslaskie', 'opolskie', 'lodzkie', 'malopolskie'],
-  'swietokrzyskie':      ['lodzkie', 'mazowieckie', 'lubelskie', 'podkarpackie', 'malopolskie'],
+  'slaskie':             ['dolnoslaskie', 'opolskie', 'lodzkie', 'malopolskie', 'swietokrzyskie'],
+  'swietokrzyskie':      ['lodzkie', 'mazowieckie', 'lubelskie', 'podkarpackie', 'malopolskie', 'slaskie'],
   'warminsko-mazurskie': ['pomorskie', 'kujawsko-pomorskie', 'mazowieckie', 'podlaskie'],
   'wielkopolskie':       ['lubuskie', 'zachodniopomorskie', 'kujawsko-pomorskie', 'lodzkie', 'opolskie', 'dolnoslaskie'],
   'zachodniopomorskie':  ['lubuskie', 'wielkopolskie', 'kujawsko-pomorskie', 'pomorskie'],
+}
+
+// =============================================================================
+// DOZWOLONE GODZINY WYSYŁKI (pon–sob, 08:00–21:00 czasu warszawskiego)
+// =============================================================================
+
+function getWarsawTime(date: Date = new Date()): { hour: number; dayOfWeek: number } {
+  const fake = new Date(
+    date.toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' }).replace(' ', 'T') + 'Z'
+  )
+  return { hour: fake.getUTCHours(), dayOfWeek: fake.getUTCDay() }
+}
+
+function isAllowedTime(): boolean {
+  const { hour, dayOfWeek } = getWarsawTime()
+  return dayOfWeek !== 0 && hour >= 8 && hour < 21
+}
+
+function nextAllowedSendTime(): Date {
+  const now = new Date()
+  const { hour, dayOfWeek } = getWarsawTime(now)
+
+  // Ile dni do przodu: 0 jeśli przed 08:00 (tego samego dnia), inaczej jutro
+  let daysToAdd = hour < 8 ? 0 : 1
+
+  // Pomiń niedzielę
+  while ((dayOfWeek + daysToAdd) % 7 === 0) daysToAdd++
+
+  // Oblicz datę docelową w czasie warszawskim jako "fake UTC"
+  const fakeNow = new Date(
+    now.toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' }).replace(' ', 'T') + 'Z'
+  )
+  const fakeTarget = new Date(fakeNow.getTime() + daysToAdd * 86400000)
+  fakeTarget.setUTCHours(8, 0, 0, 0)
+
+  // Konwersja z czasu warszawskiego na prawdziwy UTC (metoda round-trip)
+  const y = fakeTarget.getUTCFullYear()
+  const m = String(fakeTarget.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(fakeTarget.getUTCDate()).padStart(2, '0')
+  const approxUTC = new Date(`${y}-${m}-${d}T08:00:00Z`)
+  const warsawCheck = new Date(
+    approxUTC.toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' }).replace(' ', 'T') + 'Z'
+  )
+  const offsetMs = approxUTC.getTime() - warsawCheck.getTime()
+  return new Date(approxUTC.getTime() + offsetMs)
 }
 
 // =============================================================================
@@ -69,12 +114,13 @@ function normalizeWoj(s: string): string {
     .trim()
 }
 
-function getReachableSet(offerWojewodztwaRaw: string): Set<string> | 'cala_polska' {
+function getReachableSet(offerWojewodztwaRaw: string): Set<string> {
   const parts = offerWojewodztwaRaw.split(',').map(w => w.trim()).filter(Boolean)
   const normalized = parts.map(normalizeWoj)
 
+  // Oferta ogólnopolska — powiadamiamy subskrybentów ze wszystkich konkretnych województw
   if (normalized.some(n => n.includes('cala polska') || n.includes('caly kraj'))) {
-    return 'cala_polska'
+    return new Set(Object.keys(NEIGHBORS))
   }
 
   const reachable = new Set<string>()
@@ -153,9 +199,8 @@ Deno.serve(async (req: Request) => {
     .eq('typ_subskrybenta', targetTypSubskrybenta)
     .eq('zgoda_sms', true)
 
-  if (reachable !== 'cala_polska') {
-    query = query.in('wojewodztwo', ['cala_polska', ...reachable])
-  }
+  // Tylko subskrybenci z konkretnym województwem (bez 'cala_polska', 'europa_zagranica')
+  query = query.in('wojewodztwo', [...reachable])
 
   const { data: subscribers, error } = await query
 
@@ -171,22 +216,35 @@ Deno.serve(async (req: Request) => {
     )
   }
 
-  const message =
-    `Nowy anons w Twojej kategorii na Recyklat.pl - zobacz: recyklat.pl/rynek/${offer.id}`
+  const message = `Nowy anons w Twojej kategorii - zobacz: recyklat.pl/rynek/${offer.id}`
+  const phones = (subscribers as SmsSubscription[]).map(s => s.phone)
 
-  const results = await Promise.allSettled(
-    (subscribers as SmsSubscription[]).map((sub) => sendSMS(sub.phone, message))
-  )
+  if (!isAllowedTime()) {
+    // Poza dozwolonymi godzinami — dodaj do kolejki
+    const scheduledFor = nextAllowedSendTime()
+    const queueRows = phones.map(phone => ({
+      phone,
+      message,
+      scheduled_for: scheduledFor.toISOString(),
+    }))
+    const { error: qErr } = await supabase.from('sms_queue').insert(queueRows)
+    if (qErr) console.error('Blad kolejki SMS:', qErr)
+    console.log(`Oferta ${offer.id} | zakolejkowano ${phones.length} SMS na ${scheduledFor.toISOString()}`)
+    return new Response(
+      JSON.stringify({ queued: phones.length, scheduled_for: scheduledFor }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // Dozwolone godziny — wyślij natychmiast
+  const results = await Promise.allSettled(phones.map(phone => sendSMS(phone, message)))
 
   const sent = results.filter((r) => r.status === 'fulfilled').length
   const failed = results.filter((r) => r.status === 'rejected').length
 
   results.forEach((r, i) => {
     if (r.status === 'rejected') {
-      console.error(
-        `SMS nie wyslany do ${(subscribers as SmsSubscription[])[i].phone}:`,
-        (r as PromiseRejectedResult).reason
-      )
+      console.error(`SMS nie wyslany do ${phones[i]}:`, (r as PromiseRejectedResult).reason)
     }
   })
 
