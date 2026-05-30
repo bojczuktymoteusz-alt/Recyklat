@@ -95,7 +95,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-3 mb-8 md:mb-16">
             <Link href="/dodaj" className="w-full sm:w-auto bg-slate-900 text-white px-6 pt-3 pb-2.5 sm:px-8 sm:pt-4 sm:pb-3 rounded-[24px] font-black text-base sm:text-xl uppercase tracking-tighter hover:bg-blue-600 transition-all shadow-2xl hover:-translate-y-1 text-center flex flex-col items-center gap-0.5">
               <span>DODAJ OGŁOSZENIE</span>
-              <span className="text-[10px] font-normal normal-case tracking-normal text-white leading-tight">Otrzymasz SMS z dopasowanymi ofertami</span>
+              <span className="text-[10px] font-normal normal-case tracking-normal text-white leading-tight">Możesz otrzymać SMS z dopasowanymi ofertami</span>
             </Link>
             <Link href="/rynek" className="w-full sm:w-auto bg-white border-2 border-slate-200 px-6 py-4 sm:px-8 sm:py-5 rounded-[24px] font-black text-base sm:text-xl uppercase tracking-tighter hover:border-slate-900 transition-all text-center">
               PRZEGLĄDAJ GIEŁDĘ
