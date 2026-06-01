@@ -32,9 +32,19 @@ export default function ZarzadzajOferta() {
     const [bladWeryfikacji, setBladWeryfikacji] = useState('');
     const [chceCO2, setChceCO2] = useState(false);
 
+    // Premium
+    const [emailPremium, setEmailPremium] = useState('');
+    const [wysylaniePremium, setWysylaniePremium] = useState(false);
+    const [premiumSuccess, setPremiumSuccess] = useState(false);
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             setBaseUrl(window.location.origin);
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('success') === '1') {
+                setPremiumSuccess(true);
+                window.history.replaceState({}, '', window.location.pathname);
+            }
         }
         if (token) pobierzOferte();
     }, [token]);
@@ -93,6 +103,27 @@ export default function ZarzadzajOferta() {
         const grupy = cyfry.match(/(\d{0,3})(\d{0,3})(\d{0,3})/);
         return !grupy ? '' : [grupy[1], grupy[2], grupy[3]].filter(Boolean).join(' ').trim();
     };
+
+    async function rozpocznijPlatnosc() {
+        setWysylaniePremium(true);
+        try {
+            const res = await fetch('/api/premium-checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, email: emailPremium || oferta.email }),
+            });
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                alert('Błąd przekierowania do płatności. Spróbuj ponownie.');
+                setWysylaniePremium(false);
+            }
+        } catch {
+            alert('Błąd sieci. Spróbuj ponownie.');
+            setWysylaniePremium(false);
+        }
+    }
 
     async function wyslijWeryfikacje(e: React.FormEvent) {
         e.preventDefault();
@@ -295,6 +326,67 @@ export default function ZarzadzajOferta() {
                             <Trash2 size={20} /> Usuń Ofertę Trwale
                         </button>
                     </div>
+                </div>
+
+                {/* WYRÓŻNIENIE PREMIUM */}
+                <div className="bg-amber-50 rounded-[32px] border-2 border-amber-200 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center shadow-md shadow-amber-200">
+                            <span className="text-white text-xl leading-none">⭐</span>
+                        </div>
+                        <h2 className="font-black text-slate-900 text-base tracking-tight uppercase">
+                            Wyróżnij ogłoszenie
+                        </h2>
+                    </div>
+
+                    {premiumSuccess && (
+                        <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-4">
+                            <CheckCircle size={20} className="text-emerald-500 shrink-0" />
+                            <div>
+                                <p className="font-black text-emerald-700 text-sm uppercase tracking-widest">Płatność zakończona!</p>
+                                <p className="text-slate-500 text-xs font-bold">Twoje ogłoszenie zostanie wyróżnione w ciągu chwili.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {oferta.is_premium && oferta.premium_do && new Date(oferta.premium_do) > new Date() ? (
+                        <div className="flex items-center gap-3 bg-white rounded-2xl border border-amber-200 p-4">
+                            <span className="text-2xl shrink-0">⭐</span>
+                            <div>
+                                <p className="font-black text-amber-700 text-sm uppercase tracking-widest">Aktywne Premium</p>
+                                <p className="text-slate-500 text-xs font-bold">
+                                    do {new Date(oferta.premium_do).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <p className="text-slate-600 text-sm font-medium leading-relaxed">
+                                Wyróżnione ogłoszenia pojawiają się <strong>zawsze na górze listy</strong> przez 30 dni.
+                            </p>
+                            {!oferta.email && (
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">
+                                        Email do potwierdzenia płatności
+                                    </label>
+                                    <input
+                                        type="email"
+                                        placeholder="np. firma@example.com"
+                                        value={emailPremium}
+                                        onChange={e => setEmailPremium(e.target.value)}
+                                        className="w-full p-4 bg-white border-2 border-amber-200 focus:border-amber-400 rounded-2xl outline-none font-bold text-slate-900 transition-colors"
+                                    />
+                                </div>
+                            )}
+                            <button
+                                onClick={rozpocznijPlatnosc}
+                                disabled={wysylaniePremium || (!oferta.email && !emailPremium)}
+                                className="w-full flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-500 disabled:opacity-50 text-white p-4 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 shadow-md shadow-amber-100 text-sm"
+                            >
+                                {wysylaniePremium ? 'Przekierowywanie...' : '⭐ Wyróżnij ogłoszenie na 30 dni — 19 zł'}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* STREFA WIARYGODNOŚCI */}

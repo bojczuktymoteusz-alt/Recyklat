@@ -24,6 +24,8 @@ interface Oferta {
     typ_oferty?: string;
     wyswietlenia?: number;
     supply_frequency?: string;
+    is_premium?: boolean;
+    premium_do?: string;
 }
 
 const SUPPLY_BADGE: Record<string, { label: string; color: string }> = {
@@ -199,7 +201,7 @@ function RynekInner() {
                 setLoading(true);
                 const { data, error } = await supabase
                     .from('oferty')
-                    .select('id, title, material, form, waga, cena, jednostka, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia, supply_frequency')
+                    .select('id, title, material, form, waga, cena, jednostka, lokalizacja, wojewodztwo, zdjecie_url, created_at, status, typ_oferty, wyswietlenia, supply_frequency, is_premium, premium_do')
                     .eq('status', 'aktywna')
                     .order('wyswietlenia', { ascending: false, nullsFirst: false })
                     .order('created_at',   { ascending: false });
@@ -280,7 +282,11 @@ function RynekInner() {
                 );
             }
         }
+        const now = new Date().toISOString();
         wynik.sort((a, b) => {
+            const aPremium = a.is_premium && a.premium_do && a.premium_do > now ? 1 : 0;
+            const bPremium = b.is_premium && b.premium_do && b.premium_do > now ? 1 : 0;
+            if (bPremium !== aPremium) return bPremium - aPremium;
             if (sortowanie === 'popularne') {
                 const diff = (b.wyswietlenia ?? 0) - (a.wyswietlenia ?? 0);
                 if (diff !== 0) return diff;
@@ -534,6 +540,11 @@ function RynekInner() {
                                                         <div className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${SUPPLY_BADGE[o.supply_frequency].color}`}>
                                                             <RefreshCw size={9} />
                                                             {SUPPLY_BADGE[o.supply_frequency].label}
+                                                        </div>
+                                                    )}
+                                                    {o.is_premium && o.premium_do && o.premium_do > new Date().toISOString() && (
+                                                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg bg-amber-400 text-white">
+                                                            ⭐ Premium
                                                         </div>
                                                     )}
                                                 </div>
