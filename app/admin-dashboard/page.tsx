@@ -81,7 +81,10 @@ export default function AdminDashboard() {
     useEffect(() => {
         const sesja = sessionStorage.getItem(SESSION_KEY);
         const pwd = sessionStorage.getItem(SESSION_KEY + '_pwd');
-        if (sesja === 'true' && pwd) { setZalogowany(true); setZapisaneHaslo(pwd); }
+        if (sesja === 'true' && pwd) {
+            setZalogowany(true); setZapisaneHaslo(pwd);
+            localStorage.setItem('recyklat_admin_device', '1');
+        }
     }, []);
 
     useEffect(() => {
