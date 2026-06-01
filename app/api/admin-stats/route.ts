@@ -92,15 +92,21 @@ export async function POST(req: NextRequest) {
             if (o.id) ofertaIdMap[o.id] = { material: o.material || '', title: o.title || '' };
         });
 
+        // DEBUG: sprawdz co zwraca topKlikniecia
+        if (topKlikniecia?.length) {
+            console.log('[topSurowce] sample:', topKlikniecia[0], '| ofertaIdMap keys sample:', Object.keys(ofertaIdMap).slice(0, 3));
+        } else {
+            console.log('[topSurowce] topKlikniecia puste lub null');
+        }
+
         const surowiecCount: Record<string, number> = {};
         (topKlikniecia || []).forEach((c: any) => {
             // Jesli jest filtr, liczymy tylko klikniecia dla tej oferty
             if (filterOfertaId && c.oferta_id !== filterOfertaId) return;
             const oferta = ofertaIdMap[c.oferta_id];
-            if (oferta) {
-                const kat = oferta.material || oferta.title || 'Inne';
-                surowiecCount[kat] = (surowiecCount[kat] || 0) + 1;
-            }
+            // Fallback: jesli oferta usunieta lub oferta_id=null, policz jako 'Inne'
+            const kat = oferta?.material || oferta?.title || (c.oferta_id ? `Oferta #${c.oferta_id}` : 'Inne');
+            surowiecCount[kat] = (surowiecCount[kat] || 0) + 1;
         });
         const topSurowce = Object.entries(surowiecCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
 

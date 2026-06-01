@@ -11,6 +11,10 @@ import { sendSMS } from './sms-provider.ts'
 //
 const TARGET_MATERIAL = 'Tworzywa twarde (PP, PE, HDPE)' // <-- TU WPISZ WŁAŚCIWĄ KATEGORIĘ
 
+// Zmienne łatwe do edycji w przyszłości
+const BASE_URL    = 'recyklat.pl'
+const SUPPORT_TEL = '667887562'
+
 // =============================================================================
 // MAPA SĄSIADÓW — 16 województw, klucze znormalizowane (bez polskich znaków)
 // =============================================================================
@@ -95,10 +99,12 @@ interface OfertaRecord {
   typ_oferty: 'sprzedam' | 'kupie'
   wojewodztwo: string
   status: string
+  sms_notifications_enabled?: boolean  // null/undefined = traktowane jako true
 }
 
 interface SmsSubscription {
   phone: string
+  offer_id: number | null
 }
 
 // =============================================================================
@@ -173,6 +179,13 @@ Deno.serve(async (req: Request) => {
     )
   }
 
+  if (offer.sms_notifications_enabled === false) {
+    return new Response(
+      JSON.stringify({ skipped: true, reason: 'sms_notifications_disabled' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
   const wojRaw = offer.wojewodztwo ?? ''
   if (normalizeWoj(wojRaw).includes('europa') || normalizeWoj(wojRaw).includes('zagranica')) {
     return new Response(
@@ -194,7 +207,7 @@ Deno.serve(async (req: Request) => {
 
   let query = supabase
     .from('sms_subscriptions')
-    .select('phone')
+    .select('phone, offer_id')
     .eq('material_name', TARGET_MATERIAL)
     .eq('typ_subskrybenta', targetTypSubskrybenta)
     .eq('zgoda_sms', true)
@@ -216,35 +229,42 @@ Deno.serve(async (req: Request) => {
     )
   }
 
-  const message = `Nowy anons w Twojej kategorii - zobacz: recyklat.pl/rynek/${offer.id}`
-  const phones = (subscribers as SmsSubscription[]).map(s => s.phone)
+  // Każdy subskrybent dostaje spersonalizowany link do edycji swojego ogłoszenia
+  const buildMessage = (sub: SmsSubscription) => {
+    const editLink = sub.offer_id
+      ? `${BASE_URL}/dodaj?edit=${sub.offer_id}`
+      : `${BASE_URL}/dodaj`
+    return `Nowe dopasowanie: ${BASE_URL}/rynek/${offer.id}. Pytania? tel: ${SUPPORT_TEL} Edytuj anons: ${editLink}`
+  }
+
+  const subs = subscribers as SmsSubscription[]
 
   if (!isAllowedTime()) {
     // Poza dozwolonymi godzinami — dodaj do kolejki
     const scheduledFor = nextAllowedSendTime()
-    const queueRows = phones.map(phone => ({
-      phone,
-      message,
+    const queueRows = subs.map(sub => ({
+      phone: sub.phone,
+      message: buildMessage(sub),
       scheduled_for: scheduledFor.toISOString(),
     }))
     const { error: qErr } = await supabase.from('sms_queue').insert(queueRows)
     if (qErr) console.error('Blad kolejki SMS:', qErr)
-    console.log(`Oferta ${offer.id} | zakolejkowano ${phones.length} SMS na ${scheduledFor.toISOString()}`)
+    console.log(`Oferta ${offer.id} | zakolejkowano ${subs.length} SMS na ${scheduledFor.toISOString()}`)
     return new Response(
-      JSON.stringify({ queued: phones.length, scheduled_for: scheduledFor }),
+      JSON.stringify({ queued: subs.length, scheduled_for: scheduledFor }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   }
 
   // Dozwolone godziny — wyślij natychmiast
-  const results = await Promise.allSettled(phones.map(phone => sendSMS(phone, message)))
+  const results = await Promise.allSettled(subs.map(sub => sendSMS(sub.phone, buildMessage(sub))))
 
   const sent = results.filter((r) => r.status === 'fulfilled').length
   const failed = results.filter((r) => r.status === 'rejected').length
 
   results.forEach((r, i) => {
     if (r.status === 'rejected') {
-      console.error(`SMS nie wyslany do ${phones[i]}:`, (r as PromiseRejectedResult).reason)
+      console.error(`SMS nie wyslany do ${subs[i].phone}:`, (r as PromiseRejectedResult).reason)
     }
   })
 

@@ -222,6 +222,7 @@ export default function ParametryDetailsPage() {
                                 wojewodztwo: n,
                                 typ_subskrybenta: step1Data.typ_oferty || 'sprzedam',
                                 zgoda_sms: true,
+                                offer_id: ofertaIdNumber,
                             };
                         })
                         .filter(Boolean);
