@@ -14,10 +14,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Brak podpisu Stripe' }, { status: 400 });
     }
 
+    const secret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!secret) {
+        console.error('STRIPE_WEBHOOK_SECRET is not set');
+        return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
+    }
+
     let event: Stripe.Event;
     try {
-        event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+        event = await stripe.webhooks.constructEventAsync(body, sig, secret);
     } catch (err: any) {
+        console.error('Webhook signature error:', err.message);
         return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
     }
 
