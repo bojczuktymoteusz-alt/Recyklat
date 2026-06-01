@@ -383,6 +383,7 @@ export default function SzczegolyOferty() {
     const toastTimerRef = useRef<number | null>(null);
 
     const logClick = (ofertaId: number) => {
+        if (localStorage.getItem('recyklat_admin_device') === '1') return;
         fetch('/api/log-click', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ofertaId, type: 'phone_click', userType: 'gosc' }),

@@ -115,6 +115,7 @@ export default function AdminDashboard() {
             setZalogowany(true); setZapisaneHaslo(haslo);
             sessionStorage.setItem(SESSION_KEY, 'true');
             sessionStorage.setItem(SESSION_KEY + '_pwd', haslo);
+            localStorage.setItem('recyklat_admin_device', '1');
         }
     };
 

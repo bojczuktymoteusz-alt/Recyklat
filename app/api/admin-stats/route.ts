@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
             { count: clicksGoscie },
             { count: clicksDzisiaj },
             { count: clicksWczoraj },
-            { data: topKlikniecia, error: topKlikError },
+            { data: topKlikniecia },
             // Jesli filtr — pobierz tytul oferty
             { data: ofertaInfo },
         ] = await Promise.all([
@@ -92,16 +92,7 @@ export async function POST(req: NextRequest) {
             if (o.id) ofertaIdMap[o.id] = { material: o.material || '', title: o.title || '' };
         });
 
-        // DEBUG: sprawdz co zwraca topKlikniecia
-        if (topKlikError) {
-            console.log('[topSurowce] BLAD ZAPYTANIA:', topKlikError.message, '| code:', topKlikError.code);
-        } else if (topKlikniecia?.length) {
-            console.log('[topSurowce] sample:', topKlikniecia[0], '| ofertaIdMap keys sample:', Object.keys(ofertaIdMap).slice(0, 3));
-        } else {
-            console.log('[topSurowce] pusta tablica — brak wierszy (RLS?)');
-        }
-
-        const surowiecCount: Record<string, number> = {};
+const surowiecCount: Record<string, number> = {};
         (topKlikniecia || []).forEach((c: any) => {
             // Jesli jest filtr, liczymy tylko klikniecia dla tej oferty
             if (filterOfertaId && c.oferta_id !== filterOfertaId) return;
