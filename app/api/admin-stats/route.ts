@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
             { count: clicksGoscie },
             { count: clicksDzisiaj },
             { count: clicksWczoraj },
-            { data: topKlikniecia },
+            { data: topKlikniecia, error: topKlikError },
             // Jesli filtr — pobierz tytul oferty
             { data: ofertaInfo },
         ] = await Promise.all([
@@ -93,10 +93,12 @@ export async function POST(req: NextRequest) {
         });
 
         // DEBUG: sprawdz co zwraca topKlikniecia
-        if (topKlikniecia?.length) {
+        if (topKlikError) {
+            console.log('[topSurowce] BLAD ZAPYTANIA:', topKlikError.message, '| code:', topKlikError.code);
+        } else if (topKlikniecia?.length) {
             console.log('[topSurowce] sample:', topKlikniecia[0], '| ofertaIdMap keys sample:', Object.keys(ofertaIdMap).slice(0, 3));
         } else {
-            console.log('[topSurowce] topKlikniecia puste lub null');
+            console.log('[topSurowce] pusta tablica — brak wierszy (RLS?)');
         }
 
         const surowiecCount: Record<string, number> = {};
