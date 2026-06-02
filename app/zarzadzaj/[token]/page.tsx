@@ -329,7 +329,7 @@ export default function ZarzadzajOferta() {
                 </div>
 
                 {/* WYRÓŻNIENIE PREMIUM */}
-                <div className="bg-amber-50 rounded-[32px] border-2 border-amber-200 p-6">
+                <div className="bg-amber-100 rounded-[32px] border-2 border-amber-300 p-6">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center shadow-md shadow-amber-200">
                             <span className="text-white text-xl leading-none">⭐</span>
