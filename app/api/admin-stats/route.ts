@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     const przed30Dniami = new Date(teraz); przed30Dniami.setDate(teraz.getDate() - 30);
     const dzisiajStart = new Date(teraz); dzisiajStart.setHours(0, 0, 0, 0);
     const wczorajStart = new Date(dzisiajStart); wczorajStart.setDate(dzisiajStart.getDate() - 1);
+    const poczatekMiesiaca = new Date(teraz.getFullYear(), teraz.getMonth(), 1);
 
     // Opcjonalny filtr po konkretnym ID ogloszenia
     const filterOfertaId = ofertaIdFilter ? Number(ofertaIdFilter) : null;
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
             { count: clicksGoscie },
             { count: clicksDzisiaj },
             { count: clicksWczoraj },
+            { count: clicksMiesiac },
             { data: topKlikniecia },
             // Jesli filtr — pobierz tytul oferty
             { data: ofertaInfo },
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
             buildClickQuery(supabase.from('phone_clicks').select('*', { count: 'exact', head: true }).eq('user_type', 'gosc')),
             buildClickQuery(supabase.from('phone_clicks').select('*', { count: 'exact', head: true }).gte('clicked_at', dzisiajStart.toISOString())),
             buildClickQuery(supabase.from('phone_clicks').select('*', { count: 'exact', head: true }).gte('clicked_at', wczorajStart.toISOString()).lt('clicked_at', dzisiajStart.toISOString())),
+            buildClickQuery(supabase.from('phone_clicks').select('*', { count: 'exact', head: true }).gte('clicked_at', poczatekMiesiaca.toISOString())),
             supabase.from('phone_clicks').select('oferta_id').limit(1000),
             filterOfertaId
                 ? supabase.from('oferty').select('id, title, material').eq('id', filterOfertaId).single()
@@ -143,6 +146,7 @@ const surowiecCount: Record<string, number> = {};
                 goscie: clicksGoscie ?? 0,
                 dzisiaj: clicksDzisiaj ?? 0,
                 wczoraj: clicksWczoraj ?? 0,
+                miesiac: clicksMiesiac ?? 0,
                 ctr,
             },
             magicBox: { uzyte: uzyteMagicBox, procent: wszystkie ? Math.round((uzyteMagicBox / wszystkie) * 100) : 0, oszczednoscGodzin, oszczednoscMinut },

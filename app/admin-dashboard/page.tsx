@@ -16,7 +16,7 @@ interface Stats {
     ruch: { wyswietleniaWszystkie: number; wyswietleniaOstatnie30dni: number; };
     klikniecia: {
         wszystkie: number; firmy: number; goscie: number;
-        dzisiaj: number; wczoraj: number; ctr: number;
+        dzisiaj: number; wczoraj: number; miesiac: number; ctr: number;
     };
     magicBox: { uzyte: number; procent: number; oszczednoscGodzin: number; oszczednoscMinut: number; };
     topWojewodztwa: [string, number][];
@@ -374,9 +374,16 @@ export default function AdminDashboard() {
                                     <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 print:text-slate-400">
                                         <Phone size={10} /> Zainteresowanie Telefonem
                                     </p>
-                                    <p className="text-emerald-400 text-5xl font-black tracking-tighter print:text-slate-900">
-                                        {stats.klikniecia.wszystkie}
-                                    </p>
+                                    <div className="flex items-end gap-3">
+                                        <p className="text-emerald-400 text-5xl font-black tracking-tighter print:text-slate-900">
+                                            {stats.klikniecia.wszystkie}
+                                        </p>
+                                        {stats.klikniecia.miesiac > 0 && (
+                                            <span className="mb-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-900/50 border border-emerald-700 text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+                                                +{stats.klikniecia.miesiac} ten miesiąc
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="mt-3 flex items-center gap-6">
                                         <div>
                                             <p className="text-slate-400 text-[9px] uppercase font-black">Firmy (zalogowani)</p>
