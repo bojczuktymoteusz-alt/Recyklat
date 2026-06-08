@@ -137,6 +137,235 @@ function KalkulatorTransportu({ oferta }: { oferta: any }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PANEL CO2 / TRANSPORT (SLIDE-IN) — tylko dla ofert sprzedaży
+// ─────────────────────────────────────────────────────────────────────────────
+const CO2_WSPOLCZYNNIK = 0.062; // kg CO₂e / t·km — standard GHG Protocol
+
+function PanelCO2({ oferta, onClose }: { oferta: any; onClose: () => void }) {
+    const [miasto, setMiasto] = useState('');
+    const [dystans, setDystans] = useState<number | null>(null);
+    const [ladowanie, setLadowanie] = useState(false);
+    const [pokazReczny, setPokazReczny] = useState(false);
+    const [dystansReczny, setDystansReczny] = useState('');
+    const [obliczone, setObliczone] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const cenaPaliwa = parseFloat(process.env.NEXT_PUBLIC_CENA_ON || '') || CENA_ON_DOMYSLNA;
+    const wagaTon = oferta.waga > 0 ? oferta.waga : null;
+    const lokalizacjaTowaru = [oferta.lokalizacja, oferta.wojewodztwo].filter(Boolean).join(', ');
+
+    const kosztPaliwa = dystans !== null ? obliczKosztPaliwa(dystans, cenaPaliwa) : null;
+    // CO2 z wagą jeśli dostępna, wskaźnik na tonę jeśli nie ma
+    const co2Total = dystans !== null && wagaTon !== null
+        ? Math.round(dystans * wagaTon * CO2_WSPOLCZYNNIK * 10) / 10
+        : null;
+    const co2NaTone = dystans !== null
+        ? Math.round(dystans * CO2_WSPOLCZYNNIK * 10) / 10
+        : null;
+
+    useEffect(() => {
+        // Focus na polu po otwarciu panelu
+        setTimeout(() => inputRef.current?.focus(), 300);
+    }, []);
+
+    const handleOblicz = async () => {
+        if (!miasto.trim()) return;
+        setLadowanie(true); setDystans(null); setPokazReczny(false); setObliczone(false);
+        try {
+            const res = await fetch(`/api/distance?from=${encodeURIComponent(miasto)}&to=${encodeURIComponent(lokalizacjaTowaru)}`);
+            if (res.ok) { const d = await res.json(); setDystans(d.dystansKm); setObliczone(true); }
+            else setPokazReczny(true);
+        } catch { setPokazReczny(true); }
+        setLadowanie(false);
+    };
+
+    const zatwierdReczny = () => {
+        const km = parseFloat(dystansReczny);
+        if (!isNaN(km) && km > 0) { setDystans(km); setObliczone(true); setPokazReczny(false); }
+    };
+
+    const handleDrukuj = () => window.print();
+
+    return (
+        <>
+            {/* OVERLAY */}
+            <div
+                className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 print:hidden"
+                onClick={onClose}
+            />
+
+            {/* PANEL */}
+            <div className="fixed right-0 top-0 bottom-0 w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col print:static print:shadow-none print:max-w-full">
+
+                {/* NAGŁÓWEK */}
+                <div className="bg-gradient-to-br from-slate-900 to-blue-900 px-6 py-5 flex items-start justify-between shrink-0">
+                    <div>
+                        <p className="text-blue-300 text-[10px] font-black uppercase tracking-widest mb-1">Kalkulator CO₂ & Transport</p>
+                        <h2 className="text-white font-black text-lg leading-tight">
+                            Ile kosztuje<br />ten transport?
+                        </h2>
+                        <p className="text-slate-400 text-[11px] font-bold mt-2 leading-relaxed">
+                            Kontrahenci wymagają danych o śladzie węglowym.<br />
+                            Ty potrzebujesz znać koszt transportu.
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors ml-3 mt-0.5 print:hidden">
+                        <X size={20} strokeWidth={2.5} />
+                    </button>
+                </div>
+
+                {/* CIAŁO */}
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+                    {/* SKĄD — info o towarze */}
+                    <div className="bg-slate-50 rounded-2xl px-4 py-3 flex items-center gap-2">
+                        <MapPin size={14} className="text-blue-500 shrink-0" />
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Towar jest w</p>
+                            <p className="font-black text-slate-900 text-sm">{lokalizacjaTowaru || 'Lokalizacja nieznana'}</p>
+                        </div>
+                    </div>
+
+                    {/* DOKĄD — pole z placeholderem */}
+                    <div>
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Twoje miasto docelowe</label>
+                        <div className="flex gap-2">
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                placeholder="np. Warszawa, Kraków..."
+                                value={miasto}
+                                onChange={e => setMiasto(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleOblicz()}
+                                className="flex-1 p-4 bg-slate-50 border-2 border-slate-200 focus:border-blue-400 rounded-2xl outline-none font-bold text-slate-900 text-sm placeholder:text-slate-300 placeholder:font-medium"
+                            />
+                            <button
+                                onClick={handleOblicz}
+                                disabled={!miasto.trim() || ladowanie}
+                                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white px-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5"
+                            >
+                                <Calculator size={14} />
+                                <span>Oblicz</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* RĘCZNY DYSTANS */}
+                    {pokazReczny && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                            <p className="text-amber-700 text-xs font-bold mb-2">Nie udało się pobrać dystansu automatycznie. Podaj ręcznie:</p>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number" placeholder="np. 320"
+                                    value={dystansReczny}
+                                    onChange={e => setDystansReczny(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && zatwierdReczny()}
+                                    className="flex-1 p-3 bg-white border-2 border-amber-200 focus:border-amber-400 rounded-xl outline-none font-bold text-slate-900 text-sm"
+                                />
+                                <button onClick={zatwierdReczny} className="bg-amber-500 hover:bg-amber-600 text-white px-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all">
+                                    km
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {ladowanie && (
+                        <div className="text-center py-6 text-slate-400 text-sm font-bold animate-pulse">Obliczam dystans...</div>
+                    )}
+
+                    {/* WYNIKI */}
+                    {obliczone && dystans !== null && (
+                        <div className="space-y-3">
+
+                            {/* KOSZT PALIWA */}
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                    <Fuel size={10} /> Szacunkowy koszt paliwa
+                                </p>
+                                <p className="text-3xl font-black text-emerald-700 tracking-tighter">
+                                    {kosztPaliwa?.toLocaleString('pl-PL')} zł
+                                </p>
+                                <p className="text-emerald-600 text-[11px] font-bold mt-1">
+                                    ~{Math.round(dystans)} km · {SPALANIE} l/100km · {cenaPaliwa} zł/l
+                                </p>
+                            </div>
+
+                            {/* CO2 */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
+                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                    🌿 Ślad węglowy transportu
+                                </p>
+                                {wagaTon !== null ? (
+                                    <>
+                                        <p className="text-3xl font-black text-blue-700 tracking-tighter">
+                                            {co2Total} kg CO₂e
+                                        </p>
+                                        <p className="text-blue-600 text-[11px] font-bold mt-1">
+                                            {dystans} km × {wagaTon} t × {CO2_WSPOLCZYNNIK} kg CO₂e/t·km
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-3xl font-black text-blue-700 tracking-tighter">
+                                            {co2NaTone} kg CO₂e / t
+                                        </p>
+                                        <p className="text-blue-600 text-[11px] font-bold mt-1">
+                                            Wskaźnik emisyjności logistyki · brak wagi w ogłoszeniu
+                                        </p>
+                                        <p className="text-blue-500 text-[10px] font-bold mt-1">
+                                            {dystans} km × 1 t × {CO2_WSPOLCZYNNIK} kg CO₂e/t·km
+                                        </p>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* NOTA METODYCZNA */}
+                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">📋 Nota metodyczna</p>
+                                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
+                                    Koszt paliwa: spalanie TIR {SPALANIE} l/100km · cena ON {cenaPaliwa} zł/l · tylko paliwo (bez kierowcy i opłat drogowych).<br />
+                                    Emisja CO₂: współczynnik {CO2_WSPOLCZYNNIK} kg CO₂e/t·km zgodnie z GHG Protocol (Scope 3, Category 4 — upstream transportation). Wartość szacunkowa dla transportu drogowego TIR EURO 6. Dystans: trasa drogowa.
+                                </p>
+                            </div>
+
+                            {/* PRZYCISK DRUKUJ */}
+                            <button
+                                onClick={handleDrukuj}
+                                className="w-full border-2 border-slate-200 hover:border-blue-400 text-slate-600 hover:text-blue-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 print:hidden"
+                            >
+                                <FileText size={14} /> Generuj raport PDF
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* STOPKA */}
+                <div className="px-6 py-4 border-t border-slate-100 shrink-0 print:hidden">
+                    <p className="text-[10px] text-slate-400 font-bold text-center">
+                        Wartości szacunkowe · GHG Protocol Scope 3 · Recyklat.pl
+                    </p>
+                </div>
+            </div>
+
+            {/* STYLE DLA DRUKU */}
+            <style>{`
+                @media print {
+                    body > *:not(.print-panel) { display: none !important; }
+                    .fixed.right-0 {
+                        position: static !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        box-shadow: none !important;
+                        border: 1px solid #e2e8f0;
+                    }
+                    .print\\:hidden { display: none !important; }
+                }
+            `}</style>
+        </>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GEOLOKALIZACJA + ODLEGŁOŚĆ PO LINII PROSTEJ
 // ─────────────────────────────────────────────────────────────────────────────
 const COORDS: Record<string, [number, number]> = {

@@ -1,12 +1,15 @@
 'use client';
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2 } from 'lucide-react';
+import Link from 'next/link';
+import { CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function UdaloSie() {
     const router = useRouter();
     const [countdown, setCountdown] = useState(3);
     const tokenRef = useRef('');
+    const [typOferty, setTypOferty] = useState('sprzedam');
+    const [noweId, setNoweId] = useState('');
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -14,6 +17,10 @@ export default function UdaloSie() {
         // Pobierz token i zapisz w ref (nie w state)
         const savedToken = localStorage.getItem('ostatni_token') || '';
         tokenRef.current = savedToken;
+
+        // Pobierz typ i ID nowego ogłoszenia
+        setTypOferty(localStorage.getItem('ostatni_typ_oferty') || 'sprzedam');
+        setNoweId(localStorage.getItem('ostatnie_id') || '');
 
         // Posprzątaj magic_slug
         localStorage.removeItem('magic_slug');
@@ -73,6 +80,17 @@ export default function UdaloSie() {
                         Znajdziesz tam link do oferty i opcje zarządzania
                     </p>
                 </div>
+
+                {/* PRZYCISK: Zobacz na giełdzie */}
+                {noweId && (
+                    <Link
+                        href={`/rynek?typ=${typOferty}&highlight=${noweId}`}
+                        className="mt-6 w-full flex items-center justify-between bg-white border-2 border-slate-200 hover:border-blue-500 text-slate-700 hover:text-blue-600 p-5 rounded-[24px] font-black uppercase tracking-tight transition-all group"
+                    >
+                        <span className="text-sm">Zobacz swoje ogłoszenie na giełdzie</span>
+                        <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                )}
 
             </div>
         </div>

@@ -87,9 +87,11 @@ export default function Home() {
             Zmień odpady <br />
             <span className="text-blue-600">w kapitał</span>
           </h1>
-          <p className="text-sm md:text-xl text-slate-500 font-medium max-w-xl mb-6 md:mb-12 leading-normal md:leading-relaxed">
-  {"Najszybsza giełda surowców wtórnych. W\u00A0100% polska platforma. Kupuj, sprzedawaj i\u00A0zgłaszaj zapotrzebowanie w\u00A030\u00A0sekund."}
-</p>
+          <div className="flex flex-col text-sm md:text-xl text-slate-500 font-medium max-w-xl mb-6 md:mb-12 leading-normal md:leading-relaxed">
+  <span className="block">Najszybsza giełda recyklatów, surowców wtórnych</span>
+  <span className="block">i zapotrzebowań zakupowych. 100% polska platforma.</span>
+  <span className="block mt-2">Kupuj, sprzedawaj i dodawaj ogłoszenia w 30 sekund.</span>
+</div>
           
 
           <div className="flex flex-col sm:flex-row gap-3 mb-8 md:mb-16">

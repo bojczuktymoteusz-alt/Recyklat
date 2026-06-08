@@ -198,6 +198,8 @@ export default function ParametryDetailsPage() {
                         localStorage.setItem('oferty_tokeny', JSON.stringify(tokenMap));
                     } catch { }
                     localStorage.setItem("ostatni_token", ofertaToken);
+                    localStorage.setItem("ostatni_typ_oferty", step1Data.typ_oferty || 'sprzedam');
+                    localStorage.setItem("ostatnie_id", String(ofertaIdNumber));
                 }
 
                 // Subskrypcja SMS — działa dla nowych ofert i edycji
