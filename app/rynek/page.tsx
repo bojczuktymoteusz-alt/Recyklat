@@ -345,9 +345,10 @@ function RynekInner() {
                             </div>
                         </div>
                     )}
-                    <h1 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight">
-                        Rynek Odpadów <span className="text-blue-500">Recyklingowych</span>
-                    </h1>
+                <h1 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight text-center max-w-4xl mx-auto w-full leading-tight">
+  <span className="block">Rynek Recyklatów</span>
+  <span className="block text-blue-500">i Surowców Wtórnych</span>
+</h1>
                     <div className="flex justify-center mb-8">
                         <div className="bg-slate-800 p-1 rounded-2xl flex gap-2">
                             {(['sprzedam', 'kupie'] as const).map(t => (
