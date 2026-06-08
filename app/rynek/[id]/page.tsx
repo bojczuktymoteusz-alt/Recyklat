@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import {
     ArrowLeft, MapPin, Phone, Info, Truck, Building2,
     Clock, Mail, CheckCircle, FileText, Eye, ExternalLink,
-    ChevronRight, ChevronDown, Fuel, Calculator, Send, Globe, Navigation
+    ChevronRight, ChevronDown, Fuel, Calculator, Send, Globe, Navigation, X
 } from 'lucide-react';
 import Link from 'next/link';
 import { wyglądaJakUrl, fixUrl, urlDoWyswietlenia, formatCena } from '@/lib/ofertaUtils';
