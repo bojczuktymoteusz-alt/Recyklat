@@ -81,15 +81,15 @@ export default function Home() {
       <section className="relative pt-6 md:pt-16 pb-20 overflow-hidden border-b border-slate-50">
         <div className="max-w-5xl mx-auto px-6 relative z-10">
           <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 md:mb-8">
-            <TrendingUp size={14} /> OBIEG B2B  <span className="mx-1.5 opacity-50">•</span>  RAPORTY CO2   <span className="mx-1.5 opacity-50">•</span>  CERTYFIKATY
+            <TrendingUp size={14} /> OBIEG B2B •  RAPORTY CO2   •  CERTYFIKATY
           </div>
           <h1 className="text-4xl md:text-6xl xl:text-8xl font-black tracking-tighter uppercase leading-tight md:leading-[0.9] mb-6 md:mb-8">
             Zmień odpady <br />
             <span className="text-blue-600">w kapitał</span>
           </h1>
-          <div className="flex flex-col text-sm md:text-xl text-slate-500 font-medium max-w-xl mb-6 md:mb-12 leading-normal md:leading-relaxed">
-  <span className="block">Najszybsza giełda recyklatów, surowców wtórnych.</span>
-  <span className="block">100% polska platforma.</span>
+          <div className="text-sm md:text-xl text-slate-500 font-medium max-w-xl mb-6 md:mb-12 leading-normal md:leading-relaxed">
+  <span className="inline md:block">Najszybsza giełda recyklatów, surowców wtórnych. </span>
+  <span className="inline md:block">100% polska platforma.</span>
   <span className="block mt-2">Kupuj, sprzedawaj i dodawaj ogłoszenia w 30 sekund.</span>
 </div>
           
