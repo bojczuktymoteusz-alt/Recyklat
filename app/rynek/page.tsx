@@ -37,8 +37,8 @@ const SUPPLY_BADGE: Record<string, { label: string; color: string }> = {
 const KATEGORIE = [
     { nazwa: "Wszystko",   ikona: "🌐" },
     { nazwa: "Folia",      ikona: "🧻" },
-    { nazwa: "Tworzywa",   ikona: "♻️" }, // Wracamy do profesjonalnej nazwy
-    { nazwa: "Karton",     ikona: "📦" }, // Zostawiamy Karton (oszczędność miejsca)
+    { nazwa: "Tworzywa",   ikona: "♻️" },
+    { nazwa: "Karton",     ikona: "📦" },
     { nazwa: "Złom",       ikona: "🔩" },
     { nazwa: "Drewno",     ikona: "/drewno.png" },
     { nazwa: "Inne",       ikona: "❓" }
@@ -95,35 +95,26 @@ function PlaceholderSVG({ typ }: { typ?: string }) {
             className="w-full h-full"
             aria-hidden="true"
         >
-            {/* Tło */}
             <rect width="400" height="300" fill={bg} />
-            {/* Siatka dekoracyjna */}
             {[0,1,2,3,4].map(i => (
                 <line key={`h${i}`} x1="0" y1={i * 60} x2="400" y2={i * 60} stroke={accent} strokeOpacity="0.08" strokeWidth="1"/>
             ))}
             {[0,1,2,3,4,5,6].map(i => (
                 <line key={`v${i}`} x1={i * 70} y1="0" x2={i * 70} y2="300" stroke={accent} strokeOpacity="0.08" strokeWidth="1"/>
             ))}
-            {/* Kółko tła ikony */}
             <circle cx="200" cy="130" r="60" fill={accent} fillOpacity="0.12" />
             <circle cx="200" cy="130" r="45" fill={accent} fillOpacity="0.15" />
-
-            {/* Ikona — strzałka w górę dla OFERTA, lupa dla SZUKAM */}
             {isKupie ? (
-                /* Lupa */
                 <g stroke={accent} strokeWidth="8" strokeLinecap="round" fill="none">
                     <circle cx="193" cy="122" r="24" />
                     <line x1="210" y1="140" x2="226" y2="156" />
                 </g>
             ) : (
-                /* Strzałka w górę */
                 <g stroke={accent} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none">
                     <line x1="200" y1="158" x2="200" y2="102" />
                     <polyline points="178,124 200,102 222,124" />
                 </g>
             )}
-
-            {/* Etykieta */}
             <rect x="140" y="200" width="120" height="32" rx="16" fill={accent} fillOpacity="0.18" />
             <text
                 x="200" y="221"
@@ -136,8 +127,6 @@ function PlaceholderSVG({ typ }: { typ?: string }) {
             >
                 {label}
             </text>
-
-            {/* Znak recyklingu w rogu */}
             <text x="370" y="280" textAnchor="end" fontSize="28" opacity="0.15" fill={accent}>♻</text>
         </svg>
     );
@@ -308,6 +297,13 @@ function RynekInner() {
         if (!zaznaczone) setDropdownOpen(false);
     };
 
+    // Zapisz bieżący URL rynku przed wejściem w szczegóły ogłoszenia
+    const handleKlikniecieOferty = (id: number) => {
+        const currentUrl = window.location.pathname + window.location.search;
+        sessionStorage.setItem('rynek_powrot_url', currentUrl);
+        router.push(`/rynek/${id}`);
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-20">
 
@@ -345,10 +341,10 @@ function RynekInner() {
                             </div>
                         </div>
                     )}
-                <h1 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight text-center max-w-4xl mx-auto w-full leading-tight">
-  <span className="block">Rynek Recyklatów</span>
-  <span className="block text-blue-500">i Surowców Wtórnych</span>
-</h1>
+                    <h1 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight text-center max-w-4xl mx-auto w-full leading-tight">
+                        <span className="block">Rynek Recyklatów</span>
+                        <span className="block text-blue-500">i Surowców Wtórnych</span>
+                    </h1>
                     <div className="flex justify-center mb-8">
                         <div className="bg-slate-800 p-1 rounded-2xl flex gap-2">
                             {(['sprzedam', 'kupie'] as const).map(t => (
@@ -490,9 +486,11 @@ function RynekInner() {
                                 const cenaStr      = formatCenaZDatata(o.cena, o.jednostka, o.created_at);
 
                                 return (
-                                    <Link href={`/rynek/${o.id}`} key={o.id}
-                                        className="group bg-white rounded-[32px] ring-1 ring-slate-100 shadow-sm hover:shadow-2xl hover:ring-blue-100 transition-all duration-300 flex flex-col overflow-hidden isolate active:scale-[0.98]">
-
+                                    <div
+                                        key={o.id}
+                                        onClick={() => handleKlikniecieOferty(o.id)}
+                                        className="group bg-white rounded-[32px] ring-1 ring-slate-100 shadow-sm hover:shadow-2xl hover:ring-blue-100 transition-all duration-300 flex flex-col overflow-hidden isolate active:scale-[0.98] cursor-pointer"
+                                    >
                                         {/* ZDJĘCIE / PLACEHOLDER SVG */}
                                         <div className="aspect-[4/3] relative overflow-hidden bg-slate-50 isolate">
                                             {o.zdjecie_url ? (
@@ -501,7 +499,6 @@ function RynekInner() {
                                                     alt={displayTitle}
                                                     loading="lazy"
                                                     onError={e => {
-                                                        // przy błędzie — ukryj img i pokaż SVG
                                                         (e.currentTarget as HTMLImageElement).style.display = 'none';
                                                         const next = e.currentTarget.nextElementSibling as HTMLElement;
                                                         if (next) next.style.display = 'block';
@@ -509,7 +506,6 @@ function RynekInner() {
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                                                 />
                                             ) : null}
-                                            {/* SVG placeholder — widoczny gdy brak zdjęcia lub błąd ładowania */}
                                             <div
                                                 className="w-full h-full"
                                                 style={{ display: o.zdjecie_url ? 'none' : 'block' }}
@@ -580,7 +576,7 @@ function RynekInner() {
                                                 </div>
                                             </div>
                                         </div>
-                                    </Link>
+                                    </div>
                                 );
                             })}
                         </div>

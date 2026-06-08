@@ -155,7 +155,6 @@ function PanelCO2({ oferta, onClose }: { oferta: any; onClose: () => void }) {
     const lokalizacjaTowaru = [oferta.lokalizacja, oferta.wojewodztwo].filter(Boolean).join(', ');
 
     const kosztPaliwa = dystans !== null ? obliczKosztPaliwa(dystans, cenaPaliwa) : null;
-    // CO2 z wagą jeśli dostępna, wskaźnik na tonę jeśli nie ma
     const co2Total = dystans !== null && wagaTon !== null
         ? Math.round(dystans * wagaTon * CO2_WSPOLCZYNNIK * 10) / 10
         : null;
@@ -164,7 +163,6 @@ function PanelCO2({ oferta, onClose }: { oferta: any; onClose: () => void }) {
         : null;
 
     useEffect(() => {
-        // Focus na polu po otwarciu panelu
         setTimeout(() => inputRef.current?.focus(), 300);
     }, []);
 
@@ -188,36 +186,21 @@ function PanelCO2({ oferta, onClose }: { oferta: any; onClose: () => void }) {
 
     return (
         <>
-            {/* OVERLAY */}
-            <div
-                className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 print:hidden"
-                onClick={onClose}
-            />
-
-            {/* PANEL */}
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 print:hidden" onClick={onClose} />
             <div className="fixed right-0 top-0 bottom-0 w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col print:static print:shadow-none print:max-w-full">
-
-                {/* NAGŁÓWEK */}
                 <div className="bg-gradient-to-br from-slate-900 to-blue-900 px-6 py-5 flex items-start justify-between shrink-0">
                     <div>
                         <p className="text-blue-300 text-[10px] font-black uppercase tracking-widest mb-1">Kalkulator CO₂ & Transport</p>
-                        <h2 className="text-white font-black text-lg leading-tight">
-                            Ile kosztuje<br />ten transport?
-                        </h2>
+                        <h2 className="text-white font-black text-lg leading-tight">Ile kosztuje<br />ten transport?</h2>
                         <p className="text-slate-400 text-[11px] font-bold mt-2 leading-relaxed">
-                            Kontrahenci wymagają danych o śladzie węglowym.<br />
-                            Ty potrzebujesz znać koszt transportu.
+                            Kontrahenci wymagają danych o śladzie węglowym.<br />Ty potrzebujesz znać koszt transportu.
                         </p>
                     </div>
                     <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors ml-3 mt-0.5 print:hidden">
                         <X size={20} strokeWidth={2.5} />
                     </button>
                 </div>
-
-                {/* CIAŁO */}
                 <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-
-                    {/* SKĄD — info o towarze */}
                     <div className="bg-slate-50 rounded-2xl px-4 py-3 flex items-center gap-2">
                         <MapPin size={14} className="text-blue-500 shrink-0" />
                         <div>
@@ -225,101 +208,56 @@ function PanelCO2({ oferta, onClose }: { oferta: any; onClose: () => void }) {
                             <p className="font-black text-slate-900 text-sm">{lokalizacjaTowaru || 'Lokalizacja nieznana'}</p>
                         </div>
                     </div>
-
-                    {/* DOKĄD — pole z placeholderem */}
                     <div>
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Twoje miasto docelowe</label>
                         <div className="flex gap-2">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                placeholder="np. Warszawa, Kraków..."
-                                value={miasto}
-                                onChange={e => setMiasto(e.target.value)}
+                            <input ref={inputRef} type="text" placeholder="np. Warszawa, Kraków..."
+                                value={miasto} onChange={e => setMiasto(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleOblicz()}
-                                className="flex-1 p-4 bg-slate-50 border-2 border-slate-200 focus:border-blue-400 rounded-2xl outline-none font-bold text-slate-900 text-sm placeholder:text-slate-300 placeholder:font-medium"
-                            />
-                            <button
-                                onClick={handleOblicz}
-                                disabled={!miasto.trim() || ladowanie}
-                                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white px-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5"
-                            >
-                                <Calculator size={14} />
-                                <span>Oblicz</span>
+                                className="flex-1 p-4 bg-slate-50 border-2 border-slate-200 focus:border-blue-400 rounded-2xl outline-none font-bold text-slate-900 text-sm placeholder:text-slate-300 placeholder:font-medium" />
+                            <button onClick={handleOblicz} disabled={!miasto.trim() || ladowanie}
+                                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white px-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5">
+                                <Calculator size={14} /><span>Oblicz</span>
                             </button>
                         </div>
                     </div>
-
-                    {/* RĘCZNY DYSTANS */}
                     {pokazReczny && (
                         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
                             <p className="text-amber-700 text-xs font-bold mb-2">Nie udało się pobrać dystansu automatycznie. Podaj ręcznie:</p>
                             <div className="flex gap-2">
-                                <input
-                                    type="number" placeholder="np. 320"
-                                    value={dystansReczny}
+                                <input type="number" placeholder="np. 320" value={dystansReczny}
                                     onChange={e => setDystansReczny(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && zatwierdReczny()}
-                                    className="flex-1 p-3 bg-white border-2 border-amber-200 focus:border-amber-400 rounded-xl outline-none font-bold text-slate-900 text-sm"
-                                />
-                                <button onClick={zatwierdReczny} className="bg-amber-500 hover:bg-amber-600 text-white px-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all">
-                                    km
-                                </button>
+                                    className="flex-1 p-3 bg-white border-2 border-amber-200 focus:border-amber-400 rounded-xl outline-none font-bold text-slate-900 text-sm" />
+                                <button onClick={zatwierdReczny} className="bg-amber-500 hover:bg-amber-600 text-white px-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all">km</button>
                             </div>
                         </div>
                     )}
-
-                    {ladowanie && (
-                        <div className="text-center py-6 text-slate-400 text-sm font-bold animate-pulse">Obliczam dystans...</div>
-                    )}
-
-                    {/* WYNIKI */}
+                    {ladowanie && <div className="text-center py-6 text-slate-400 text-sm font-bold animate-pulse">Obliczam dystans...</div>}
                     {obliczone && dystans !== null && (
                         <div className="space-y-3">
-
-                            {/* KOSZT PALIWA */}
                             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
                                 <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1 flex items-center gap-1">
                                     <Fuel size={10} /> Szacunkowy koszt paliwa
                                 </p>
-                                <p className="text-3xl font-black text-emerald-700 tracking-tighter">
-                                    {kosztPaliwa?.toLocaleString('pl-PL')} zł
-                                </p>
-                                <p className="text-emerald-600 text-[11px] font-bold mt-1">
-                                    ~{Math.round(dystans)} km · {SPALANIE} l/100km · {cenaPaliwa} zł/l
-                                </p>
+                                <p className="text-3xl font-black text-emerald-700 tracking-tighter">{kosztPaliwa?.toLocaleString('pl-PL')} zł</p>
+                                <p className="text-emerald-600 text-[11px] font-bold mt-1">~{Math.round(dystans)} km · {SPALANIE} l/100km · {cenaPaliwa} zł/l</p>
                             </div>
-
-                            {/* CO2 */}
                             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
-                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1">
-                                    🌿 Ślad węglowy transportu
-                                </p>
+                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1">🌿 Ślad węglowy transportu</p>
                                 {wagaTon !== null ? (
                                     <>
-                                        <p className="text-3xl font-black text-blue-700 tracking-tighter">
-                                            {co2Total} kg CO₂e
-                                        </p>
-                                        <p className="text-blue-600 text-[11px] font-bold mt-1">
-                                            {dystans} km × {wagaTon} t × {CO2_WSPOLCZYNNIK} kg CO₂e/t·km
-                                        </p>
+                                        <p className="text-3xl font-black text-blue-700 tracking-tighter">{co2Total} kg CO₂e</p>
+                                        <p className="text-blue-600 text-[11px] font-bold mt-1">{dystans} km × {wagaTon} t × {CO2_WSPOLCZYNNIK} kg CO₂e/t·km</p>
                                     </>
                                 ) : (
                                     <>
-                                        <p className="text-3xl font-black text-blue-700 tracking-tighter">
-                                            {co2NaTone} kg CO₂e / t
-                                        </p>
-                                        <p className="text-blue-600 text-[11px] font-bold mt-1">
-                                            Wskaźnik emisyjności logistyki · brak wagi w ogłoszeniu
-                                        </p>
-                                        <p className="text-blue-500 text-[10px] font-bold mt-1">
-                                            {dystans} km × 1 t × {CO2_WSPOLCZYNNIK} kg CO₂e/t·km
-                                        </p>
+                                        <p className="text-3xl font-black text-blue-700 tracking-tighter">{co2NaTone} kg CO₂e / t</p>
+                                        <p className="text-blue-600 text-[11px] font-bold mt-1">Wskaźnik emisyjności logistyki · brak wagi w ogłoszeniu</p>
+                                        <p className="text-blue-500 text-[10px] font-bold mt-1">{dystans} km × 1 t × {CO2_WSPOLCZYNNIK} kg CO₂e/t·km</p>
                                     </>
                                 )}
                             </div>
-
-                            {/* NOTA METODYCZNA */}
                             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">📋 Nota metodyczna</p>
                                 <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
@@ -327,37 +265,21 @@ function PanelCO2({ oferta, onClose }: { oferta: any; onClose: () => void }) {
                                     Emisja CO₂: współczynnik {CO2_WSPOLCZYNNIK} kg CO₂e/t·km zgodnie z GHG Protocol (Scope 3, Category 4 — upstream transportation). Wartość szacunkowa dla transportu drogowego TIR EURO 6. Dystans: trasa drogowa.
                                 </p>
                             </div>
-
-                            {/* PRZYCISK DRUKUJ */}
-                            <button
-                                onClick={handleDrukuj}
-                                className="w-full border-2 border-slate-200 hover:border-blue-400 text-slate-600 hover:text-blue-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 print:hidden"
-                            >
+                            <button onClick={handleDrukuj}
+                                className="w-full border-2 border-slate-200 hover:border-blue-400 text-slate-600 hover:text-blue-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 print:hidden">
                                 <FileText size={14} /> Generuj raport PDF
                             </button>
                         </div>
                     )}
                 </div>
-
-                {/* STOPKA */}
                 <div className="px-6 py-4 border-t border-slate-100 shrink-0 print:hidden">
-                    <p className="text-[10px] text-slate-400 font-bold text-center">
-                        Wartości szacunkowe · GHG Protocol Scope 3 · Recyklat.pl
-                    </p>
+                    <p className="text-[10px] text-slate-400 font-bold text-center">Wartości szacunkowe · GHG Protocol Scope 3 · Recyklat.pl</p>
                 </div>
             </div>
-
-            {/* STYLE DLA DRUKU */}
             <style>{`
                 @media print {
                     body > *:not(.print-panel) { display: none !important; }
-                    .fixed.right-0 {
-                        position: static !important;
-                        width: 100% !important;
-                        max-width: 100% !important;
-                        box-shadow: none !important;
-                        border: 1px solid #e2e8f0;
-                    }
+                    .fixed.right-0 { position: static !important; width: 100% !important; max-width: 100% !important; box-shadow: none !important; border: 1px solid #e2e8f0; }
                     .print\\:hidden { display: none !important; }
                 }
             `}</style>
@@ -428,11 +350,9 @@ const NAGLOWEK: Record<Priorytet, string> = {
     inne: 'Może Cię zainteresować',
 };
 
-// ── KLUCZOWA POPRAWKA: typ_oferty filtrowany we wszystkich priorytetach ──────
 async function pobierzPodobne(oferta: any): Promise<{ oferty: PodobnaOferta[]; priorytet: Priorytet }> {
     const typOferty = oferta.typ_oferty || 'sprzedam';
 
-    // P1: ten sam telefon + ten sam typ (sprzedam→sprzedam, kupie→kupie)
     if (oferta.telefon) {
         const { data } = await supabase
             .from('oferty')
@@ -445,7 +365,6 @@ async function pobierzPodobne(oferta: any): Promise<{ oferty: PodobnaOferta[]; p
         if (data && data.length > 0) return { oferty: data, priorytet: 'tenSamTelefon' };
     }
 
-    // P2: ta sama kategoria materiału + TEN SAM TYP — sprzedam tylko ze sprzedam, kupie tylko z kupie
     const katSlowo = (oferta.material || '').split(/[\s(]/)[0].toLowerCase();
     if (katSlowo.length >= 3) {
         const { data } = await supabase
@@ -453,13 +372,12 @@ async function pobierzPodobne(oferta: any): Promise<{ oferty: PodobnaOferta[]; p
             .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, typ_oferty, telefon')
             .neq('id', oferta.id)
             .eq('status', 'aktywna')
-            .eq('typ_oferty', typOferty)          // ← filtr typu zawsze aktywny
+            .eq('typ_oferty', typOferty)
             .ilike('material', `%${katSlowo}%`)
             .limit(4);
         if (data && data.length > 0) return { oferty: data, priorytet: 'kategoria' };
     }
 
-    // P3: awaryjne — najczęściej oglądane, bez filtra typu (mieszane — pełni rolę "odkryj coś nowego")
     const { data } = await supabase
         .from('oferty')
         .select('id, title, material, waga, cena, lokalizacja, wojewodztwo, zdjecie_url, typ_oferty, telefon')
@@ -611,6 +529,15 @@ export default function SzczegolyOferty() {
     const [showToast, setShowToast] = useState(false);
     const toastTimerRef = useRef<number | null>(null);
 
+    // Odczytaj zapisany URL rynku z filtrami (ustawiony przez rynek/page.tsx przed wejściem tutaj)
+    const powrotUrl = typeof window !== 'undefined'
+        ? sessionStorage.getItem('rynek_powrot_url') || '/rynek'
+        : '/rynek';
+
+    const handlePowrot = () => {
+        router.push(powrotUrl);
+    };
+
     const logClick = (ofertaId: number) => {
         if (localStorage.getItem('recyklat_admin_device') === '1') return;
         fetch('/api/log-click', {
@@ -650,7 +577,6 @@ export default function SzczegolyOferty() {
         if (typeof window === 'undefined') return;
         const storedToast = window.sessionStorage.getItem('ofertaToast');
         if (!storedToast) return;
-
         window.sessionStorage.removeItem('ofertaToast');
         setToastMessage(storedToast);
         setShowToast(true);
@@ -658,7 +584,6 @@ export default function SzczegolyOferty() {
             setShowToast(false);
             toastTimerRef.current = null;
         }, 3000);
-
         return () => {
             if (toastTimerRef.current) {
                 window.clearTimeout(toastTimerRef.current);
@@ -766,7 +691,7 @@ export default function SzczegolyOferty() {
             )}
             <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <button onClick={() => router.push('/rynek')}
+                    <button onClick={handlePowrot}
                         className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-bold uppercase text-xs tracking-widest">
                         <ArrowLeft size={18} /><span>Powrót</span>
                     </button>
@@ -816,8 +741,7 @@ export default function SzczegolyOferty() {
                         </div>
 
                         <div className="bg-white p-8 rounded-[40px] border shadow-sm space-y-6">
-                            <a
-                                href="#podobne-ogloszenia"
+                            <a href="#podobne-ogloszenia"
                                 onClick={e => {
                                     e.preventDefault();
                                     document.getElementById('podobne-ogloszenia')?.scrollIntoView({ behavior: 'smooth' });
