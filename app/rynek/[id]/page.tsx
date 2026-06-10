@@ -137,9 +137,9 @@ function KalkulatorTransportu({ oferta }: { oferta: any }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PANEL CO2 / TRANSPORT (SLIDE-IN) — tylko dla ofert sprzedaży
+// PANEL CO2 / TRANSPORT (SLIDE-IN)
 // ─────────────────────────────────────────────────────────────────────────────
-const CO2_WSPOLCZYNNIK = 0.062; // kg CO₂e / t·km — standard GHG Protocol
+const CO2_WSPOLCZYNNIK = 0.062;
 
 function PanelCO2({ oferta, onClose }: { oferta: any; onClose: () => void }) {
     const [miasto, setMiasto] = useState('');
@@ -529,7 +529,6 @@ export default function SzczegolyOferty() {
     const [showToast, setShowToast] = useState(false);
     const toastTimerRef = useRef<number | null>(null);
 
-    // Odczytaj zapisany URL rynku z filtrami (ustawiony przez rynek/page.tsx przed wejściem tutaj)
     const powrotUrl = typeof window !== 'undefined'
         ? sessionStorage.getItem('rynek_powrot_url') || '/rynek'
         : '/rynek';
@@ -760,6 +759,11 @@ export default function SzczegolyOferty() {
                                 <span className={`px-5 py-3 rounded-2xl text-2xl font-black ${jestZapotrzebowanie ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
                                     {formatCena(oferta.cena, 't', true)}
                                 </span>
+                                {oferta.waga > 0 && (
+                                    <span className="px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-700">
+                                        {jestZapotrzebowanie ? 'Szukam:' : 'Dostępne:'} {oferta.waga} t
+                                    </span>
+                                )}
                                 {oferta.supply_frequency && SUPPLY_BADGE[oferta.supply_frequency] && (
                                     <span className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${SUPPLY_BADGE[oferta.supply_frequency].color}`}>
                                         {SUPPLY_BADGE[oferta.supply_frequency].label}
