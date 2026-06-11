@@ -88,9 +88,9 @@ export default function Home() {
             <span className="text-blue-600">w kapitał</span>
           </h1>
           <div className="text-sm md:text-xl text-slate-500 font-medium max-w-xl mb-6 md:mb-12 leading-normal md:leading-relaxed">
-  <span className="inline md:block">Najszybsza giełda recyklatów, surowców wtórnych. </span>
+  <span className="inline md:block">Najszybsza giełda recyklatów i surowców wtórnych. </span>
   <span className="inline md:block">100% polska platforma.</span>
-  <span className="block mt-2">Kupuj, sprzedawaj i dodawaj ogłoszenia w 30 sekund.</span>
+  <span className="block mt-2">Kupuj, sprzedawaj, dodawaj ogłoszenia w 30 sekund.</span>
 </div>
           
 
