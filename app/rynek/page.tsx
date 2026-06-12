@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-    Recycle, MapPin, Package, ChevronDown, TrendingUp, Clock, Globe, Plane, RefreshCw
+    Recycle, MapPin, Search, Package, ChevronDown, TrendingUp, Clock, Globe, Plane, RefreshCw
 } from 'lucide-react';
 import { getFallbackTitle, formatCenaZDatata } from '@/lib/ofertaUtils';
 
