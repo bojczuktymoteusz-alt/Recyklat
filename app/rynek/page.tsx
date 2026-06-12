@@ -350,14 +350,14 @@ function RynekInner() {
 
                     <div className="relative max-w-2xl mx-auto flex gap-2">
                         <div className="relative flex-1">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                             <input
                                 ref={inputRef}
                                 type="text"
-                                placeholder="Materiał, miasto itp."
+                                placeholder="Materiał, miasto..."
                                 value={szukanaFraza}
                                 onChange={e => setSzukanaFraza(e.target.value)}
-                                className="w-full pl-11 pr-24 py-4 bg-white/90 backdrop-blur-sm border border-white/20 text-slate-900 placeholder:text-slate-500 rounded-2xl focus:bg-white focus:border-blue-400 outline-none font-medium shadow-lg transition-all"
+                                className="w-full pl-9 pr-24 py-4 bg-white/90 backdrop-blur-sm border border-white/20 text-slate-900 placeholder:text-slate-500 rounded-2xl focus:bg-white focus:border-blue-400 outline-none font-medium shadow-lg transition-all"
                             />
                             <button
                                 onClick={zamknijKlawiature}
@@ -371,7 +371,7 @@ function RynekInner() {
                                 className={`h-full flex items-center gap-2 px-4 py-4 rounded-2xl border font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
                                     wybrane.length > 0
                                         ? 'bg-blue-600 border-blue-500 text-white'
-                                        : 'bg-white/90 backdrop-blur-sm border-white/20 text-slate-700 hover:bg-white shadow-lg'
+                                        : 'bg-white/90 backdrop-blur-sm border-white/20 text-slate-700 shadow-lg'
                                 }`}>
                                 <Globe size={15} />
                                 <span className="hidden sm:inline">

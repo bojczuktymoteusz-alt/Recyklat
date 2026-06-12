@@ -1,0 +1,17 @@
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                placeholder="Materiał, miasto..."
+                                value={szukanaFraza}
+                                onChange={e => setSzukanaFraza(e.target.value)}
+                                className="w-full pl-9 pr-24 py-4 bg-white/90 backdrop-blur-sm border border-white/20 text-slate-900 placeholder:text-slate-500 rounded-2xl focus:bg-white focus:border-blue-400 outline-none font-medium shadow-lg transition-all"
+                            />
+                            <button
+                                onClick={zamknijKlawiature}
+                                className="absolute right-1.5 inset-y-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-xl font-semibold text-xs uppercase tracking-wide transition-all active:scale-95 flex items-center"
+                            >
+                                Zawęź
+                            </button>
+                        </div>
