@@ -81,7 +81,6 @@ const wykryjWojewodztwo = (fraza: string): string | null => {
     return WSZYSTKIE_WOJEWODZTWA.find(w => normalizuj(w).startsWith(f)) || null;
 };
 
-// ─── SVG Placeholder — generowany inline, bez JPG ────────────────────────────
 function PlaceholderSVG({ typ }: { typ?: string }) {
     const isKupie = typ === 'kupie';
     const bg      = isKupie ? '#1e40af' : '#064e3b';
@@ -89,12 +88,7 @@ function PlaceholderSVG({ typ }: { typ?: string }) {
     const label   = isKupie ? 'SZUKAM' : 'OFERTA';
 
     return (
-        <svg
-            viewBox="0 0 400 300"
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-full h-full"
-            aria-hidden="true"
-        >
+        <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" className="w-full h-full" aria-hidden="true">
             <rect width="400" height="300" fill={bg} />
             {[0,1,2,3,4].map(i => (
                 <line key={`h${i}`} x1="0" y1={i * 60} x2="400" y2={i * 60} stroke={accent} strokeOpacity="0.08" strokeWidth="1"/>
@@ -116,17 +110,7 @@ function PlaceholderSVG({ typ }: { typ?: string }) {
                 </g>
             )}
             <rect x="140" y="200" width="120" height="32" rx="16" fill={accent} fillOpacity="0.18" />
-            <text
-                x="200" y="221"
-                textAnchor="middle"
-                fontFamily="system-ui, sans-serif"
-                fontWeight="900"
-                fontSize="13"
-                letterSpacing="3"
-                fill={accent}
-            >
-                {label}
-            </text>
+            <text x="200" y="221" textAnchor="middle" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="13" letterSpacing="3" fill={accent}>{label}</text>
             <text x="370" y="280" textAnchor="end" fontSize="28" opacity="0.15" fill={accent}>♻</text>
         </svg>
     );
@@ -160,10 +144,12 @@ function RynekInner() {
     const [showToast, setShowToast] = useState(false);
     const toastTimerRef = React.useRef<number | null>(null);
 
-    const dropdownRef   = React.useRef<HTMLDivElement>(null);
-    const kategorieRef  = React.useRef<HTMLDivElement>(null);
+    const dropdownRef  = React.useRef<HTMLDivElement>(null);
+    const kategorieRef = React.useRef<HTMLDivElement>(null);
+    const inputRef     = React.useRef<HTMLInputElement>(null);
 
-    // Stan → URL
+    const zamknijKlawiature = () => inputRef.current?.blur();
+
     useEffect(() => {
         const params = new URLSearchParams();
         if (szukanaFraza)                params.set('q',    szukanaFraza);
@@ -206,10 +192,8 @@ function RynekInner() {
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
-
         const storedToast = window.sessionStorage.getItem('rynekToast');
         if (!storedToast) return;
-
         window.sessionStorage.removeItem('rynekToast');
         setToastMessage(storedToast);
         setShowToast(true);
@@ -217,7 +201,6 @@ function RynekInner() {
             setShowToast(false);
             toastTimerRef.current = null;
         }, 4000);
-
         return () => {
             if (toastTimerRef.current) {
                 window.clearTimeout(toastTimerRef.current);
@@ -297,7 +280,6 @@ function RynekInner() {
         if (!zaznaczone) setDropdownOpen(false);
     };
 
-    // Zapisz bieżący URL rynku przed wejściem w szczegóły ogłoszenia
     const handleKlikniecieOferty = (id: number) => {
         const currentUrl = window.location.pathname + window.location.search;
         sessionStorage.setItem('rynek_powrot_url', currentUrl);
@@ -345,7 +327,7 @@ function RynekInner() {
                         <span className="block">Rynek Recyklatów</span>
                         <span className="block text-blue-500">i Surowców Wtórnych</span>
                     </h1>
-                    <div className="flex justify-center mb-8">
+                    <div className="flex justify-center mb-6">
                         <div className="bg-slate-800 p-1 rounded-2xl flex gap-2">
                             {(['sprzedam', 'kupie'] as const).map(t => (
                                 <button key={t} onClick={() => setTypFiltr(t)}
@@ -368,19 +350,28 @@ function RynekInner() {
 
                     <div className="relative max-w-2xl mx-auto flex gap-2">
                         <div className="relative flex-1">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                            <input type="text" placeholder="Materiał, miasto itp."
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                placeholder="Materiał, miasto itp."
                                 value={szukanaFraza}
                                 onChange={e => setSzukanaFraza(e.target.value)}
-                                className="w-full pl-11 pr-4 py-4 bg-slate-800 border-2 border-slate-700 text-white rounded-2xl focus:border-blue-500 outline-none"
+                                className="w-full pl-11 pr-24 py-4 bg-white/90 backdrop-blur-sm border border-white/20 text-slate-900 placeholder:text-slate-500 rounded-2xl focus:bg-white focus:border-blue-400 outline-none font-medium shadow-lg transition-all"
                             />
+                            <button
+                                onClick={zamknijKlawiature}
+                                className="absolute right-1.5 inset-y-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-xl font-semibold text-xs uppercase tracking-wide transition-all active:scale-95 flex items-center"
+                            >
+                                Zawęź
+                            </button>
                         </div>
                         <div ref={dropdownRef} className="relative shrink-0">
                             <button type="button" onClick={() => setDropdownOpen(o => !o)}
-                                className={`h-full flex items-center gap-2 px-4 py-4 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
+                                className={`h-full flex items-center gap-2 px-4 py-4 rounded-2xl border font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
                                     wybrane.length > 0
                                         ? 'bg-blue-600 border-blue-500 text-white'
-                                        : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-blue-500'
+                                        : 'bg-white/90 backdrop-blur-sm border-white/20 text-slate-700 hover:bg-white shadow-lg'
                                 }`}>
                                 <Globe size={15} />
                                 <span className="hidden sm:inline">
@@ -491,7 +482,6 @@ function RynekInner() {
                                         onClick={() => handleKlikniecieOferty(o.id)}
                                         className="group bg-white rounded-[32px] ring-1 ring-slate-100 shadow-sm hover:shadow-2xl hover:ring-blue-100 transition-all duration-300 flex flex-col overflow-hidden isolate active:scale-[0.98] cursor-pointer"
                                     >
-                                        {/* ZDJĘCIE / PLACEHOLDER SVG */}
                                         <div className="aspect-[4/3] relative overflow-hidden bg-slate-50 isolate">
                                             {o.zdjecie_url ? (
                                                 <img
@@ -506,31 +496,16 @@ function RynekInner() {
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                                                 />
                                             ) : null}
-                                            <div
-                                                className="w-full h-full"
-                                                style={{ display: o.zdjecie_url ? 'none' : 'block' }}
-                                            >
+                                            <div className="w-full h-full" style={{ display: o.zdjecie_url ? 'none' : 'block' }}>
                                                 <PlaceholderSVG typ={o.typ_oferty} />
                                             </div>
-
-                                            {/* Badże */}
                                             <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
                                                 <div className="flex flex-col gap-1.5">
                                                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg ${o.typ_oferty === 'kupie' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
                                                         {o.typ_oferty === 'kupie' ? (
-                                                            <>
-                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                                                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                                                                </svg>
-                                                                Popyt
-                                                            </>
+                                                            <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Popyt</>
                                                         ) : (
-                                                            <>
-                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                                                    <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
-                                                                </svg>
-                                                                Oferta
-                                                            </>
+                                                            <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>Oferta</>
                                                         )}
                                                     </div>
                                                     {o.supply_frequency && SUPPLY_BADGE[o.supply_frequency] && (
@@ -551,7 +526,6 @@ function RynekInner() {
                                             </div>
                                         </div>
 
-                                        {/* DANE */}
                                         <div className="p-6 flex flex-col flex-1">
                                             <h3 className="text-lg font-black text-slate-900 line-clamp-2 uppercase mb-2 group-hover:text-blue-600 transition-colors">
                                                 {displayTitle}

@@ -1,0 +1,3 @@
+    const inputRef = React.useRef<HTMLInputElement>(null);
+
+    const zamknijKlawiature = () => inputRef.current?.blur();

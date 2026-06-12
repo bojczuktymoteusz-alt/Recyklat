@@ -1,0 +1,7 @@
+                        <div ref={dropdownRef} className="relative shrink-0">
+                            <button type="button" onClick={() => setDropdownOpen(o => !o)}
+                                className={`h-full flex items-center gap-2 px-4 py-4 rounded-2xl border font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
+                                    wybrane.length > 0
+                                        ? 'bg-blue-600 border-blue-500 text-white'
+                                        : 'bg-white/80 backdrop-blur-sm border-white/20 text-slate-700 hover:bg-white/90 shadow-lg'
+                                }`}>

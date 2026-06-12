@@ -1,0 +1,8 @@
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                placeholder="Materiał, miasto itp."
+                                value={szukanaFraza}
+                                onChange={e => setSzukanaFraza(e.target.value)}
+                                className="w-full pl-11 pr-24 py-4 bg-slate-700/80 border border-slate-600 text-white placeholder:text-slate-400 rounded-2xl focus:bg-white focus:text-slate-900 focus:placeholder:text-slate-400 focus:border-blue-500 outline-none font-medium shadow-lg transition-all"
+                            />
