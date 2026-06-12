@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-    Recycle, MapPin, Search, Package, ChevronDown, TrendingUp, Clock, Globe, Plane, RefreshCw
+    Recycle, MapPin, Package, ChevronDown, TrendingUp, Clock, Globe, Plane, RefreshCw
 } from 'lucide-react';
 import { getFallbackTitle, formatCenaZDatata } from '@/lib/ofertaUtils';
 
@@ -350,14 +350,13 @@ function RynekInner() {
 
                     <div className="relative max-w-2xl mx-auto flex gap-2">
                         <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                             <input
                                 ref={inputRef}
                                 type="text"
                                 placeholder="Materiał, miasto..."
                                 value={szukanaFraza}
                                 onChange={e => setSzukanaFraza(e.target.value)}
-                                className="w-full pl-9 pr-24 py-4 bg-white/90 backdrop-blur-sm border border-white/20 text-slate-900 placeholder:text-slate-500 rounded-2xl focus:bg-white focus:border-blue-400 outline-none font-medium shadow-lg transition-all"
+                                className="w-full pl-2 pr-24 py-4 bg-white/90 backdrop-blur-sm border border-white/20 text-slate-900 placeholder:text-slate-500 rounded-2xl focus:bg-white focus:border-blue-400 outline-none font-medium shadow-lg transition-all"
                             />
                             <button
                                 onClick={zamknijKlawiature}

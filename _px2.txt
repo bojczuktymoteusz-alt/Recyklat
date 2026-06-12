@@ -1,0 +1,1 @@
+                                className="w-full px-2 pr-24 py-4 bg-white/90 backdrop-blur-sm border border-white/20 text-slate-900 placeholder:text-slate-500 rounded-2xl focus:bg-white focus:border-blue-400 outline-none font-medium shadow-lg transition-all"
