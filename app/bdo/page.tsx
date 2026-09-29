@@ -22,6 +22,21 @@ export default function BDOPage() {
         <p className="text-slate-600 text-lg md:text-xl font-medium leading-relaxed mb-16">
           Your company remains the BDO account holder. We can act as your authorised representative/proxy for BDO administration in Poland.
         </p>
+<div className="mb-8 space-y-1 text-sm text-slate-700">
+  <p className="font-semibold text-slate-900">Tymoteusz Bojczuk</p>
+  <p>
+    <a href="mailto:tymoteusz.bojczuk@impactfs.uk" className="underline hover:text-blue-600">
+      tymoteusz.bojczuk@impactfs.uk
+    </a>
+  </p>
+  <p>
+    tel: <a href="tel:667887562" className="underline hover:text-blue-600">667887562</a>
+  </p>
+  <p>
+    WhatsApp: <a href="tel:07999697559" className="underline hover:text-blue-600">07999697559</a>
+  </p>
+  
+</div>
 
         <img
           src="/bdo.jpg"
