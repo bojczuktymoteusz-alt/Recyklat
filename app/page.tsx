@@ -61,8 +61,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-white font-sans text-slate-900">
-      <header className="relative md:absolute top-0 left-0 w-full z-50">
-        <div className="max-w-5xl mx-auto px-6 py-4 md:py-6 flex justify-between items-center">
+      <header className="relative md:absolute top-0 left-0 w-full z-50 pointer-events-none">
+        <div className="max-w-5xl mx-auto px-6 py-4 md:py-6 flex justify-between items-center pointer-events-auto">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="bg-blue-600 p-2 rounded-xl group-hover:bg-slate-900 transition-colors shadow-md">
               <Recycle className="w-5 h-5 text-white" />
@@ -80,14 +80,18 @@ export default function Home() {
 
       <section className="relative pt-6 md:pt-16 pb-20 overflow-hidden border-b border-slate-50">
         <div className="max-w-5xl mx-auto px-6 relative z-10">
-          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 md:mb-8">
-  <TrendingUp size={14} /> OBIEG B2B •  RAPORTY CO2   • 
-              <Link href="/bdo" className="hover:text-slate-900 transition-colors flex items-center gap-1">
-        <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[8px] font-black tracking-wider shadow-sm">
-          BDO SERVICES
-        </span>
-               </Link>
-        </div>
+        <div className="relative z-20 inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 md:mb-8">
+  <TrendingUp size={14} />
+
+  <span>OBIEG B2B • RAPORTY CO2 •</span>
+
+<Link
+  href="/bdo"
+  className="relative z-[9999] inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-full text-[8px] font-black tracking-wider shadow-sm cursor-pointer"
+>
+  BDO SERVICES
+</Link>
+</div>
           <h1 className="text-4xl md:text-6xl xl:text-8xl font-black tracking-tighter uppercase leading-tight md:leading-[0.9] mb-6 md:mb-8">
             Zmień odpady <br />
             <span className="text-blue-600">w kapitał</span>
