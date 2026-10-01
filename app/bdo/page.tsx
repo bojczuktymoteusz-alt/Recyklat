@@ -26,7 +26,7 @@ export default function BDOPage() {
   <p className="font-semibold text-slate-900">Tymoteusz Bojczuk</p>
   <p>
     <a href="mailto:tymoteusz.bojczuk@impactfs.uk" className="underline hover:text-blue-600">
-      tymoteusz.bojczuk@impactfs.uk
+      kontakt@recyklat.pl
     </a>
   </p>
   <p>
